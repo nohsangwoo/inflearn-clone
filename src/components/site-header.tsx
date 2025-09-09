@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { ModeToggle } from "@/components/mode-toggle"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -32,6 +33,7 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <ModeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

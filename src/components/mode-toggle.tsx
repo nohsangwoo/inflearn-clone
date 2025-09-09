@@ -4,41 +4,27 @@ import * as React from "react"
 import { useTheme } from "next-themes"
 import { Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 export function ModeToggle() {
-  const { setTheme, theme, resolvedTheme } = useTheme()
+  const { theme, resolvedTheme, setTheme } = useTheme()
 
-  const current = (theme ?? resolvedTheme ?? "system") as
-    | "light"
-    | "dark"
-    | "system"
+  const isDark = (theme ?? resolvedTheme ?? "light") === "dark"
+
+  function toggleTheme() {
+    setTheme(isDark ? "light" : "dark")
+  }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Toggle theme">
-          <Sun className="size-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute size-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-36">
-        <DropdownMenuItem onClick={() => setTheme("light")} data-state={current === "light" ? "checked" : undefined}>
-          라이트
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")} data-state={current === "dark" ? "checked" : undefined}>
-          다크
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")} data-state={current === "system" ? "checked" : undefined}>
-          시스템
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      onClick={toggleTheme}
+      variant="ghost"
+      size="icon"
+      aria-label="Toggle theme"
+      title={isDark ? "라이트 모드" : "다크 모드"}
+   >
+      <Sun className="size-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute size-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+    </Button>
   )
 }
 
