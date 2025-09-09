@@ -14,18 +14,166 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model Post {
-  id        Int     @id @default(autoincrement())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author    User?   @relation(fields: [authorId], references: [id])
-  authorId  Int?
+enum Role {
+  ADMIN
+  STUDENT
+  TEACHER
+}
+
+enum Language {
+  KO // 한국어
+  EN // 영어
+  JA // 일본어
+  VI // 베트남어
+  RU // 러시아어
+  ZH // 중국어
+  ZH_CN // 중국어(중국)
+  ZH_TW // 중국어(대만)
+  FR // 프랑스어
+  DE // 독일어
+  ES // 스페인어
+  PT // 포르투갈어
+  IT // 이탈리아어
+  ID // 인도네시아어
+  TH // 태국어
+  HI // 힌디어
+  AR // 아랍어
+  TR // 터키어
+  PL // 폴란드어
+  UK // 우크라이나어
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  posts Post[]
+  id                Int        @id @default(autoincrement())
+  email             String     @unique // 이메일
+  nickname          String? // 닉네임
+  description       String? // 소개
+  profileImageUrl   String? // 프로필 이미지
+  role              Role       @default(STUDENT) // 역할
+  profileAddress    String? // 주소
+  phoneNumber       String? // 전화번호
+  isVerified        Boolean    @default(false) // 이메일 인증 여부
+  createdAt         DateTime   @default(now()) // 생성일
+  updatedAt         DateTime   @updatedAt
+  createdLectures   Lecture[]  @relation("InstructorLectures") // 제작한 강의
+  purchasedLectures Purchase[] // 구매한 강의
+  Reviews           Review[] // 리뷰
+  Likes             Like[] // 좋아요
+  Cart              Cart[] // 장바구니
+}
+
+model Lecture {
+  id            Int          @id @default(autoincrement())
+  title         String // 강의 제목
+  description   String? // 강의 설명
+  price         Int // 강의 가격
+  discountPrice Int? // 강의 할인 가격
+  isActive      Boolean      @default(true) // 강의 활성 여부
+  imageUrl      String? // 강의 이미지
+  createdAt     DateTime     @default(now()) // 생성일
+  updatedAt     DateTime     @updatedAt // 수정일
+  instructor    User?        @relation("InstructorLectures", fields: [instructorId], references: [id])
+  instructorId  Int? // 강의 제작자
+  purchases     Purchase[] // 구매 기록
+  Reviews       Review[]
+  Curriculums   Curriculum[] // 사실상 1:1인데 여지를 남겨둠
+  Likes         Like[] // 좋아요
+  Cart          Cart[] // 장바구니
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  content   String // 리뷰 내용
+  rating    Int // 리뷰 평점
+  createdAt DateTime @default(now()) // 생성일
+  updatedAt DateTime @updatedAt // 수정일
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    Int? // 리뷰 작성자
+  Lecture   Lecture? @relation(fields: [lectureId], references: [id])
+  lectureId Int? // 강의 ID
+
+  // 대댓글 관계 설정
+  parentId Int? // 부모 댓글 ID
+  parent   Review?  @relation("ReviewToReview", fields: [parentId], references: [id]) // 부모 댓글
+  replies  Review[] @relation("ReviewToReview") // 대댓글 목록
+
+  // 삭제된 댓글 표시
+  isDeleted Boolean @default(false)
+}
+
+model Cart {
+  id        Int       @id @default(autoincrement()) // 장바구니 ID  
+  createdAt DateTime  @default(now()) // 생성일
+  updatedAt DateTime  @updatedAt // 수정일
+  User      User?     @relation(fields: [userId], references: [id])
+  userId    Int? // 장바구니 소유자
+  Lecture   Lecture[] // 장바구니 안에 들어있는 강의
+}
+
+model Like {
+  id        Int      @id @default(autoincrement()) // 좋아요 ID
+  createdAt DateTime @default(now()) // 생성일
+  updatedAt DateTime @updatedAt // 수정일
+
+  Lecture   Lecture? @relation(fields: [lectureId], references: [id]) // 강의
+  lectureId Int? // 강의 ID
+  User      User?    @relation(fields: [userId], references: [id]) // 좋아요 소유자
+  userId    Int?
+}
+
+model Curriculum {
+  id                 Int                 @id @default(autoincrement())
+  createdAt          DateTime            @default(now()) // 생성일
+  updatedAt          DateTime            @updatedAt // 수정일
+  Lecture            Lecture?            @relation(fields: [lectureId], references: [id]) // 강의
+  lectureId          Int? // 강의 ID
+  CurriculumSections CurriculumSection[] // 강의 커리큘럼 섹션
+}
+
+model CurriculumSection {
+  id           Int         @id @default(autoincrement())
+  title        String // 강의 커리큘럼 섹션 제목
+  description  String? // 강의 커리큘럼 섹션 설명
+  createdAt    DateTime    @default(now()) // 생성일
+  updatedAt    DateTime    @updatedAt // 수정일
+  Curriculum   Curriculum? @relation(fields: [curriculumId], references: [id]) // 강의 커리큘럼
+  curriculumId Int? // 강의 커리큘럼 섹션 ID
+  Videos       Video[] // 사실상 1:1인데 여지를 남겨둠
+  Files        File[] // 강의 커리큘럼 섹션 파일
+}
+
+model Video {
+  id                  Int                @id @default(autoincrement())
+  title               String? // 강의 커리큘럼 섹션 동영상 제목
+  description         String? // 강의 커리큘럼 섹션 동영상 설명
+  videoUrl            String // 강의 커리큘럼 섹션 동영상 URL
+  thumbnailUrl        String? // 강의 커리큘럼 섹션 동영상 썸네일 URL
+  duration            Int? // 강의 커리큘럼 섹션 동영상 재생 시간
+  language            Language           @default(KO) // 강의 커리큘럼 섹영상 언어
+  createdAt           DateTime           @default(now()) // 생성일
+  updatedAt           DateTime           @updatedAt // 수정일
+  CurriculumSection   CurriculumSection? @relation(fields: [curriculumSectionId], references: [id]) // 강의 커리큘럼 섹션
+  curriculumSectionId Int? // 강의 커리큘럼 섹션 ID
+}
+
+model File {
+  id                  Int                @id @default(autoincrement())
+  url                 String
+  createdAt           DateTime           @default(now()) // 생성일
+  updatedAt           DateTime           @updatedAt // 수정일
+  CurriculumSection   CurriculumSection? @relation(fields: [curriculumSectionId], references: [id])
+  curriculumSectionId Int? // 강의 커리큘럼 섹션 ID
+}
+
+model Purchase {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id]) // 구매자
+  userId    Int
+  lecture   Lecture  @relation(fields: [lectureId], references: [id]) // 강의
+  lectureId Int // 강의 ID
+  progress  Float    @default(0) // 진행률 (0-100)  
+  updatedAt DateTime @updatedAt // 수정일
+  createdAt DateTime @default(now()) // 생성일
+
+  @@unique([userId, lectureId]) // 같은 사용자가 같은 강의를 중복 구매 방지
 }
