@@ -1,15 +1,38 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Apple } from "lucide-react"
 import { useAuthStore } from "@/lib/stores/auth-store"
+import { toast } from "sonner"
 
 export default function LoginPage() {
-  const { setUser, isLoading, setLoading } = useAuthStore()
+  const router = useRouter()
+  const {
+    user,
+    isLoading,
+    setLoading,
+    loginWithEmailPassword,
+    signUpWithEmailPassword,
+    initialize,
+  } = useAuthStore()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [mode, setMode] = useState<"login" | "signup">("login")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+
+  useEffect(() => {
+    initialize()
+  }, [initialize])
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/")
+    }
+  }, [user, router])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,13 +41,38 @@ export default function LoginPage() {
       setError("이메일과 비밀번호를 입력해 주세요")
       return
     }
+    if (!isValidEmail(email)) {
+      setError("올바른 이메일 형식이 아닙니다")
+      return
+    }
+    if (password.length < 8) {
+      setError("비밀번호는 8자 이상이어야 합니다")
+      return
+    }
+    if (mode === "signup" && password !== confirmPassword) {
+      setError("비밀번호가 일치하지 않습니다")
+      return
+    }
     try {
       setLoading(true)
-      // 실제 로그인 로직은 추후 연동 (예: /api/auth/login)
-      await new Promise((r) => setTimeout(r, 800))
-      setUser({ id: "demo", email })
-    } catch {
-      setError("로그인에 실패했습니다. 다시 시도해 주세요")
+      if (mode === "login") {
+        await loginWithEmailPassword(email, password)
+        toast.success("로그인에 성공했습니다")
+      } else {
+        const { needsEmailVerification } = await signUpWithEmailPassword(
+          email,
+          password,
+        )
+        if (needsEmailVerification) {
+          toast.success("확인 메일이 전송되었습니다. 메일함을 확인해 주세요.")
+        }
+        if (!needsEmailVerification) {
+          toast.success("회원가입이 완료되었습니다")
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      setError(message || (mode === "login" ? "로그인에 실패했습니다." : "회원가입에 실패했습니다."))
     } finally {
       setLoading(false)
     }
@@ -34,7 +82,7 @@ export default function LoginPage() {
     <div className="min-h-[calc(100dvh-56px)] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">로그인</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{mode === "login" ? "로그인" : "회원가입"}</h1>
           <p className="text-sm text-muted-foreground">계속하려면 아래 방법 중 하나를 선택하세요</p>
         </div>
 
@@ -82,13 +130,50 @@ export default function LoginPage() {
               disabled={isLoading}
             />
           </div>
+          {mode === "signup" && (
+            <div className="space-y-1.5">
+              <label htmlFor="confirmPassword" className="text-sm font-medium">비밀번호 확인</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="********"
+                disabled={isLoading}
+              />
+            </div>
+          )}
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "로그인 중..." : "이메일로 로그인"}
+            {isLoading ? (mode === "login" ? "로그인 중..." : "회원가입 중...") : (mode === "login" ? "이메일로 로그인" : "이메일로 회원가입")}
           </Button>
         </form>
+
+        <div className="mt-3 text-center text-sm">
+          {mode === "login" ? (
+            <button
+              type="button"
+              className="text-primary underline underline-offset-4"
+              onClick={() => setMode("signup")}
+              disabled={isLoading}
+            >
+              계정이 없으신가요? 회원가입
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="text-primary underline underline-offset-4"
+              onClick={() => setMode("login")}
+              disabled={isLoading}
+            >
+              이미 계정이 있으신가요? 로그인
+            </button>
+          )}
+        </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground leading-relaxed">
           로그인 시 서비스 약관 및 개인정보 처리방침에 동의한 것으로 간주됩니다.
