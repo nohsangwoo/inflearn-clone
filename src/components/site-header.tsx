@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { ModeToggle } from "@/components/mode-toggle"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { Button } from "@/components/ui/button"
@@ -14,9 +15,22 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuthStore } from "@/lib/stores/auth-store"
+import { toast } from "sonner"
 
 export function SiteHeader() {
-  const { user } = useAuthStore()
+  const router = useRouter()
+  const { user, logout, isLoading } = useAuthStore()
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      toast.success("로그아웃되었습니다")
+      router.replace("/")
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      toast.error(message || "로그아웃에 실패했습니다")
+    }
+  }
   return (
     <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto max-w-6xl px-4">
@@ -55,7 +69,7 @@ export function SiteHeader() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">my@email.com</div>
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">{user?.email || ""}</div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/me/profile">프로필</Link>
@@ -67,7 +81,7 @@ export function SiteHeader() {
                     <Link href="/me">대시보드</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>로그아웃</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} disabled={isLoading}>로그아웃</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
