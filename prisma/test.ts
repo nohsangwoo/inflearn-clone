@@ -2,7 +2,7 @@ import prisma from '@/lib/prismaClient'
 
 async function main() {
   //change to reference a table in your schema
-  const val = await prisma.post.findMany({
+  const val = await prisma.lecture.findMany({
     take: 10,
   })
   console.log(val)

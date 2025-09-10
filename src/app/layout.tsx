@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { headers } from "next/headers";
-import { ThemeProvider } from "@/components/theme-provider";
+import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
@@ -33,13 +33,13 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
+        <Providers>
           <SiteHeader />
           <main className="min-h-[calc(100dvh-56px)]">
             {children}
           </main>
           <SiteFooter />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

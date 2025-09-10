@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
       "uk",
     ],
     defaultLocale: "ko",
-    localeDetection: true,
+    localeDetection: false,
   },
 };
 

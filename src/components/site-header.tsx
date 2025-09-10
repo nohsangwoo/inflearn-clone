@@ -13,8 +13,10 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuthStore } from "@/lib/stores/auth-store"
 
 export function SiteHeader() {
+  const { user } = useAuthStore()
   return (
     <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto max-w-6xl px-4">
@@ -33,33 +35,42 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <Link href="/admin" className="hidden sm:block">
+              <Button variant="outline" size="sm">지식공유자</Button>
+            </Link>
             <LanguageSwitcher />
             <ModeToggle />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="p-1">
-                  <Avatar>
-                    <AvatarImage src="/avatar.png" alt="profile" />
-                    <AvatarFallback>ME</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">my@email.com</div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="#">프로필</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="#">내 강의</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="#">설정</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>로그아웃</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {!user ? (
+              <Link href="/login">
+                <Button size="sm">로그인</Button>
+              </Link>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="p-1">
+                    <Avatar>
+                      <AvatarImage src="/avatar.png" alt="profile" />
+                      <AvatarFallback>ME</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">my@email.com</div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/me/profile">프로필</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/me/courses">내 강의</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/me">대시보드</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>로그아웃</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </div>
