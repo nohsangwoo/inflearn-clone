@@ -20,6 +20,7 @@ type AuthState = {
     email: string,
     password: string,
   ) => Promise<{ needsEmailVerification: boolean }>
+  loginWithOAuth: (provider: "google" | "apple") => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -66,6 +67,26 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(message || "로그인에 실패했습니다")
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+
+  loginWithOAuth: async (provider: "google" | "apple") => {
+    set({ isLoading: true })
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo:
+            typeof window !== "undefined" ? window.location.origin : undefined,
+        },
+      })
+      if (error) throw error
+      // 성공 시 Supabase가 외부 인증 페이지로 리다이렉트합니다
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(message || "소셜 로그인을 시작하지 못했습니다")
     } finally {
       set({ isLoading: false })
     }

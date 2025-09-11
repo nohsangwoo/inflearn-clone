@@ -78,6 +78,19 @@ export default function LoginPage() {
     }
   }
 
+  const handleOAuth = async (provider: "google" | "apple") => {
+    try {
+      setLoading(true)
+      await useAuthStore.getState().loginWithOAuth(provider)
+      // OAuth는 외부로 리다이렉트되므로 여기서 추가 동작 없음
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      toast.error(message || "소셜 로그인에 실패했습니다")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-[calc(100dvh-56px)] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
@@ -87,11 +100,21 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-6 space-y-3">
-          <Button variant="outline" className="w-full justify-center">
+          <Button
+            variant="outline"
+            className="w-full justify-center"
+            onClick={() => handleOAuth("google")}
+            disabled={isLoading}
+          >
             <GoogleIcon className="mr-2 h-4 w-4" />
             Google로 계속하기
           </Button>
-          <Button variant="outline" className="w-full justify-center">
+          <Button
+            variant="outline"
+            className="w-full justify-center"
+            onClick={() => handleOAuth("apple")}
+            disabled={isLoading}
+          >
             <Apple className="mr-2 h-4 w-4" />
             Apple로 계속하기
           </Button>
