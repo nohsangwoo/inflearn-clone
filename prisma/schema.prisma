@@ -46,6 +46,8 @@ enum Language {
 model User {
   id                Int        @id @default(autoincrement())
   email             String     @unique // 이메일
+  /// Supabase Auth에서 생성된 고유 사용자 ID (UUID 형식)
+  supabaseId        String     @unique
   nickname          String? // 닉네임
   description       String? // 소개
   profileImageUrl   String? // 프로필 이미지

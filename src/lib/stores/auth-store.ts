@@ -26,6 +26,15 @@ type AuthState = {
 
 const supabase = createClient()
 
+// 인증된 세션이 있을 때 서버 DB에 사용자 레코드가 존재하도록 보장
+const ensureUserOnServer = async () => {
+  try {
+    await fetch("/api/auth/ensure-user", { method: "POST" })
+  } catch {
+    // 네트워크 오류 시 다음 기회에 재시도
+  }
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: false,
@@ -41,6 +50,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: user ? { id: user.id, email: user.email ?? "" } : null,
       })
 
+      // 세션이 있다면 DB 사용자 보장 (이메일 인증된 사용자만 생성됨)
+      if (user) {
+        await ensureUserOnServer()
+      }
+
       supabase.auth.onAuthStateChange((_event, session) => {
         const nextUser = session?.user
         set({
@@ -48,6 +62,9 @@ export const useAuthStore = create<AuthState>((set) => ({
             ? { id: nextUser.id, email: nextUser.email ?? "" }
             : null,
         })
+        if (nextUser) {
+          void ensureUserOnServer()
+        }
       })
     } finally {
       set({ isLoading: false })
@@ -64,6 +81,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (error) throw error
       const user = data.user
       set({ user: user ? { id: user.id, email: user.email ?? "" } : null })
+      if (user) {
+        await ensureUserOnServer()
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
       throw new Error(message || "로그인에 실패했습니다")
@@ -75,11 +95,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   loginWithOAuth: async (provider: "google" | "apple") => {
     set({ isLoading: true })
     try {
+      const origin = typeof window !== "undefined" ? window.location.origin : undefined
+      const currentUrl = typeof window !== "undefined" ? window.location.href : undefined
+      const callbackUrl = origin
+        ? `${origin}/api/auth/callback${currentUrl ? `?redirect_to=${encodeURIComponent(currentUrl)}` : ""}`
+        : undefined
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo:
-            typeof window !== "undefined" ? window.location.origin : undefined,
+          redirectTo: callbackUrl,
         },
       })
       if (error) throw error
@@ -98,13 +122,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   ) => {
     set({ isLoading: true })
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password })
+      const origin = typeof window !== "undefined" ? window.location.origin : undefined
+      const currentUrl = typeof window !== "undefined" ? window.location.href : undefined
+      const emailRedirectTo = origin
+        ? `${origin}/api/auth/callback${currentUrl ? `?redirect_to=${encodeURIComponent(currentUrl)}` : ""}`
+        : undefined
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo,
+        },
+      })
       if (error) throw error
 
       const needsEmailVerification = !data.session
 
       if (data.user && data.session) {
         set({ user: { id: data.user.id, email: data.user.email ?? "" } })
+        await ensureUserOnServer()
       }
 
       return { needsEmailVerification }
