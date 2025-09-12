@@ -1,7 +1,7 @@
-"use client"
+'use client'
 
-import { create } from "zustand"
-import { createClient } from "@/lib/supabase/client"
+import { create } from 'zustand'
+import { createClient } from '@/lib/supabase/client'
 
 type AuthUser = {
   id: string
@@ -9,9 +9,16 @@ type AuthUser = {
   name?: string
 } | null
 
+type SignInResult = {
+  success: boolean
+  error?: string
+  url?: string
+}
+
 type AuthState = {
   user: AuthUser
   isLoading: boolean
+  error: string | null
   setUser: (user: AuthUser) => void
   setLoading: (loading: boolean) => void
   initialize: () => Promise<void>
@@ -20,7 +27,7 @@ type AuthState = {
     email: string,
     password: string,
   ) => Promise<{ needsEmailVerification: boolean }>
-  loginWithOAuth: (provider: "google" | "apple") => Promise<void>
+  loginWithOAuth: (provider: 'google' | 'apple') => Promise<SignInResult>
   logout: () => Promise<void>
 }
 
@@ -29,17 +36,18 @@ const supabase = createClient()
 // 인증된 세션이 있을 때 서버 DB에 사용자 레코드가 존재하도록 보장
 const ensureUserOnServer = async () => {
   try {
-    await fetch("/api/auth/ensure-user", { method: "POST" })
+    await fetch('/api/auth/ensure-user', { method: 'POST' })
   } catch {
     // 네트워크 오류 시 다음 기회에 재시도
   }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>(set => ({
   user: null,
   isLoading: false,
-  setUser: (user) => set({ user }),
-  setLoading: (isLoading) => set({ isLoading }),
+  error: null,
+  setUser: user => set({ user }),
+  setLoading: isLoading => set({ isLoading }),
 
   initialize: async () => {
     set({ isLoading: true })
@@ -47,7 +55,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data } = await supabase.auth.getUser()
       const user = data.user
       set({
-        user: user ? { id: user.id, email: user.email ?? "" } : null,
+        user: user ? { id: user.id, email: user.email ?? '' } : null,
       })
 
       // 세션이 있다면 DB 사용자 보장 (이메일 인증된 사용자만 생성됨)
@@ -59,7 +67,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         const nextUser = session?.user
         set({
           user: nextUser
-            ? { id: nextUser.id, email: nextUser.email ?? "" }
+            ? { id: nextUser.id, email: nextUser.email ?? '' }
             : null,
         })
         if (nextUser) {
@@ -80,53 +88,65 @@ export const useAuthStore = create<AuthState>((set) => ({
       })
       if (error) throw error
       const user = data.user
-      set({ user: user ? { id: user.id, email: user.email ?? "" } : null })
+      set({ user: user ? { id: user.id, email: user.email ?? '' } : null })
       if (user) {
         await ensureUserOnServer()
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message || "로그인에 실패했습니다")
+      throw new Error(message || '로그인에 실패했습니다')
     } finally {
       set({ isLoading: false })
     }
   },
 
-  loginWithOAuth: async (provider: "google" | "apple") => {
-    set({ isLoading: true })
+  loginWithOAuth: async (provider: 'google' | 'apple'): Promise<SignInResult> => {
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : undefined
-      const currentUrl = typeof window !== "undefined" ? window.location.href : undefined
-      const callbackUrl = origin
-        ? `${origin}/api/auth/callback${currentUrl ? `?redirect_to=${encodeURIComponent(currentUrl)}` : ""}`
-        : undefined
-      const { error } = await supabase.auth.signInWithOAuth({
+      set({ isLoading: true, error: null })
+      
+      // 개발 환경과 프로덕션 환경 구분 - 쿼리스트링 없이 깔끔한 콜백 URL 사용
+      const redirectUrl = typeof window !== 'undefined' 
+        ? `${window.location.origin}/api/auth/callback`
+        : `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/callback`
+      
+      console.log('OAuth Redirect URL:', redirectUrl) // 디버깅용
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: callbackUrl,
+          redirectTo: redirectUrl,
         },
       })
-      if (error) throw error
-      // 성공 시 Supabase가 외부 인증 페이지로 리다이렉트합니다
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message || "소셜 로그인을 시작하지 못했습니다")
-    } finally {
+
+      if (error) {
+        set({ error: error.message, isLoading: false })
+        return { success: false, error: error.message }
+      }
+
+      if (!data?.url) {
+        const errorMsg = 'OAuth URL을 가져올 수 없습니다'
+        set({ error: errorMsg, isLoading: false })
+        return { success: false, error: errorMsg }
+      }
+
       set({ isLoading: false })
+      return { success: true, url: data.url }
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'OAuth 로그인 중 오류가 발생했습니다'
+      set({ error: errorMsg, isLoading: false })
+      return { success: false, error: errorMsg }
     }
   },
 
-  signUpWithEmailPassword: async (
-    email: string,
-    password: string,
-  ) => {
+  signUpWithEmailPassword: async (email: string, password: string) => {
     set({ isLoading: true })
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : undefined
-      const currentUrl = typeof window !== "undefined" ? window.location.href : undefined
-      const emailRedirectTo = origin
-        ? `${origin}/api/auth/callback${currentUrl ? `?redirect_to=${encodeURIComponent(currentUrl)}` : ""}`
-        : undefined
+      // 이메일 인증도 깔끔한 콜백 URL 사용
+      const emailRedirectTo = typeof window !== 'undefined'
+        ? `${window.location.origin}/api/auth/callback`
+        : `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/callback`
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -139,14 +159,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       const needsEmailVerification = !data.session
 
       if (data.user && data.session) {
-        set({ user: { id: data.user.id, email: data.user.email ?? "" } })
+        set({ user: { id: data.user.id, email: data.user.email ?? '' } })
         await ensureUserOnServer()
       }
 
       return { needsEmailVerification }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message || "회원가입에 실패했습니다")
+      throw new Error(message || '회원가입에 실패했습니다')
     } finally {
       set({ isLoading: false })
     }
@@ -159,11 +179,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: null })
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message || "로그아웃에 실패했습니다")
+      throw new Error(message || '로그아웃에 실패했습니다')
     } finally {
       set({ isLoading: false })
     }
   },
 }))
-
-
