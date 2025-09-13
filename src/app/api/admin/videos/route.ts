@@ -1,4 +1,5 @@
 import prisma from "@/lib/prismaClient"
+import { Language } from "@prisma/client"
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
@@ -30,6 +31,10 @@ export async function POST(req: NextRequest) {
   })
   if (!can) return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
+  const languageValue = typeof language === "string" && (Object.values(Language) as string[]).includes(language)
+    ? (language as Language)
+    : undefined
+
   const video = await prisma.video.create({
     data: {
       curriculumSectionId,
@@ -38,7 +43,7 @@ export async function POST(req: NextRequest) {
       description: description ?? undefined,
       thumbnailUrl: thumbnailUrl ?? undefined,
       // 언어는 유효한 enum 문자열일 때만 설정
-      language: language && typeof language === "string" ? (language as any) : undefined,
+      language: languageValue,
     },
   })
   return NextResponse.json(video, { status: 201 })

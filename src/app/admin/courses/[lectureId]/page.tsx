@@ -184,14 +184,30 @@ export default function EditCoursePage() {
             <label className="text-sm text-muted-foreground">제목</label>
             <Input
               defaultValue={lecture?.title ?? ""}
-              onBlur={(e) => updateLecture.mutate({ title: e.target.value })}
+              onBlur={(e) =>
+                updateLecture.mutate(
+                  { title: e.target.value },
+                  {
+                    onSuccess: () => toast.success("제목이 저장되었습니다"),
+                    onError: () => toast.error("제목 저장 실패"),
+                  },
+                )
+              }
             />
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-muted-foreground">설명</label>
             <textarea
               defaultValue={lecture?.description ?? ""}
-              onBlur={(e) => updateLecture.mutate({ description: e.target.value })}
+              onBlur={(e) =>
+                updateLecture.mutate(
+                  { description: e.target.value },
+                  {
+                    onSuccess: () => toast.success("설명이 저장되었습니다"),
+                    onError: () => toast.error("설명 저장 실패"),
+                  },
+                )
+              }
               className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
@@ -199,7 +215,15 @@ export default function EditCoursePage() {
             <span className="text-sm text-muted-foreground">비공개</span>
             <Switch
               checked={!!lecture?.isActive}
-              onCheckedChange={(v: boolean) => updateLecture.mutate({ isActive: Boolean(v) })}
+              onCheckedChange={(v: boolean) =>
+                updateLecture.mutate(
+                  { isActive: Boolean(v) },
+                  {
+                    onSuccess: () => toast.success("공개 상태가 변경되었습니다"),
+                    onError: () => toast.error("공개 상태 변경 실패"),
+                  },
+                )
+              }
             />
             <span className="text-sm text-muted-foreground">공개</span>
           </div>
@@ -209,7 +233,15 @@ export default function EditCoursePage() {
               <Input
                 type="number"
                 defaultValue={lecture?.price ?? 0}
-                onBlur={(e) => updateLecture.mutate({ price: Number(e.target.value || 0) })}
+                onBlur={(e) =>
+                  updateLecture.mutate(
+                    { price: Number(e.target.value || 0) },
+                    {
+                      onSuccess: () => toast.success("가격이 저장되었습니다"),
+                      onError: () => toast.error("가격 저장 실패"),
+                    },
+                  )
+                }
               />
             </div>
             <div className="grid gap-2">
@@ -220,7 +252,13 @@ export default function EditCoursePage() {
                 placeholder="미설정 시 비워두세요"
                 onBlur={(e) => {
                   const v = e.target.value
-                  updateLecture.mutate({ discountPrice: v === '' ? null : Number(v) })
+                  updateLecture.mutate(
+                    { discountPrice: v === '' ? null : Number(v) },
+                    {
+                      onSuccess: () => toast.success("할인 가격이 저장되었습니다"),
+                      onError: () => toast.error("할인 가격 저장 실패"),
+                    },
+                  )
                 }}
               />
             </div>
@@ -233,10 +271,16 @@ export default function EditCoursePage() {
                 if (!file) return
                 const objectUrl = URL.createObjectURL(file)
                 setLocalPreviewUrl(objectUrl)
-                const { key } = await uploadImageWebp(file, { pathPrefix: 'lectures', quality: 0.8, maxWidth: 1920 })
-                updateLecture.mutate({ imageUrl: key })
-                URL.revokeObjectURL(objectUrl)
-                setLocalPreviewUrl(null)
+                try {
+                  const { key } = await uploadImageWebp(file, { pathPrefix: 'lectures', quality: 0.8, maxWidth: 1920 })
+                  await updateLecture.mutateAsync({ imageUrl: key })
+                  toast.success('대표 이미지가 업데이트되었습니다')
+                } catch {
+                  toast.error('대표 이미지 업로드 실패')
+                } finally {
+                  URL.revokeObjectURL(objectUrl)
+                  setLocalPreviewUrl(null)
+                }
               }} />
               {(() => {
                 const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? 'https://storage.lingoost.com'
@@ -292,137 +336,197 @@ export default function EditCoursePage() {
                     <div className="p-3 text-sm text-muted-foreground">수업이 없습니다.</div>
                   ) : (
                     cur.CurriculumSections.map((sec) => (
-                      <div key={sec.id}>
-                        <div className="flex items-center p-3 gap-3">
-                          <Input
-                            defaultValue={sec.title}
-                            onBlur={(e) =>
-                              updateSection.mutate({ sectionId: sec.id, title: e.target.value })
-                            }
-                          />
-                          <div className="ml-auto flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground">공개</span>
-                            <Switch
-                              checked={sec.isActive}
-                              onCheckedChange={(v: boolean) =>
-                                updateSection.mutate({ sectionId: sec.id, isActive: Boolean(v) })
-                              }
-                            />
-                            <Button
-                              variant="ghost"
-                              className="text-red-600"
-                              onClick={() => deleteSection.mutate(sec.id)}
-                            >
-                              삭제
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="p-3 space-y-4">
-                          <div className="grid gap-2">
-                            <label className="text-sm text-muted-foreground">수업 설명</label>
-                            <textarea
-                              defaultValue={sec.description ?? ""}
-                              onBlur={(e) =>
-                                updateSection.mutate({ sectionId: sec.id, description: e.target.value })
-                              }
-                              className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            />
-                          </div>
-
-                          <Separator />
-
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium">강의 영상</div>
-                              <VideoDropzone
-                                onFiles={async (files) => {
-                                  const file = files[0]
-                                  if (!file) return
-                                  try {
-                                    const { key } = await uploadBinary(file, { pathPrefix: "videos", contentType: file.type })
-                                    await createVideo.mutateAsync({ curriculumSectionId: sec.id, videoUrl: key, title: file.name })
-                                    toast.success("영상 업로드 완료")
-                                  } catch {
-                                    toast.error("영상 업로드 실패")
+                      <div key={sec.id} className="p-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* 좌측: 메타 정보 카드 */}
+                          <Card>
+                            <CardHeader className="space-y-1">
+                              <CardTitle className="text-base">수업 정보</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                              <div className="grid gap-2">
+                                <label className="text-xs text-muted-foreground">수업 제목</label>
+                                <Input
+                                  defaultValue={sec.title}
+                                  onBlur={(e) =>
+                                    updateSection.mutate(
+                                      { sectionId: sec.id, title: e.target.value },
+                                      {
+                                        onSuccess: () => toast.success("수업 제목이 저장되었습니다"),
+                                        onError: () => toast.error("수업 제목 저장 실패"),
+                                      },
+                                    )
                                   }
-                                }}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              {(sec.Videos ?? []).length === 0 ? (
-                                <div className="text-sm text-muted-foreground">등록된 영상이 없습니다.</div>
-                              ) : (
-                                (sec.Videos ?? []).map((v) => {
-                                  const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
-                                  const href = `${cdnBase}/${v.videoUrl}`
-                                  return (
-                                    <div key={v.id} className="flex items-center gap-2">
-                                      <Input
-                                        defaultValue={v.title ?? ""}
-                                        onBlur={(e) => updateVideo.mutate({ id: v.id, title: e.target.value })}
-                                      />
-                                      <a href={href} target="_blank" rel="noreferrer" className="text-sm underline">
-                                        보기
-                                      </a>
-                                      <Button
-                                        variant="ghost"
-                                        className="text-red-600"
-                                        onClick={() => deleteVideo.mutate(v.id)}
-                                      >
-                                        삭제
-                                      </Button>
-                                    </div>
-                                  )
-                                })
-                              )}
-                            </div>
-                          </div>
-
-                          <Separator />
-
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium">참고 자료</div>
-                              <FileDropzone
-                                onFiles={async (files) => {
-                                  const file = files[0]
-                                  if (!file) return
-                                  try {
-                                    const { key } = await uploadBinary(file, { pathPrefix: "files", contentType: file.type })
-                                    await createFileRec.mutateAsync({ curriculumSectionId: sec.id, url: key })
-                                    toast.success("참고자료 업로드 완료")
-                                  } catch {
-                                    toast.error("참고자료 업로드 실패")
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <label className="text-xs text-muted-foreground">수업 설명</label>
+                                <textarea
+                                  defaultValue={sec.description ?? ""}
+                                  onBlur={(e) =>
+                                    updateSection.mutate(
+                                      { sectionId: sec.id, description: e.target.value },
+                                      {
+                                        onSuccess: () => toast.success("수업 설명이 저장되었습니다"),
+                                        onError: () => toast.error("수업 설명 저장 실패"),
+                                      },
+                                    )
                                   }
-                                }}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              {(sec.Files ?? []).length === 0 ? (
-                                <div className="text-sm text-muted-foreground">등록된 자료가 없습니다.</div>
-                              ) : (
-                                (sec.Files ?? []).map((f) => {
-                                  const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
-                                  const href = `${cdnBase}/${f.url}`
-                                  return (
-                                    <div key={f.id} className="flex items-center gap-2">
-                                      <a href={href} target="_blank" rel="noreferrer" className="text-sm underline truncate max-w-xs">
-                                        {f.url}
-                                      </a>
-                                      <Button
-                                        variant="ghost"
-                                        className="text-red-600"
-                                        onClick={() => deleteFileRec.mutate(f.id)}
-                                      >
-                                        삭제
-                                      </Button>
-                                    </div>
-                                  )
-                                })
-                              )}
-                            </div>
-                          </div>
+                                  className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                />
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-muted-foreground">비공개</span>
+                                <Switch
+                                  checked={sec.isActive}
+                                  onCheckedChange={(v: boolean) =>
+                                    updateSection.mutate(
+                                      { sectionId: sec.id, isActive: Boolean(v) },
+                                      {
+                                        onSuccess: () => toast.success("수업 공개 상태가 변경되었습니다"),
+                                        onError: () => toast.error("수업 공개 상태 변경 실패"),
+                                      },
+                                    )
+                                  }
+                                />
+                                <span className="text-xs text-muted-foreground">공개</span>
+                                <Button
+                                  variant="ghost"
+                                  className="ml-auto text-red-600"
+                                  onClick={async () => {
+                                    try {
+                                      await deleteSection.mutateAsync(sec.id)
+                                      toast.success("수업이 삭제되었습니다")
+                                    } catch {
+                                      toast.error("수업 삭제 실패")
+                                    }
+                                  }}
+                                >
+                                  수업 삭제
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* 우측: 업로드 카드 (영상/자료) */}
+                          <Card>
+                            <CardHeader className="space-y-1">
+                              <CardTitle className="text-base">업로드</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                              <div className="space-y-2">
+                                <div className="text-sm font-medium">강의 영상</div>
+                                <p className="text-xs text-muted-foreground">MP4 등 동영상 파일을 선택하거나 드래그앤드랍하세요.</p>
+                                <VideoDropzone
+                                  onFiles={async (files) => {
+                                    const file = files[0]
+                                    if (!file) return
+                                    try {
+                                      const { key } = await uploadBinary(file, { pathPrefix: "videos", contentType: file.type })
+                                      await createVideo.mutateAsync({ curriculumSectionId: sec.id, videoUrl: key, title: file.name })
+                                      toast.success("영상 업로드 완료")
+                                    } catch {
+                                      toast.error("영상 업로드 실패")
+                                    }
+                                  }}
+                                />
+                                <div className="space-y-2">
+                                  {(sec.Videos ?? []).length === 0 ? (
+                                    <div className="text-sm text-muted-foreground">등록된 영상이 없습니다.</div>
+                                  ) : (
+                                    (sec.Videos ?? []).map((v) => {
+                                      const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
+                                      const href = `${cdnBase}/${v.videoUrl}`
+                                      return (
+                                        <div key={v.id} className="flex items-center gap-2">
+                                          <Input
+                                            defaultValue={v.title ?? ""}
+                                            onBlur={(e) =>
+                                              updateVideo.mutate(
+                                                { id: v.id, title: e.target.value },
+                                                {
+                                                  onSuccess: () => toast.success("영상 제목이 저장되었습니다"),
+                                                  onError: () => toast.error("영상 제목 저장 실패"),
+                                                },
+                                              )
+                                            }
+                                          />
+                                          <a href={href} target="_blank" rel="noreferrer" className="text-sm underline">
+                                            보기
+                                          </a>
+                                          <Button
+                                            variant="ghost"
+                                            className="text-red-600"
+                                            onClick={async () => {
+                                              try {
+                                                await deleteVideo.mutateAsync(v.id)
+                                                toast.success("영상이 삭제되었습니다")
+                                              } catch {
+                                                toast.error("영상 삭제 실패")
+                                              }
+                                            }}
+                                          >
+                                            삭제
+                                          </Button>
+                                        </div>
+                                      )
+                                    })
+                                  )}
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              <div className="space-y-2">
+                                <div className="text-sm font-medium">참고 자료</div>
+                                <p className="text-xs text-muted-foreground">PDF/이미지/기타 파일을 선택하거나 드래그앤드랍하세요.</p>
+                                <FileDropzone
+                                  onFiles={async (files) => {
+                                    const file = files[0]
+                                    if (!file) return
+                                    try {
+                                      const { key } = await uploadBinary(file, { pathPrefix: "files", contentType: file.type })
+                                      await createFileRec.mutateAsync({ curriculumSectionId: sec.id, url: key })
+                                      toast.success("참고자료 업로드 완료")
+                                    } catch {
+                                      toast.error("참고자료 업로드 실패")
+                                    }
+                                  }}
+                                />
+                                <div className="space-y-2">
+                                  {(sec.Files ?? []).length === 0 ? (
+                                    <div className="text-sm text-muted-foreground">등록된 자료가 없습니다.</div>
+                                  ) : (
+                                    (sec.Files ?? []).map((f) => {
+                                      const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
+                                      const href = `${cdnBase}/${f.url}`
+                                      return (
+                                        <div key={f.id} className="flex items-center gap-2">
+                                          <a href={href} target="_blank" rel="noreferrer" className="text-sm underline truncate max-w-xs">
+                                            {f.url}
+                                          </a>
+                                          <Button
+                                            variant="ghost"
+                                            className="text-red-600"
+                                            onClick={async () => {
+                                              try {
+                                                await deleteFileRec.mutateAsync(f.id)
+                                                toast.success("참고자료가 삭제되었습니다")
+                                              } catch {
+                                                toast.error("참고자료 삭제 실패")
+                                              }
+                                            }}
+                                          >
+                                            삭제
+                                          </Button>
+                                        </div>
+                                      )
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
                         </div>
                       </div>
                     ))

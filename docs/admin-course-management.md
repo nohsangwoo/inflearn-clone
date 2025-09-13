@@ -68,6 +68,7 @@ model Lecture {
 - 커리큘럼/섹션
   - `GET /api/admin/curriculums/[lectureId]`
     - 응답: `Curriculum[]` + 각 `CurriculumSections[]` 포함
+    - 포함: 각 섹션에 `Videos[]`, `Files[]` 포함
   - `POST /api/admin/curriculums/[lectureId]`
     - 바디: `{ title?: string, description?: string }`
     - 동작: 커리큘럼 1개 생성 + 기본 섹션 1개 생성
@@ -86,6 +87,20 @@ model Lecture {
     - 바디: `{ contentType: string, pathPrefix?: string }`
     - 응답: `{ url, key }`
     - S3 PUT URL과 객체 키 반환. 키만 DB에 저장하고 표시 시 CDN 조합.
+
+- 영상
+  - `POST /api/admin/videos`
+    - 바디: `{ curriculumSectionId: number, videoUrl: string, title?: string, description?: string, thumbnailUrl?: string, language?: Language }`
+    - 동작: 섹션에 영상 레코드 생성(사전 업로드된 S3 키를 `videoUrl`로 저장)
+  - `PATCH /api/admin/videos/[videoId]`
+    - 바디(부분 갱신): `{ title?, description?, thumbnailUrl?, language?, videoUrl?, duration? }`
+  - `DELETE /api/admin/videos/[videoId]`
+
+- 참고자료 파일 레코드
+  - `POST /api/admin/files`
+    - 바디: `{ curriculumSectionId: number, url: string }`
+    - 동작: 섹션에 파일 레코드 생성(사전 업로드된 S3 키를 `url`로 저장)
+  - `DELETE /api/admin/files/[fileId]`
 
 Next.js 15 주의점
 
@@ -117,8 +132,17 @@ Next.js 15 주의점
   - 커리큘럼/섹션
     - “섹션 추가” → 커리큘럼 생성(기본 수업 1개 포함)
     - 섹션(수업) 목록 렌더링: 각 강의 내부에서 1, 2, 3… 순서로 표시(전역 id 아님)
-    - 수업 제목 수정, 공개 토글(`CurriculumSection.isActive`), 수업 삭제
+    - 수업 제목/설명 수정, 공개 토글(`CurriculumSection.isActive`), 수업 삭제
     - 커리큘럼 삭제 시 하위 리소스 일괄 삭제
+  - 섹션 업로드 UI(드래그앤드랍)
+    - 강의 영상: `react-dropzone` + `uploadBinary` → presign → S3 PUT → `POST /api/admin/videos`
+      - 목록 표시, 제목 인라인 수정(`PATCH /api/admin/videos/[id]`), 삭제(`DELETE /api/admin/videos/[id]`)
+    - 참고 자료: `react-dropzone` + `uploadBinary` → presign → S3 PUT → `POST /api/admin/files`
+      - 목록 표시, 삭제(`DELETE /api/admin/files/[id]`)
+  - 레이아웃
+    - shadcn 카드 기반 2열(모바일 1열): 좌측 “수업 정보”, 우측 “업로드(영상/자료)”
+  - 피드백
+    - 모든 주요 동작에 `sonner` 토스트로 성공/실패 알림 표시
 
 CDN URL 규칙
 
@@ -156,11 +180,27 @@ const { key } = await uploadImageWebp(file, { pathPrefix: 'lectures', quality: 0
 await axios.patch(`/api/admin/courses/${lectureId}`, { imageUrl: key })
 ```
 
+- 일반 바이너리 업로드
+  - 위치: `src/lib/upload/uploadBinary.ts`
+  - 시그니처
+
+```ts
+export async function uploadBinary(
+  file: File | Blob,
+  options?: { pathPrefix?: string; contentType?: string }
+): Promise<{ key: string; cdnUrl: string }>
+```
+
+  - 동작: presign(`POST /api/admin/files/presign`) → S3 PUT → `{ key, cdnUrl }` 반환
+  - 사용처: 섹션 영상/참고자료 업로드
+
 ---
 
 ### UI 컴포넌트
 
 - `src/components/ui/switch.tsx`: Radix Switch 래퍼. `checked`, `onCheckedChange(checked:boolean)` 지원.
+- `react-dropzone`: 드래그앤드랍 업로드 구현(섹션 영상/자료)
+- `sonner`: 업로드/저장/삭제 성공/실패 토스트 알림(Provider 초기화는 `src/components/providers.tsx` 참고)
 
 ---
 
@@ -170,6 +210,8 @@ await axios.patch(`/api/admin/courses/${lectureId}`, { imageUrl: key })
 - 섹션 번호 표시는 강의 내부 인덱스로 처리했으나, 실제 정렬 보장 필요 시 `order` 컬럼 도입 권장(생성 시 `max(order)+1`).
 - 커리큘럼 삭제 트랜잭션에서 Prisma 관계 이름 대소문자를 반드시 정확히 사용.
 - Next.js 15 App Router의 동적 API에서 `params`는 Promise이므로 항상 `await params`로 언래핑.
+- 현재 S3 객체 삭제는 DB 레코드 삭제와 별개로 동작. 필요 시 S3 삭제 API를 추가하여 동기화 권장.
+- 토스트 알림으로 사용자 피드백을 명확히 제공하여 편집 UX를 개선.
 
 ---
 

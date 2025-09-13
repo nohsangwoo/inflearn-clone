@@ -12,6 +12,8 @@ export type CourseItem = {
   thumbnail: string
   author: string
   price: string
+  originalPrice?: string
+  discountPercent?: number
   summary: string
   tags?: string[]
 }
@@ -59,11 +61,20 @@ export function CourseCard({ course }: { course: CourseItem }) {
             ))}
           </div>
         )}
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-sm font-semibold">{course.price}</span>
-          <div className="flex items-center gap-2">
-            <Button size="sm" aria-label="담기">
-              <ShoppingCart className="h-4 w-4 mr-2" /> 담기
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex-1 min-w-0 flex items-baseline gap-1">
+            <span className="text-sm font-semibold whitespace-nowrap">{course.price}</span>
+            {course.originalPrice && (
+              <span className="text-[11px] text-muted-foreground line-through whitespace-nowrap">{course.originalPrice}</span>
+            )}
+            {typeof course.discountPercent === "number" && course.discountPercent > 0 && (
+              <span className="text-[10px] font-semibold text-green-700 bg-green-50 rounded px-1 py-0.5 whitespace-nowrap">-{course.discountPercent}%</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button size="sm" aria-label="담기" className="px-2">
+              <ShoppingCart className="h-4 w-4 mr-0 xs:mr-2" />
+              <span className="hidden xs:inline">담기</span>
             </Button>
           </div>
         </div>

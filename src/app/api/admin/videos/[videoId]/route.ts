@@ -1,4 +1,5 @@
 import prisma from "@/lib/prismaClient"
+import { Language } from "@prisma/client"
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
@@ -22,6 +23,9 @@ export async function PATCH(
 
   const body = await req.json().catch(() => ({}))
   const { title, description, thumbnailUrl, language, videoUrl, duration } = body ?? {}
+  const languageValue = typeof language === "string" && (Object.values(Language) as string[]).includes(language)
+    ? (language as Language)
+    : undefined
 
   const updated = await prisma.video.update({
     where: { id },
@@ -29,7 +33,7 @@ export async function PATCH(
       title: typeof title === "string" ? title : undefined,
       description: typeof description === "string" ? description : undefined,
       thumbnailUrl: typeof thumbnailUrl === "string" ? thumbnailUrl : undefined,
-      language: typeof language === "string" ? (language as any) : undefined,
+      language: languageValue,
       videoUrl: typeof videoUrl === "string" ? videoUrl : undefined,
       duration: typeof duration === "number" && !Number.isNaN(duration) ? duration : undefined,
     },
