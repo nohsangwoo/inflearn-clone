@@ -9,7 +9,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import axios from "axios"
 import { useParams } from "next/navigation"
 import { uploadImageWebp } from "@/lib/upload/uploadImageWebp"
+import { uploadBinary } from "@/lib/upload/uploadBinary"
 import { useState } from "react"
+import { toast } from "sonner"
+import { useDropzone } from "react-dropzone"
 
 type Curriculum = {
   id: number
@@ -22,6 +25,22 @@ type CurriculumSection = {
   title: string
   description: string | null
   isActive: boolean
+  Videos: Video[]
+  Files: FileItem[]
+}
+
+type Video = {
+  id: number
+  title?: string | null
+  description?: string | null
+  videoUrl: string
+  thumbnailUrl?: string | null
+  duration?: number | null
+}
+
+type FileItem = {
+  id: number
+  url: string
 }
 
 export default function EditCoursePage() {
@@ -84,7 +103,7 @@ export default function EditCoursePage() {
 
   const updateSection = useMutation({
     mutationFn: async (
-      payload: { sectionId: number; title?: string; isActive?: boolean }
+      payload: { sectionId: number; title?: string; description?: string; isActive?: boolean }
     ) => {
       const { sectionId, ...rest } = payload
       const { data } = await axios.patch(
@@ -101,6 +120,45 @@ export default function EditCoursePage() {
       await axios.delete(
         `/api/admin/curriculums/${lectureIdNum}/sections/${sectionId}`
       )
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
+  })
+
+  const createVideo = useMutation({
+    mutationFn: async (payload: { curriculumSectionId: number; videoUrl: string; title?: string }) => {
+      const { data } = await axios.post(`/api/admin/videos`, payload)
+      return data as Video
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
+  })
+
+  const updateVideo = useMutation({
+    mutationFn: async (payload: { id: number; title?: string; description?: string; thumbnailUrl?: string; language?: string; videoUrl?: string; duration?: number }) => {
+      const { id, ...rest } = payload
+      const { data } = await axios.patch(`/api/admin/videos/${id}`, rest)
+      return data as Video
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
+  })
+
+  const deleteVideo = useMutation({
+    mutationFn: async (id: number) => {
+      await axios.delete(`/api/admin/videos/${id}`)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
+  })
+
+  const createFileRec = useMutation({
+    mutationFn: async (payload: { curriculumSectionId: number; url: string }) => {
+      const { data } = await axios.post(`/api/admin/files`, payload)
+      return data as FileItem
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
+  })
+
+  const deleteFileRec = useMutation({
+    mutationFn: async (id: number) => {
+      await axios.delete(`/api/admin/files/${id}`)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
   })
@@ -234,28 +292,137 @@ export default function EditCoursePage() {
                     <div className="p-3 text-sm text-muted-foreground">수업이 없습니다.</div>
                   ) : (
                     cur.CurriculumSections.map((sec) => (
-                      <div key={sec.id} className="flex items-center p-3 gap-3">
-                        <Input
-                          defaultValue={sec.title}
-                          onBlur={(e) =>
-                            updateSection.mutate({ sectionId: sec.id, title: e.target.value })
-                          }
-                        />
-                        <div className="ml-auto flex items-center gap-2 text-sm">
-                          <span className="text-muted-foreground">공개</span>
-                          <Switch
-                            checked={sec.isActive}
-                            onCheckedChange={(v: boolean) =>
-                              updateSection.mutate({ sectionId: sec.id, isActive: Boolean(v) })
+                      <div key={sec.id}>
+                        <div className="flex items-center p-3 gap-3">
+                          <Input
+                            defaultValue={sec.title}
+                            onBlur={(e) =>
+                              updateSection.mutate({ sectionId: sec.id, title: e.target.value })
                             }
                           />
-                          <Button
-                            variant="ghost"
-                            className="text-red-600"
-                            onClick={() => deleteSection.mutate(sec.id)}
-                          >
-                            삭제
-                          </Button>
+                          <div className="ml-auto flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground">공개</span>
+                            <Switch
+                              checked={sec.isActive}
+                              onCheckedChange={(v: boolean) =>
+                                updateSection.mutate({ sectionId: sec.id, isActive: Boolean(v) })
+                              }
+                            />
+                            <Button
+                              variant="ghost"
+                              className="text-red-600"
+                              onClick={() => deleteSection.mutate(sec.id)}
+                            >
+                              삭제
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="p-3 space-y-4">
+                          <div className="grid gap-2">
+                            <label className="text-sm text-muted-foreground">수업 설명</label>
+                            <textarea
+                              defaultValue={sec.description ?? ""}
+                              onBlur={(e) =>
+                                updateSection.mutate({ sectionId: sec.id, description: e.target.value })
+                              }
+                              className="min-h-20 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            />
+                          </div>
+
+                          <Separator />
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium">강의 영상</div>
+                              <VideoDropzone
+                                onFiles={async (files) => {
+                                  const file = files[0]
+                                  if (!file) return
+                                  try {
+                                    const { key } = await uploadBinary(file, { pathPrefix: "videos", contentType: file.type })
+                                    await createVideo.mutateAsync({ curriculumSectionId: sec.id, videoUrl: key, title: file.name })
+                                    toast.success("영상 업로드 완료")
+                                  } catch {
+                                    toast.error("영상 업로드 실패")
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              {(sec.Videos ?? []).length === 0 ? (
+                                <div className="text-sm text-muted-foreground">등록된 영상이 없습니다.</div>
+                              ) : (
+                                (sec.Videos ?? []).map((v) => {
+                                  const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
+                                  const href = `${cdnBase}/${v.videoUrl}`
+                                  return (
+                                    <div key={v.id} className="flex items-center gap-2">
+                                      <Input
+                                        defaultValue={v.title ?? ""}
+                                        onBlur={(e) => updateVideo.mutate({ id: v.id, title: e.target.value })}
+                                      />
+                                      <a href={href} target="_blank" rel="noreferrer" className="text-sm underline">
+                                        보기
+                                      </a>
+                                      <Button
+                                        variant="ghost"
+                                        className="text-red-600"
+                                        onClick={() => deleteVideo.mutate(v.id)}
+                                      >
+                                        삭제
+                                      </Button>
+                                    </div>
+                                  )
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          <Separator />
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium">참고 자료</div>
+                              <FileDropzone
+                                onFiles={async (files) => {
+                                  const file = files[0]
+                                  if (!file) return
+                                  try {
+                                    const { key } = await uploadBinary(file, { pathPrefix: "files", contentType: file.type })
+                                    await createFileRec.mutateAsync({ curriculumSectionId: sec.id, url: key })
+                                    toast.success("참고자료 업로드 완료")
+                                  } catch {
+                                    toast.error("참고자료 업로드 실패")
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              {(sec.Files ?? []).length === 0 ? (
+                                <div className="text-sm text-muted-foreground">등록된 자료가 없습니다.</div>
+                              ) : (
+                                (sec.Files ?? []).map((f) => {
+                                  const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
+                                  const href = `${cdnBase}/${f.url}`
+                                  return (
+                                    <div key={f.id} className="flex items-center gap-2">
+                                      <a href={href} target="_blank" rel="noreferrer" className="text-sm underline truncate max-w-xs">
+                                        {f.url}
+                                      </a>
+                                      <Button
+                                        variant="ghost"
+                                        className="text-red-600"
+                                        onClick={() => deleteFileRec.mutate(f.id)}
+                                      >
+                                        삭제
+                                      </Button>
+                                    </div>
+                                  )
+                                })
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))
@@ -266,8 +433,50 @@ export default function EditCoursePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 드롭존 컴포넌트들 */}
+      <VideoDropzoneDefinitions />
+      <FileDropzoneDefinitions />
     </div>
   )
 }
+function VideoDropzoneDefinitions() { return null }
+function FileDropzoneDefinitions() { return null }
+
+type CommonDropzoneProps = { onFiles: (files: File[]) => Promise<void> | void }
+
+function VideoDropzone({ onFiles }: CommonDropzoneProps) {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    multiple: false,
+    accept: { "video/*": [] },
+    onDrop: (acceptedFiles) => onFiles(acceptedFiles),
+  })
+  return (
+    <div
+      {...getRootProps()}
+      className={`border rounded px-3 py-2 text-sm cursor-pointer ${isDragActive ? "bg-accent" : "bg-background"}`}
+    >
+      <input {...getInputProps()} />
+      {isDragActive ? "여기에 파일을 놓으세요" : "영상 선택 또는 드래그앤드랍"}
+    </div>
+  )
+}
+
+function FileDropzone({ onFiles }: CommonDropzoneProps) {
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    multiple: false,
+    onDrop: (acceptedFiles) => onFiles(acceptedFiles),
+  })
+  return (
+    <div
+      {...getRootProps()}
+      className={`border rounded px-3 py-2 text-sm cursor-pointer ${isDragActive ? "bg-accent" : "bg-background"}`}
+    >
+      <input {...getInputProps()} />
+      {isDragActive ? "여기에 파일을 놓으세요" : "파일 선택 또는 드래그앤드랍"}
+    </div>
+  )
+}
+
 
 

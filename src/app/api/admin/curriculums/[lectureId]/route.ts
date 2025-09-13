@@ -22,6 +22,10 @@ export async function GET(
     include: {
       CurriculumSections: {
         orderBy: { id: 'asc' },
+        include: {
+          Videos: true,
+          Files: true,
+        },
       },
     },
   })
