@@ -140,6 +140,7 @@ model CurriculumSection {
   updatedAt    DateTime    @updatedAt // 수정일
   Curriculum   Curriculum? @relation(fields: [curriculumId], references: [id]) // 강의 커리큘럼
   curriculumId Int? // 강의 커리큘럼 섹션 ID
+  isActive     Boolean     @default(true) // 강의 커리큘럼 섹션 활성 여부
   Videos       Video[] // 사실상 1:1인데 여지를 남겨둠
   Files        File[] // 강의 커리큘럼 섹션 파일
 }
