@@ -14,7 +14,8 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { useDropzone } from "react-dropzone"
 import DubbingUploader from "./_components/dubbing-uploader"
-import HlsPlayer from "@/components/video/hls-player"
+import HlsPlayerModal from "@/components/video/hls-player-modal"
+import OriginalPlayer from "@/components/video/original-player"
 
 type Curriculum = {
   id: number
@@ -438,9 +439,7 @@ export default function EditCoursePage() {
                                                 )
                                               }
                                             />
-                                            <a href={href} target="_blank" rel="noreferrer" className="text-sm underline">
-                                              보기
-                                            </a>
+                                            <OriginalPlayer videoUrl={v.videoUrl} title={v.title ?? undefined} />
                                             <Button
                                               variant="ghost"
                                               className="text-red-600"
@@ -473,7 +472,7 @@ export default function EditCoursePage() {
                                             )}
                                           </div>
                                           {/* HLS 미리보기 */}
-                                          <HlsPlayer sectionId={sec.id} />
+                                          <HlsPlayerModal sectionId={sec.id} title={sec.title} />
                                         </div>
                                       )
                                     })
