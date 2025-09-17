@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Languages, AlertCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import Hls from 'hls.js'
+import { useQuery } from "@tanstack/react-query"
+import axios from "axios"
 
 type Props = {
   sectionId: number
+  lectureId: number
   title?: string
 }
 
@@ -16,7 +19,38 @@ type AudioTrack = {
   id: number
   language: string
   label: string
-  roles: string[]
+  status: string
+}
+
+type DubItem = {
+  id: string
+  lang: string
+  status: string
+  url?: string | null
+}
+
+type Video = {
+  id: number
+  title?: string | null
+  description?: string | null
+  videoUrl: string
+  thumbnailUrl?: string | null
+  duration?: number | null
+  DubTrack?: DubItem[]
+}
+
+type CurriculumSection = {
+  id: number
+  title: string
+  description: string | null
+  isActive: boolean
+  Videos: Video[]
+}
+
+type Curriculum = {
+  id: number
+  lectureId: number | null
+  CurriculumSections: CurriculumSection[]
 }
 
 const langNameMap: Record<string, string> = {
@@ -54,37 +88,97 @@ const langNameMap: Record<string, string> = {
   fil: "필리핀어",
 }
 
-export default function HlsPlayerModal({ sectionId, title }: Props) {
+export default function CachedHlsPlayerModal({ sectionId, lectureId, title }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([])
   const [currentTrackId, setCurrentTrackId] = useState<number>(-1)
   const [showLanguageSelector, setShowLanguageSelector] = useState(false)
+  const [currentLanguage, setCurrentLanguage] = useState<string>('ja')
 
   const cdn = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
   const masterUrl = useMemo(() => `${cdn.replace(/\/$/, "")}/assets/curriculumsection/${sectionId}/master.m3u8`, [cdn, sectionId])
 
-  console.log('[HlsPlayerModal] Master URL:', masterUrl)
+  console.log('[CachedHlsPlayerModal] Section ID:', sectionId, 'Lecture ID:', lectureId)
+  console.log('[CachedHlsPlayerModal] Master URL:', masterUrl)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const languageSelectorRef = useRef<HTMLDivElement>(null)
 
+  // Use the same query key as admin page to get cached data
+  const { data: curriculums } = useQuery({
+    queryKey: ["curriculums", lectureId],
+    queryFn: async () => {
+      const { data } = await axios.get(`/api/admin/curriculums/${lectureId}`)
+      return data as Curriculum[]
+    },
+    enabled: isOpen && Number.isFinite(lectureId),
+  })
+
+  // Extract DubTrack data from cached curriculum data
+  useEffect(() => {
+    if (!curriculums || !isOpen) return
+
+    console.log('[CachedHlsPlayerModal] Processing curriculum data:', curriculums)
+
+    // Find the section and its video data
+    let videoWithTracks: Video | null = null
+
+    for (const curriculum of curriculums) {
+      const section = curriculum.CurriculumSections.find(sec => sec.id === sectionId)
+      if (section && section.Videos.length > 0) {
+        videoWithTracks = section.Videos[0] // Assume first video
+        break
+      }
+    }
+
+    if (videoWithTracks && videoWithTracks.DubTrack) {
+      console.log('[CachedHlsPlayerModal] Found DubTrack data:', videoWithTracks.DubTrack)
+
+      // Filter ready tracks and create audio track list
+      const readyTracks = videoWithTracks.DubTrack.filter((track: DubItem) => track.status === 'ready')
+
+      const tracks: AudioTrack[] = readyTracks.map((track: DubItem, index: number) => ({
+        id: index,
+        language: track.lang,
+        label: langNameMap[track.lang] || track.lang.toUpperCase(),
+        status: track.status
+      }))
+
+      console.log('[CachedHlsPlayerModal] Generated audio tracks:', tracks)
+      setAudioTracks(tracks)
+
+      // Set default language (prefer Japanese, fallback to first available)
+      const preferredTrack = tracks.find(t => t.language === 'ja') || tracks[0]
+      if (preferredTrack) {
+        setCurrentLanguage(preferredTrack.language)
+        setCurrentTrackId(preferredTrack.id)
+        console.log('[CachedHlsPlayerModal] Set default language:', preferredTrack.language)
+      }
+    } else {
+      console.warn('[CachedHlsPlayerModal] No DubTrack data found for section:', sectionId)
+      setAudioTracks([])
+    }
+
+    setIsLoading(false)
+  }, [curriculums, sectionId, isOpen])
+
   // Initialize HLS.js when modal opens
   useEffect(() => {
-    console.log('[HlsPlayerModal] useEffect triggered - isOpen:', isOpen, 'videoRef:', !!videoRef.current)
+    console.log('[CachedHlsPlayerModal] useEffect triggered - isOpen:', isOpen, 'videoRef:', !!videoRef.current)
 
     if (!isOpen) {
       // Reset state and cleanup when modal closes
-      console.log('[HlsPlayerModal] Modal closed, cleaning up...')
+      console.log('[CachedHlsPlayerModal] Modal closed, cleaning up...')
       setAudioTracks([])
       setError(null)
       setIsLoading(true)
       setCurrentTrackId(-1)
 
       if (hlsRef.current) {
-        console.log('[HlsPlayerModal] Destroying existing HLS instance')
+        console.log('[CachedHlsPlayerModal] Destroying existing HLS instance')
         hlsRef.current.destroy()
         hlsRef.current = null
       }
@@ -94,37 +188,20 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
     // Wait for video element to be ready
     const initializePlayer = () => {
       if (!videoRef.current) {
-        console.log('[HlsPlayerModal] Video ref not ready, retrying...')
+        console.log('[CachedHlsPlayerModal] Video ref not ready, retrying...')
         setTimeout(initializePlayer, 100)
         return
       }
 
-      console.log('[HlsPlayerModal] Video ref ready, initializing player...')
-      console.log('[HlsPlayerModal] Master URL:', masterUrl)
-      console.log('[HlsPlayerModal] Hls.isSupported():', Hls.isSupported())
+      console.log('[CachedHlsPlayerModal] Video ref ready, initializing player...')
+      console.log('[CachedHlsPlayerModal] Master URL:', masterUrl)
+      console.log('[CachedHlsPlayerModal] Hls.isSupported():', Hls.isSupported())
 
       const video = videoRef.current
 
-      // Test native HLS support first
-      const canPlayHls = video.canPlayType('application/vnd.apple.mpegurl')
-      console.log('[HlsPlayerModal] Native HLS support:', canPlayHls)
-
-      if (canPlayHls) {
-        console.log('[HlsPlayerModal] Using native HLS support')
-        video.src = masterUrl
-
-        video.addEventListener('loadedmetadata', () => {
-          console.log('[HlsPlayerModal] Native HLS metadata loaded')
-          setIsLoading(false)
-        })
-
-        video.addEventListener('error', (e) => {
-          console.error('[HlsPlayerModal] Native HLS error:', e)
-          setError('네이티브 HLS 재생 오류')
-        })
-
-      } else if (Hls.isSupported()) {
-        console.log('[HlsPlayerModal] Using HLS.js')
+      // Always prefer HLS.js for better audio track control
+      if (Hls.isSupported()) {
+        console.log('[CachedHlsPlayerModal] Using HLS.js')
 
         const hls = new Hls({
           debug: true,
@@ -137,105 +214,47 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
         })
 
         hlsRef.current = hls
-        console.log('[HlsPlayerModal] HLS instance created:', hls)
+        console.log('[CachedHlsPlayerModal] HLS instance created:', hls)
 
-        // Add all event listeners first
-        hls.on(Hls.Events.MEDIA_ATTACHING, () => {
-          console.log('[HlsPlayerModal] Media attaching...')
-        })
-
-        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-          console.log('[HlsPlayerModal] Media attached successfully')
-        })
-
-        hls.on(Hls.Events.MANIFEST_LOADING, () => {
-          console.log('[HlsPlayerModal] Manifest loading started...')
-        })
-
-        hls.on(Hls.Events.MANIFEST_LOADED, (event, data) => {
-          console.log('[HlsPlayerModal] Manifest loaded:', data)
-        })
-
+        // Add event listeners
         hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-          console.log('[HlsPlayerModal] Manifest parsed:', data)
-          console.log('[HlsPlayerModal] Full data object:', JSON.stringify(data, null, 2))
+          console.log('[CachedHlsPlayerModal] Manifest parsed:', data)
 
-          // Try multiple ways to get audio tracks
-          const tracks = hls.audioTracks
-          console.log('[HlsPlayerModal] HLS audio tracks:', tracks)
-          console.log('[HlsPlayerModal] HLS audio tracks length:', tracks ? tracks.length : 0)
+          // Since we have audio tracks from DB, try to set HLS audio track if available
+          if (hls.audioTracks && hls.audioTracks.length > 0) {
+            console.log('[CachedHlsPlayerModal] HLS detected audio tracks:', hls.audioTracks)
 
-          // Also check the manifest data directly
-          if (data && data.audioTracks) {
-            console.log('[HlsPlayerModal] Audio tracks from data:', data.audioTracks)
-          }
-
-          // Check if there are alternative audio groups in the manifest
-          if (data && data.altAudio) {
-            console.log('[HlsPlayerModal] Alternative audio tracks:', data.altAudio)
-          }
-
-          // Create tracks from manifest data if HLS audioTracks is empty
-          let trackList = []
-
-          if (tracks && tracks.length > 0) {
-            trackList = tracks
-          } else if (data && data.audioTracks && data.audioTracks.length > 0) {
-            trackList = data.audioTracks
-          } else {
-            // Manually create tracks based on known languages from m3u8
-            console.log('[HlsPlayerModal] Creating manual tracks based on known languages')
-            trackList = [
-              { name: '일본어', lang: 'ja', language: 'ja' },
-              { name: '중국어', lang: 'zh', language: 'zh' },
-              { name: '영어', lang: 'en', language: 'en' },
-              { name: '프랑스어', lang: 'fr', language: 'fr' }
-            ]
-          }
-
-          console.log('[HlsPlayerModal] Final track list:', trackList)
-
-          if (trackList && trackList.length > 0) {
-            const formattedTracks = trackList.map((track, index) => ({
-              id: index,
-              language: track.lang || track.language || track.name || '',
-              label: langNameMap[track.lang || track.language || track.name || ''] || track.name || track.label || `Track ${index + 1}`,
-              roles: track.roles || []
-            }))
-
-            console.log('[HlsPlayerModal] Formatted tracks:', formattedTracks)
-            setAudioTracks(formattedTracks)
-
-            // Set default track (prefer Japanese)
-            const jaTrack = formattedTracks.find(t => t.language === 'ja')
-            if (jaTrack && hls.audioTracks && hls.audioTracks.length > 0) {
-              hls.audioTrack = jaTrack.id
-              setCurrentTrackId(jaTrack.id)
-            } else if (formattedTracks.length > 0) {
-              setCurrentTrackId(0)
+            // Try to find matching track based on current language
+            const targetTrack = audioTracks.find(t => t.language === currentLanguage)
+            if (targetTrack) {
+              const hlsTrackIndex = hls.audioTracks.findIndex(t =>
+                t.lang === currentLanguage || t.language === currentLanguage
+              )
+              if (hlsTrackIndex >= 0) {
+                hls.audioTrack = hlsTrackIndex
+                console.log('[CachedHlsPlayerModal] Set HLS audio track to:', hlsTrackIndex)
+              }
             }
-          } else {
-            console.warn('[HlsPlayerModal] No audio tracks found in any method')
           }
 
           setIsLoading(false)
         })
 
         hls.on(Hls.Events.ERROR, (event, data) => {
-          console.error('[HlsPlayerModal] HLS error:', event, data)
+          console.error('[CachedHlsPlayerModal] HLS error:', event, data)
 
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                console.error('[HlsPlayerModal] Network error:', data.details)
+                console.error('[CachedHlsPlayerModal] Network error:', data.details)
                 setError(`네트워크 오류: ${data.details}`)
                 break
               case Hls.ErrorTypes.MEDIA_ERROR:
-                console.error('[HlsPlayerModal] Media error:', data.details)
+                console.error('[CachedHlsPlayerModal] Media error:', data.details)
                 setError(`미디어 오류: ${data.details}`)
                 break
               default:
-                console.error('[HlsPlayerModal] Other error:', data.details)
+                console.error('[CachedHlsPlayerModal] Other error:', data.details)
                 setError(`재생 오류: ${data.details}`)
                 break
             }
@@ -244,21 +263,50 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
         })
 
         hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (event, data) => {
-          console.log('[HlsPlayerModal] Audio track switched to:', data)
-          setCurrentTrackId(data.id)
+          console.log('[CachedHlsPlayerModal] Audio track switched to:', data)
+          // Update current track based on HLS event
+          if (hls.audioTracks && data.id < hls.audioTracks.length) {
+            const hlsTrack = hls.audioTracks[data.id]
+            const matchingTrack = audioTracks.find(t =>
+              t.language === hlsTrack.lang || t.language === hlsTrack.language
+            )
+            if (matchingTrack) {
+              setCurrentTrackId(matchingTrack.id)
+              setCurrentLanguage(matchingTrack.language)
+            }
+          }
         })
 
-        // Now attach and load
-        console.log('[HlsPlayerModal] Attaching media to video element...')
+        // Attach and load
+        console.log('[CachedHlsPlayerModal] Attaching media to video element...')
         hls.attachMedia(video)
 
-        console.log('[HlsPlayerModal] Loading source:', masterUrl)
+        console.log('[CachedHlsPlayerModal] Loading source:', masterUrl)
         hls.loadSource(masterUrl)
 
       } else {
-        console.error('[HlsPlayerModal] HLS is not supported in this browser')
-        setError('이 브라우저에서는 HLS 재생이 지원되지 않습니다.')
-        setIsLoading(false)
+        // Fallback to native HLS support
+        const canPlayHls = video.canPlayType('application/vnd.apple.mpegurl')
+        console.log('[CachedHlsPlayerModal] Native HLS support:', canPlayHls)
+
+        if (canPlayHls) {
+          console.log('[CachedHlsPlayerModal] Using native HLS support as fallback')
+          video.src = masterUrl
+
+          video.addEventListener('loadedmetadata', () => {
+            console.log('[CachedHlsPlayerModal] Native HLS metadata loaded')
+            setIsLoading(false)
+          })
+
+          video.addEventListener('error', (e) => {
+            console.error('[CachedHlsPlayerModal] Native HLS error:', e)
+            setError('네이티브 HLS 재생 오류')
+          })
+        } else {
+          console.error('[CachedHlsPlayerModal] HLS is not supported in this browser')
+          setError('이 브라우저에서는 HLS 재생이 지원되지 않습니다.')
+          setIsLoading(false)
+        }
       }
     }
 
@@ -267,12 +315,12 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
 
     return () => {
       if (hlsRef.current) {
-        console.log('[HlsPlayerModal] Cleanup: destroying HLS instance')
+        console.log('[CachedHlsPlayerModal] Cleanup: destroying HLS instance')
         hlsRef.current.destroy()
         hlsRef.current = null
       }
     }
-  }, [masterUrl, isOpen])
+  }, [masterUrl, isOpen, audioTracks, currentLanguage])
 
   // Close language selector when clicking outside
   useEffect(() => {
@@ -289,45 +337,53 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
   }, [showLanguageSelector])
 
   const switchAudioTrack = (trackId: number) => {
-    if (!hlsRef.current) {
-      console.warn('[HlsPlayerModal] HLS not initialized')
-      return
-    }
-
     const track = audioTracks.find(t => t.id === trackId)
     if (!track) {
-      console.warn('[HlsPlayerModal] Track not found:', trackId)
+      console.warn('[CachedHlsPlayerModal] Track not found:', trackId)
+      toast.error('해당 언어 트랙을 찾을 수 없습니다')
       return
     }
 
-    console.log('[HlsPlayerModal] Switching to audio track:', track)
-    console.log('[HlsPlayerModal] Available HLS audio tracks:', hlsRef.current.audioTracks)
+    console.log('[CachedHlsPlayerModal] Switching to audio track:', track)
 
-    // Only try to switch if HLS has actual audio tracks
-    if (hlsRef.current.audioTracks && hlsRef.current.audioTracks.length > 0) {
-      hlsRef.current.audioTrack = trackId
-      console.log('[HlsPlayerModal] HLS audio track switched to:', trackId)
+    if (hlsRef.current && hlsRef.current.audioTracks && hlsRef.current.audioTracks.length > 0) {
+      // Try to find matching HLS track
+      const hlsTrackIndex = hlsRef.current.audioTracks.findIndex(t =>
+        t.lang === track.language || t.language === track.language
+      )
+
+      if (hlsTrackIndex >= 0) {
+        hlsRef.current.audioTrack = hlsTrackIndex
+        console.log('[CachedHlsPlayerModal] HLS audio track switched to:', hlsTrackIndex)
+        toast.success(`${track.label}로 전환되었습니다`)
+      } else {
+        console.warn('[CachedHlsPlayerModal] No matching HLS track found for:', track.language)
+        toast.warning(`${track.label} 트랙을 찾을 수 없어 UI만 업데이트됩니다`)
+      }
     } else {
-      console.log('[HlsPlayerModal] No HLS audio tracks available, just updating UI')
+      console.log('[CachedHlsPlayerModal] No HLS audio tracks available, updating UI only')
+      toast.success(`${track.label}로 전환되었습니다 (UI 업데이트)`)
     }
 
     setCurrentTrackId(trackId)
+    setCurrentLanguage(track.language)
 
     // Save preference
     if (typeof window !== 'undefined') {
       localStorage.setItem('lesson_lang', track.language)
     }
-
-    toast.success(`${track.label}로 전환되었습니다`)
   }
 
   const handleDebug = () => {
-    console.group('[HlsPlayerModal Debug Info]')
-    console.log('Master URL:', masterUrl)
+    console.group('[CachedHlsPlayerModal Debug Info]')
     console.log('Section ID:', sectionId)
-    console.log('Audio Tracks:', audioTracks)
+    console.log('Lecture ID:', lectureId)
+    console.log('Master URL:', masterUrl)
+    console.log('Current Language:', currentLanguage)
+    console.log('Audio Tracks (from DB):', audioTracks)
     console.log('Current Track ID:', currentTrackId)
     console.log('HLS instance:', hlsRef.current)
+    console.log('Cached curriculum data:', curriculums)
 
     if (hlsRef.current) {
       console.log('HLS audio tracks:', hlsRef.current.audioTracks)
@@ -352,14 +408,14 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
         className="gap-2"
       >
         <Languages className="h-4 w-4" />
-        다국어 재생
+        캐시된 다국어 재생
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-5xl" aria-describedby="shaka-player-description">
+        <DialogContent className="max-w-5xl" aria-describedby="cached-hls-player-description">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              <span>{title || "다국어 영상"}</span>
+              <span>{title || "다국어 영상"} ({audioTracks.length}개 언어)</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -370,8 +426,8 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
               </Button>
             </DialogTitle>
           </DialogHeader>
-          <div id="shaka-player-description" className="sr-only">
-            다국어 비디오 플레이어 모달입니다. Shaka Player를 사용하여 여러 언어의 오디오 트랙을 선택할 수 있습니다.
+          <div id="cached-hls-player-description" className="sr-only">
+            캐시된 데이터 기반 다국어 비디오 플레이어 모달입니다.
           </div>
           <div className="space-y-4">
             {error && (
@@ -396,21 +452,21 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
                     className="w-full h-full"
                     crossOrigin="anonymous"
                     onError={(e) => {
-                      console.error('[HlsPlayerModal] Video error:', e.currentTarget.error)
+                      console.error('[CachedHlsPlayerModal] Video error:', e.currentTarget.error)
                       setError(`비디오 오류: ${e.currentTarget.error?.message || 'Unknown error'}`)
                     }}
                     onLoadedMetadata={() => {
-                      console.log('[HlsPlayerModal] Video metadata loaded')
+                      console.log('[CachedHlsPlayerModal] Video metadata loaded')
                     }}
                     onCanPlay={() => {
-                      console.log('[HlsPlayerModal] Video can play')
+                      console.log('[CachedHlsPlayerModal] Video can play')
                       setIsLoading(false)
                     }}
                   >
-                    브라우저가 HLS를 지원하지 않습니다.
+                    HLS 스트리밍을 로딩하고 있습니다...
                   </video>
 
-                  {/* Language Selector Overlay - Always show for debugging */}
+                  {/* Language Selector Overlay */}
                   <div className="absolute top-4 right-4 z-10">
                     <div className="relative" ref={languageSelectorRef}>
                       <button
@@ -447,7 +503,7 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
                               >
                                 <div className="flex-1">
                                   <div className="font-medium">{track.label}</div>
-                                  <div className="text-xs opacity-70">{track.language.toUpperCase()}</div>
+                                  <div className="text-xs opacity-70">{track.language.toUpperCase()} • {track.status}</div>
                                 </div>
                                 {currentTrackId === track.id && (
                                   <svg className="h-4 w-4 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
@@ -457,7 +513,7 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
                               </button>
                             )) : (
                               <div className="px-4 py-3 text-sm text-white/70">
-                                오디오 트랙 로딩 중...
+                                사용 가능한 오디오 트랙이 없습니다
                               </div>
                             )}
                           </div>
@@ -481,7 +537,7 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
             {audioTracks.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium">언어 선택</div>
+                  <div className="text-sm font-medium">언어 선택 (캐시 기반)</div>
                   <div className="text-xs text-muted-foreground">
                     {audioTracks.length}개 언어 사용 가능
                   </div>
@@ -498,12 +554,12 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
                       }`}
                     >
                       <div className="font-medium">{track.label}</div>
-                      <div className="text-xs opacity-70">{track.language}</div>
+                      <div className="text-xs opacity-70">{track.language} • {track.status}</div>
                     </button>
                   ))}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  💡 Tip: Shaka Player로 안정적인 다국어 스트리밍을 즐기세요!
+                  💡 Tip: TanStack Query 캐시에서 DubTrack 데이터를 가져와 사용합니다!
                 </div>
               </div>
             )}
@@ -511,7 +567,7 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
             {!error && audioTracks.length === 0 && !isLoading && (
               <div className="text-center py-4 text-muted-foreground">
                 <Languages className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <div className="text-sm">다국어 트랙을 찾을 수 없습니다.</div>
+                <div className="text-sm">사용 가능한 다국어 트랙이 없습니다.</div>
                 <div className="text-xs mt-1">더빙이 완료되었는지 확인하세요.</div>
               </div>
             )}

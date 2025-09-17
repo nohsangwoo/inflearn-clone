@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Master Playlist Refresh</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .test-button:hover { background: #c82333; }
+        .test-button.success { background: #28a745; }
+        .test-button.success:hover { background: #218838; }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+        .highlight { background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Master Playlist Refresh Tool</h1>
+
+        <div class="highlight">
+            <strong>DB 기반 Master.m3u8 재생성</strong><br>
+            현재 DB의 DubTrack 데이터를 기반으로 master.m3u8 파일을 재생성하여
+            모든 더빙된 언어가 정확히 반영되도록 합니다.
+        </div>
+
+        <h2>🎯 문제 해결:</h2>
+        <ul>
+            <li>❌ 기존: master.m3u8에 마지막 언어만 저장되는 문제</li>
+            <li>✅ 해결: DB의 모든 ready 상태 DubTrack을 master.m3u8에 반영</li>
+            <li>✅ 실시간: 더빙 완료시마다 자동으로 master.m3u8 업데이트</li>
+        </ul>
+
+        <h2>🧪 테스트 섹션들:</h2>
+
+        <div style="margin: 20px 0;">
+            <h3>Section 3 (테스트 데이터)</h3>
+            <button class="test-button" onclick="refreshMaster(3)">Section 3 Master 재생성</button>
+            <button class="test-button success" onclick="checkMaster(3)">현재 Master 확인</button>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <h3>Section 1</h3>
+            <button class="test-button" onclick="refreshMaster(1)">Section 1 Master 재생성</button>
+            <button class="test-button success" onclick="checkMaster(1)">현재 Master 확인</button>
+        </div>
+
+        <div style="margin: 20px 0;">
+            <h3>Section 2</h3>
+            <button class="test-button" onclick="refreshMaster(2)">Section 2 Master 재생성</button>
+            <button class="test-button success" onclick="checkMaster(2)">현재 Master 확인</button>
+        </div>
+
+        <div id="result"></div>
+
+        <h2>📊 기대 결과:</h2>
+        <ul>
+            <li>Section 3: 4개 언어 (ja, zh, en, fr) - 모두 표시되어야 함</li>
+            <li>각 언어별 EXT-X-MEDIA 라인이 모두 포함</li>
+            <li>status='ready'인 DubTrack만 반영</li>
+            <li>일본어 또는 한국어가 DEFAULT=YES로 설정</li>
+        </ul>
+
+        <div class="highlight">
+            <strong>💡 구현된 기능:</strong><br>
+            • DB에서 ready 상태 DubTrack 조회<br>
+            • 모든 언어를 master.m3u8에 반영<br>
+            • S3에 업로드하여 즉시 적용<br>
+            • API 엔드포인트: POST /api/refresh-master
+        </div>
+    </div>
+
+    <script>
+        async function refreshMaster(sectionId) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `🔄 Section ${sectionId} master.m3u8 재생성 중...`;
+
+            try {
+                const response = await fetch('/api/refresh-master', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ sectionId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.className = 'result';
+                    resultDiv.innerHTML = `✅ Section ${sectionId} master.m3u8 재생성 완료!\n\n` +
+                        `Master URL: ${data.masterUrl}\n\n` +
+                        `응답 데이터:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ 오류 발생:\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 네트워크 오류: ${error.message}`;
+            }
+        }
+
+        async function checkMaster(sectionId) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `🔍 Section ${sectionId} master.m3u8 내용 확인 중...`;
+
+            try {
+                const masterUrl = `https://storage.lingoost.com/assets/curriculumsection/${sectionId}/master.m3u8`;
+                const response = await fetch(masterUrl);
+
+                if (response.ok) {
+                    const content = await response.text();
+                    const lines = content.split('\n');
+                    const audioLines = lines.filter(line => line.includes('EXT-X-MEDIA:TYPE=AUDIO'));
+
+                    resultDiv.className = 'result';
+                    resultDiv.innerHTML = `📄 Section ${sectionId} Master.m3u8 내용:\n\n` +
+                        `전체 내용:\n${content}\n\n` +
+                        `오디오 트랙 수: ${audioLines.length}\n` +
+                        `오디오 트랙들:\n${audioLines.join('\n')}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `❌ Master 파일을 가져올 수 없습니다: ${response.status}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 오류: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

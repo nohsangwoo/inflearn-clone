@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Dynamic HLS Player</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .player-button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .player-button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dynamic HLS Player Test</h1>
+        <p>이 페이지는 DB 기반 다국어 HLS 플레이어를 테스트하기 위한 페이지입니다.</p>
+
+        <h2>사용 가능한 섹션들:</h2>
+        <ul>
+            <li>Section 3: <button class="player-button" onclick="openPlayer(3)">테스트 재생</button></li>
+            <li>Section 1: <button class="player-button" onclick="openPlayer(1)">테스트 재생</button></li>
+            <li>Section 2: <button class="player-button" onclick="openPlayer(2)">테스트 재생</button></li>
+        </ul>
+
+        <h2>현재 구현된 기능:</h2>
+        <ul>
+            <li>✅ DB의 DubTrack 데이터를 기반으로 언어 목록 생성</li>
+            <li>✅ 언어 전환 시 동적으로 오디오 스트림 변경</li>
+            <li>✅ 재생 위치 유지</li>
+            <li>✅ 사용자 언어 설정 저장</li>
+            <li>✅ 상태별 트랙 표시 (ready, processing, failed)</li>
+        </ul>
+
+        <div id="api-test">
+            <h2>API 테스트:</h2>
+            <button class="player-button" onclick="testApi()">Section 3 DubTrack 데이터 확인</button>
+            <pre id="api-result"></pre>
+        </div>
+    </div>
+
+    <script>
+        function openPlayer(sectionId) {
+            // Admin 페이지로 이동하여 실제 플레이어 테스트
+            window.open(`/admin/courses/1`, '_blank');
+        }
+
+        async function testApi() {
+            try {
+                const response = await fetch('/api/admin/curriculums/sections/3/video');
+                const data = await response.json();
+                document.getElementById('api-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('api-result').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
