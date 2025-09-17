@@ -152,11 +152,28 @@ model Video {
   videoUrl            String // 강의 커리큘럼 섹션 동영상 URL
   thumbnailUrl        String? // 강의 커리큘럼 섹션 동영상 썸네일 URL
   duration            Int? // 강의 커리큘럼 섹션 동영상 재생 시간
+  masterKey           String // s3 key: assets/{id}/master.m3u8
   language            Language           @default(KO) // 강의 커리큘럼 섹영상 언어
   createdAt           DateTime           @default(now()) // 생성일
   updatedAt           DateTime           @updatedAt // 수정일
   CurriculumSection   CurriculumSection? @relation(fields: [curriculumSectionId], references: [id]) // 강의 커리큘럼 섹션
   curriculumSectionId Int? // 강의 커리큘럼 섹션 ID
+  DubTrack            DubTrack[]
+}
+
+model DubTrack {
+  id        String   @id @default(cuid())
+  lang      String
+  status    String // queued|processing|ready|failed
+  lufs      Float?
+  offsetMs  Int? // sync compensation
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Video   Video? @relation(fields: [videoId], references: [id])
+  videoId Int?
+
+  @@unique([videoId, lang])
 }
 
 model File {
