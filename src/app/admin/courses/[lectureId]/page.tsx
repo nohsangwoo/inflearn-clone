@@ -13,6 +13,8 @@ import { uploadBinary } from "@/lib/upload/uploadBinary"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useDropzone } from "react-dropzone"
+import DubbingUploader from "./_components/dubbing-uploader"
+import HlsPlayer from "@/components/video/hls-player"
 
 type Curriculum = {
   id: number
@@ -25,7 +27,7 @@ type CurriculumSection = {
   title: string
   description: string | null
   isActive: boolean
-  Videos: Video[]
+  Videos: (Video & { DubTrack?: DubItem[] })[]
   Files: FileItem[]
 }
 
@@ -37,6 +39,8 @@ type Video = {
   thumbnailUrl?: string | null
   duration?: number | null
 }
+
+type DubItem = { id: string; lang: string; status: string; url?: string | null }
 
 type FileItem = {
   id: number
@@ -124,13 +128,7 @@ export default function EditCoursePage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
   })
 
-  const createVideo = useMutation({
-    mutationFn: async (payload: { curriculumSectionId: number; videoUrl: string; title?: string }) => {
-      const { data } = await axios.post(`/api/admin/videos`, payload)
-      return data as Video
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
-  })
+  
 
   const updateVideo = useMutation({
     mutationFn: async (payload: { id: number; title?: string; description?: string; thumbnailUrl?: string; language?: string; videoUrl?: string; duration?: number }) => {
@@ -417,57 +415,65 @@ export default function EditCoursePage() {
                               <div className="space-y-2">
                                 <div className="text-sm font-medium">강의 영상</div>
                                 <p className="text-xs text-muted-foreground">MP4 등 동영상 파일을 선택하거나 드래그앤드랍하세요.</p>
-                                <VideoDropzone
-                                  onFiles={async (files) => {
-                                    const file = files[0]
-                                    if (!file) return
-                                    try {
-                                      const { key } = await uploadBinary(file, { pathPrefix: "videos", contentType: file.type })
-                                      await createVideo.mutateAsync({ curriculumSectionId: sec.id, videoUrl: key, title: file.name })
-                                      toast.success("영상 업로드 완료")
-                                    } catch {
-                                      toast.error("영상 업로드 실패")
-                                    }
-                                  }}
-                                />
+                                <DubbingUploader curriculumSectionId={sec.id} />
                                 <div className="space-y-2">
                                   {(sec.Videos ?? []).length === 0 ? (
                                     <div className="text-sm text-muted-foreground">등록된 영상이 없습니다.</div>
                                   ) : (
                                     (sec.Videos ?? []).map((v) => {
                                       const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
-                                      const href = `${cdnBase}/${v.videoUrl}`
+                                      const href = /^(https?:)?\/\//.test(v.videoUrl) ? v.videoUrl : `${cdnBase}/${v.videoUrl}`
                                       return (
-                                        <div key={v.id} className="flex items-center gap-2">
-                                          <Input
-                                            defaultValue={v.title ?? ""}
-                                            onBlur={(e) =>
-                                              updateVideo.mutate(
-                                                { id: v.id, title: e.target.value },
-                                                {
-                                                  onSuccess: () => toast.success("영상 제목이 저장되었습니다"),
-                                                  onError: () => toast.error("영상 제목 저장 실패"),
-                                                },
-                                              )
-                                            }
-                                          />
-                                          <a href={href} target="_blank" rel="noreferrer" className="text-sm underline">
-                                            보기
-                                          </a>
-                                          <Button
-                                            variant="ghost"
-                                            className="text-red-600"
-                                            onClick={async () => {
-                                              try {
-                                                await deleteVideo.mutateAsync(v.id)
-                                                toast.success("영상이 삭제되었습니다")
-                                              } catch {
-                                                toast.error("영상 삭제 실패")
+                                        <div key={v.id} className="space-y-2">
+                                          <div className="flex items-center gap-2">
+                                            <Input
+                                              defaultValue={v.title ?? ""}
+                                              onBlur={(e) =>
+                                                updateVideo.mutate(
+                                                  { id: v.id, title: e.target.value },
+                                                  {
+                                                    onSuccess: () => toast.success("영상 제목이 저장되었습니다"),
+                                                    onError: () => toast.error("영상 제목 저장 실패"),
+                                                  },
+                                                )
                                               }
-                                            }}
-                                          >
-                                            삭제
-                                          </Button>
+                                            />
+                                            <a href={href} target="_blank" rel="noreferrer" className="text-sm underline">
+                                              보기
+                                            </a>
+                                            <Button
+                                              variant="ghost"
+                                              className="text-red-600"
+                                              onClick={async () => {
+                                                try {
+                                                  await deleteVideo.mutateAsync(v.id)
+                                                  toast.success("영상이 삭제되었습니다")
+                                                } catch {
+                                                  toast.error("영상 삭제 실패")
+                                                }
+                                              }}
+                                            >
+                                              삭제
+                                            </Button>
+                                          </div>
+                                          {/* DubTrack 상태 표시 */}
+                                          <div className="text-xs">
+                                            {Array.isArray((v as { DubTrack?: DubItem[] }).DubTrack) && (v as { DubTrack?: DubItem[] }).DubTrack!.length > 0 ? (
+                                              <div className="flex flex-wrap gap-2">
+                                                {(v as { DubTrack?: DubItem[] }).DubTrack!.map((t: DubItem) => (
+                                                  <span key={t.id} className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${t.status === 'ready' ? 'border-green-400 text-green-700' : t.status === 'processing' ? 'border-amber-400 text-amber-700' : t.status === 'failed' ? 'border-red-400 text-red-700' : 'border-muted-foreground text-muted-foreground'}`}>
+                                                    <span className="font-mono">{t.lang}</span>
+                                                    <span>·</span>
+                                                    <span>{t.status}</span>
+                                                  </span>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <span className="text-muted-foreground">더빙 트랙 없음</span>
+                                            )}
+                                          </div>
+                                          {/* HLS 미리보기 */}
+                                          <HlsPlayer sectionId={sec.id} />
                                         </div>
                                       )
                                     })
@@ -548,23 +554,6 @@ function VideoDropzoneDefinitions() { return null }
 function FileDropzoneDefinitions() { return null }
 
 type CommonDropzoneProps = { onFiles: (files: File[]) => Promise<void> | void }
-
-function VideoDropzone({ onFiles }: CommonDropzoneProps) {
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    multiple: false,
-    accept: { "video/*": [] },
-    onDrop: (acceptedFiles) => onFiles(acceptedFiles),
-  })
-  return (
-    <div
-      {...getRootProps()}
-      className={`border rounded px-3 py-2 text-sm cursor-pointer ${isDragActive ? "bg-accent" : "bg-background"}`}
-    >
-      <input {...getInputProps()} />
-      {isDragActive ? "여기에 파일을 놓으세요" : "영상 선택 또는 드래그앤드랍"}
-    </div>
-  )
-}
 
 function FileDropzone({ onFiles }: CommonDropzoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

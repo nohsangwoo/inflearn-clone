@@ -1,5 +1,4 @@
 import prisma from "@/lib/prismaClient"
-import { Language } from "@prisma/client"
 import { NextRequest, NextResponse } from "next/server"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
@@ -11,11 +10,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const curriculumSectionId = Number(body?.curriculumSectionId)
-  const videoUrl: string | undefined = body?.videoUrl
-  const title: string | undefined = body?.title
-  const description: string | undefined = body?.description
-  const thumbnailUrl: string | undefined = body?.thumbnailUrl
-  const language: string | undefined = body?.language // Prisma enum Language 문자열
+  const videoUrl: string | undefined = body?.videoUrl // 업로드된 객체의 key 또는 절대 URL
+  const targetLanguages: string[] | undefined = Array.isArray(body?.targetLanguages) ? body.targetLanguages : undefined
 
   if (!Number.isFinite(curriculumSectionId)) {
     return NextResponse.json({ message: "curriculumSectionId required" }, { status: 400 })
@@ -31,22 +27,28 @@ export async function POST(req: NextRequest) {
   })
   if (!can) return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
-  const languageValue = typeof language === "string" && (Object.values(Language) as string[]).includes(language)
-    ? (language as Language)
-    : undefined
+  const dubbingServer = process.env.DUBBING_SERVER
+  if (!dubbingServer) {
+    return NextResponse.json({ message: "DUBBING_SERVER not configured" }, { status: 500 })
+  }
 
-  const video = await prisma.video.create({
-    data: {
-      curriculumSectionId,
-      videoUrl,
-      title: title ?? undefined,
-      description: description ?? undefined,
-      thumbnailUrl: thumbnailUrl ?? undefined,
-      // 언어는 유효한 enum 문자열일 때만 설정
-      language: languageValue,
-    },
-  })
-  return NextResponse.json(video, { status: 201 })
+  // key -> 절대 URL 변환 (이미 절대 URL이면 그대로 사용)
+  const cdnBase = process.env.CDN_URL || process.env.NEXT_PUBLIC_CDN_URL || "https://storage.lingoost.com"
+  const inputVideoUrl = /^(https?:)?\/\//.test(videoUrl) ? videoUrl : `${cdnBase.replace(/\/$/, "")}/${videoUrl.replace(/^\//, "")}`
+
+  // 타겟 언어: 요청 바디 > 환경변수(DUBBING_LANGS=ko,en,ja) > 기본 en
+  const envLangs = (process.env.DUBBING_LANGS ?? "").split(",").map(s => s.trim()).filter(Boolean)
+  const langs = (targetLanguages && targetLanguages.length > 0) ? targetLanguages : (envLangs.length > 0 ? envLangs : ["en"])
+
+  // 더빙 서버에 비동기 트리거 (응답 대기하지 않음)
+  void fetch(`${dubbingServer.replace(/\/$/, "")}/api/dubbing`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ inputVideoUrl, targetLanguages: langs, curriculumSectionId }),
+    // Next.js Edge/Node fetch는 기본 keepalive 지원. 에러는 무시하고 즉시 리턴
+  }).catch(() => {})
+
+  return NextResponse.json({ ok: true, queued: true }, { status: 202 })
 }
 
 

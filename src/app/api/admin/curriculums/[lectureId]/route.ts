@@ -23,7 +23,7 @@ export async function GET(
       CurriculumSections: {
         orderBy: { id: 'asc' },
         include: {
-          Videos: true,
+          Videos: { include: { DubTrack: true } },
           Files: true,
         },
       },
