@@ -5,10 +5,11 @@ const prisma = new PrismaClient()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sectionId: string } }
+  { params }: { params: Promise<{ sectionId: string }> }
 ) {
   try {
-    const sectionId = parseInt(params.sectionId)
+    const { sectionId: sectionIdParam } = await params
+    const sectionId = parseInt(sectionIdParam)
 
     if (!sectionId || isNaN(sectionId)) {
       return NextResponse.json({ error: "Invalid section ID" }, { status: 400 })

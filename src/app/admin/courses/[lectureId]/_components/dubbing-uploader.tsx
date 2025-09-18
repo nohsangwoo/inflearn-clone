@@ -44,7 +44,7 @@ export default function DubbingUploader({ curriculumSectionId }: Props) {
     let video: { videoUrl?: string; title?: string | null } | null = null
 
     for (const q of all) {
-      const data = q.state.data as any
+      const data = q.state.data as unknown
       console.log("Query data:", data)
 
       if (!Array.isArray(data)) {

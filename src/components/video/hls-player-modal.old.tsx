@@ -130,7 +130,7 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
               const level = data.levels[0]
               if (level.audioGroupIds && level.audioGroupIds.length > 0) {
                 const audioGroupId = level.audioGroupIds[0]
-                const audioPlaylist = _hls.audioTrackController?.audioTracks || []
+                const audioPlaylist = _hls.audioTracks || []
 
                 console.log("[HLS] Checking audio group:", audioGroupId)
                 console.log("[HLS] Audio playlist:", audioPlaylist)

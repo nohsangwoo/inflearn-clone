@@ -196,9 +196,9 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
           if (trackList && trackList.length > 0) {
             const formattedTracks = trackList.map((track, index) => ({
               id: index,
-              language: track.lang || track.language || track.name || '',
-              label: langNameMap[track.lang || track.language || track.name || ''] || track.name || track.label || `Track ${index + 1}`,
-              roles: track.roles || []
+              language: track.lang || (track as unknown as {language?: string}).language || track.name || '',
+              label: langNameMap[track.lang || (track as unknown as {language?: string}).language || track.name || ''] || track.name || (track as unknown as {label?: string}).label || `Track ${index + 1}`,
+              roles: (track as unknown as {roles?: string[]}).roles || []
             }))
 
             console.log('[HlsPlayerModal] Formatted tracks:', formattedTracks)

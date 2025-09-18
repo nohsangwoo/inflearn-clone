@@ -229,7 +229,7 @@ export default function CachedHlsPlayerModal({ sectionId, lectureId, title }: Pr
             const targetTrack = audioTracks.find(t => t.language === currentLanguage)
             if (targetTrack) {
               const hlsTrackIndex = hls.audioTracks.findIndex(t =>
-                t.lang === currentLanguage || t.language === currentLanguage
+                t.lang === currentLanguage
               )
               if (hlsTrackIndex >= 0) {
                 hls.audioTrack = hlsTrackIndex
@@ -269,7 +269,7 @@ export default function CachedHlsPlayerModal({ sectionId, lectureId, title }: Pr
           if (hls.audioTracks && data.id < hls.audioTracks.length) {
             const hlsTrack = hls.audioTracks[data.id]
             const matchingTrack = audioTracks.find(t =>
-              t.language === hlsTrack.lang || t.language === hlsTrack.language
+              t.language === hlsTrack.lang
             )
             if (matchingTrack) {
               setCurrentTrackId(matchingTrack.id)
@@ -350,7 +350,7 @@ export default function CachedHlsPlayerModal({ sectionId, lectureId, title }: Pr
     if (hlsRef.current && hlsRef.current.audioTracks && hlsRef.current.audioTracks.length > 0) {
       // Try to find matching HLS track
       const hlsTrackIndex = hlsRef.current.audioTracks.findIndex(t =>
-        t.lang === track.language || t.language === track.language
+        t.lang === track.language
       )
 
       if (hlsTrackIndex >= 0) {
