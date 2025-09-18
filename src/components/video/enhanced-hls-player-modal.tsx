@@ -29,6 +29,7 @@ type AudioTrack = {
 }
 
 const langNameMap: Record<string, string> = {
+  origin: "ORIGIN",
   ko: "한국어",
   en: "영어",
   ja: "일본어",

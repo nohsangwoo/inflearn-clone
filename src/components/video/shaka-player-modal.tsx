@@ -65,8 +65,6 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
   const cdn = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
   const masterUrl = useMemo(() => `${cdn.replace(/\/$/, "")}/assets/curriculumsection/${sectionId}/master.m3u8`, [cdn, sectionId])
 
-  console.log('[HlsPlayerModal] Master URL:', masterUrl)
-
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const languageSelectorRef = useRef<HTMLDivElement>(null)
