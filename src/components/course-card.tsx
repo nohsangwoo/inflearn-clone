@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Heart, ShoppingCart } from "lucide-react"
@@ -22,64 +23,66 @@ export function CourseCard({ course }: { course: CourseItem }) {
   const [liked, setLiked] = useState(false)
 
   return (
-    <Card className="group h-full overflow-hidden">
-      <div className="relative aspect-video bg-muted overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={course.thumbnail} alt={course.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-        <div className="absolute top-2 right-2 z-10">
-          <Button
-            variant={liked ? "secondary" : "outline"}
-            size="sm"
-            className="rounded-full bg-background/80 backdrop-blur"
-            aria-label="좋아요"
-            onClick={() => setLiked((v) => !v)}
-          >
-            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
-          </Button>
-        </div>
-      </div>
-      <CardHeader>
-        <CardTitle className="text-base leading-tight line-clamp-2 min-h-10">
-          {course.title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Avatar className="size-6">
-            <AvatarImage src="/avatar.png" alt={course.author} />
-            <AvatarFallback>AU</AvatarFallback>
-          </Avatar>
-          <span>{course.author}</span>
-        </div>
-        <p className="text-sm text-foreground/90 line-clamp-3 min-h-[3.75rem]">{course.summary}</p>
-        {course.tags && (
-          <div className="flex flex-wrap gap-1">
-            {course.tags.slice(0, 3).map((t) => (
-              <span key={t} className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <div className="flex-1 min-w-0 flex items-baseline gap-1">
-            <span className="text-sm font-semibold whitespace-nowrap">{course.price}</span>
-            {course.originalPrice && (
-              <span className="text-[11px] text-muted-foreground line-through whitespace-nowrap">{course.originalPrice}</span>
-            )}
-            {typeof course.discountPercent === "number" && course.discountPercent > 0 && (
-              <span className="text-[10px] font-semibold text-green-700 bg-green-50 rounded px-1 py-0.5 whitespace-nowrap">-{course.discountPercent}%</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button size="sm" aria-label="담기" className="px-2">
-              <ShoppingCart className="h-4 w-4 mr-0 xs:mr-2" />
-              <span className="hidden xs:inline">담기</span>
+    <Link href={`/course/${course.id}`} className="block h-full">
+      <Card className="group h-full overflow-hidden">
+        <div className="relative aspect-video bg-muted overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={course.thumbnail} alt={course.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <div className="absolute top-2 right-2 z-10">
+            <Button
+              onClick={(e) => { e.preventDefault(); setLiked((v) => !v) }}
+              variant={liked ? "secondary" : "outline"}
+              size="sm"
+              className="rounded-full bg-background/80 backdrop-blur"
+              aria-label="좋아요"
+            >
+              <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
             </Button>
           </div>
         </div>
-      </CardContent>
-    </Card>
+        <CardHeader>
+          <CardTitle className="text-base leading-tight line-clamp-2 min-h-10">
+            {course.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Avatar className="size-6">
+              <AvatarImage src="/avatar.png" alt={course.author} />
+              <AvatarFallback>AU</AvatarFallback>
+            </Avatar>
+            <span>{course.author}</span>
+          </div>
+          <p className="text-sm text-foreground/90 line-clamp-3 min-h-[3.75rem]">{course.summary}</p>
+          {course.tags && (
+            <div className="flex flex-wrap gap-1">
+              {course.tags.slice(0, 3).map((t) => (
+                <span key={t} className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="flex-1 min-w-0 flex items-baseline gap-1">
+              <span className="text-sm font-semibold whitespace-nowrap">{course.price}</span>
+              {course.originalPrice && (
+                <span className="text-[11px] text-muted-foreground line-through whitespace-nowrap">{course.originalPrice}</span>
+              )}
+              {typeof course.discountPercent === "number" && course.discountPercent > 0 && (
+                <span className="text-[10px] font-semibold text-green-700 bg-green-50 rounded px-1 py-0.5 whitespace-nowrap">-{course.discountPercent}%</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button size="sm" aria-label="담기" className="px-2" onClick={(e) => { e.preventDefault() }}>
+                <ShoppingCart className="h-4 w-4 mr-0 xs:mr-2" />
+                <span className="hidden xs:inline">담기</span>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
 

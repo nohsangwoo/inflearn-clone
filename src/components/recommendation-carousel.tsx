@@ -4,6 +4,7 @@ import { useCallback } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 type Course = { id: string; title: string; thumbnail: string; author?: string; price?: string }
 
@@ -35,17 +36,19 @@ export function RecommendationCarousel({ items }: { items: Course[] }) {
               key={c.id}
               className="shrink-0 basis-[85%] sm:basis-1/2 md:basis-1/3 lg:basis-1/5"
             >
-              <div className="rounded-lg border overflow-hidden bg-card h-full">
-                <div className="aspect-video bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={c.thumbnail} alt={c.title} className="h-full w-full object-cover" />
+              <Link href={`/course/${c.id}`} className="block h-full">
+                <div className="rounded-lg border overflow-hidden bg-card h-full hover:shadow-sm transition-shadow">
+                  <div className="aspect-video bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.thumbnail} alt={c.title} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <div className="text-sm font-medium line-clamp-2 min-h-10">{c.title}</div>
+                    {c.author && <div className="text-xs text-muted-foreground">{c.author}</div>}
+                    {c.price && <div className="text-sm font-semibold">{c.price}</div>}
+                  </div>
                 </div>
-                <div className="p-3 space-y-1">
-                  <div className="text-sm font-medium line-clamp-2 min-h-10">{c.title}</div>
-                  {c.author && <div className="text-xs text-muted-foreground">{c.author}</div>}
-                  {c.price && <div className="text-sm font-semibold">{c.price}</div>}
-                </div>
-              </div>
+              </Link>
             </div>
           ))}
         </div>
