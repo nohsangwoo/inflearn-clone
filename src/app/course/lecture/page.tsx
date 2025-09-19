@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ChevronLeft, ChevronRight, Download, Languages, Menu, X } from "lucide-react"
+import { ArrowLeft, ChevronLeft, ChevronRight, Download, Languages, Menu, X } from "lucide-react"
 import Hls from "hls.js"
 import { toast } from "sonner"
 
@@ -401,14 +401,25 @@ export default function LecturePage() {
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
       <div className={`${sidebarOpen ? "w-80" : "w-0"} transition-all duration-300 overflow-hidden border-r bg-card`}>
-        <div className="p-4 border-b">
-          <h2 className="font-semibold text-lg truncate">{courseData.title}</h2>
-          <div className="text-sm text-muted-foreground mt-1">
-            {courseData.sections.filter(s => s.active).length}개 수업
+        <div className="p-4 border-b space-y-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(`/course/${courseId}`)}
+            className="w-full justify-start gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            강의 소개로 돌아가기
+          </Button>
+          <div>
+            <h2 className="font-semibold text-lg truncate">{courseData.title}</h2>
+            <div className="text-sm text-muted-foreground mt-1">
+              {courseData.sections.filter(s => s.active).length}개 수업
+            </div>
           </div>
         </div>
 
-        <div className="overflow-y-auto h-[calc(100vh-80px)]">
+        <div className="overflow-y-auto h-[calc(100vh-140px)]">
           {courseData.sections.map((section, index) => (
             <button
               key={section.id}
