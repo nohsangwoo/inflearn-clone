@@ -80,14 +80,18 @@ export async function GET(
     */
 
     // 4. 데이터 변환
-    // Curriculum이 여러 개일 수 있지만, 보통 하나만 사용
-    const curriculum = lecture.Curriculums[0]
-    const sections = curriculum?.CurriculumSections || []
+    // 모든 커리큘럼의 모든 섹션을 하나의 배열로 합침
+    const allSections = lecture.Curriculums.flatMap(curriculum =>
+      curriculum.CurriculumSections.map(section => ({
+        ...section,
+        curriculumId: curriculum.id
+      }))
+    )
 
     const courseData = {
       id: lecture.id,
       title: lecture.title,
-      sections: sections.map(section => ({
+      sections: allSections.map(section => ({
         id: section.id,
         title: section.title,
         description: section.description,

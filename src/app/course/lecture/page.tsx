@@ -122,10 +122,10 @@ export default function LecturePage() {
       const firstSection = courseData.sections.find(s => s.active && s.videos.length > 0)
       if (firstSection) {
         setCurrentSectionId(firstSection.id)
-        updateUrl(firstSection.id, currentLanguage)
+        // Don't update URL here to avoid infinite loop
       }
     }
-  }, [courseData, currentSectionId])
+  }, [courseData]) // Remove currentSectionId from dependencies
 
   // Get current section
   const currentSection = courseData?.sections.find(s => s.id === currentSectionId)
