@@ -1,0 +1,616 @@
+"use client"
+
+import { useEffect, useState, useRef } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
+import axios from "axios"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { ChevronLeft, ChevronRight, Download, Languages, Menu, X } from "lucide-react"
+import Hls from "hls.js"
+import { toast } from "sonner"
+
+type CourseData = {
+  id: number
+  title: string
+  sections: Array<{
+    id: number
+    title: string
+    description?: string | null
+    active: boolean
+    videos: Array<{
+      id: number
+      title?: string | null
+      videoUrl: string
+      masterKey?: string | null
+    }>
+    files: Array<{
+      id: number
+      filename: string
+      url: string
+    }>
+    dubTracks?: Array<{
+      lang: string
+      status: string
+      url: string
+    }>
+  }>
+}
+
+type TrackInfo = {
+  lang: string
+  label: string
+  url: string
+}
+
+const langNameMap: Record<string, string> = {
+  origin: "원본",
+  ORIGIN: "원본",
+  ko: "한국어",
+  en: "영어",
+  ja: "일본어",
+  zh: "중국어",
+  es: "스페인어",
+  fr: "프랑스어",
+  de: "독일어",
+  ru: "러시아어",
+  pt: "포르투갈어",
+  it: "이탈리아어",
+  ar: "아랍어",
+  hi: "힌디어",
+  th: "태국어",
+  vi: "베트남어",
+  id: "인도네시아어",
+  sv: "스웨덴어",
+  fi: "핀란드어",
+  bg: "불가리아어",
+  cs: "체코어",
+  da: "덴마크어",
+  el: "그리스어",
+  he: "히브리어",
+  hu: "헝가리어",
+  ms: "말레이어",
+  nl: "네덜란드어",
+  no: "노르웨이어",
+  pl: "폴란드어",
+  ro: "루마니아어",
+  sk: "슬로바키아어",
+  tr: "터키어",
+  uk: "우크라이나어",
+  fil: "필리핀어",
+}
+
+export default function LecturePage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Query parameters
+  const courseId = searchParams.get("courseId")
+  const sectionId = searchParams.get("sectionId")
+  const subtitleLanguage = searchParams.get("subtitleLanguage") || "origin"
+
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [currentSectionId, setCurrentSectionId] = useState<number | null>(
+    sectionId ? parseInt(sectionId) : null
+  )
+  const [currentLanguage, setCurrentLanguage] = useState(subtitleLanguage)
+  const [audioTracks, setAudioTracks] = useState<TrackInfo[]>([])
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false)
+
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const hlsRef = useRef<Hls | null>(null)
+
+  // Fetch course data
+  const { data: courseData, isLoading, error } = useQuery({
+    queryKey: ["lecture-data", courseId],
+    enabled: !!courseId,
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get(`/api/courses/${courseId}/lecture`)
+        console.log("[Lecture] Course data loaded:", data)
+        return data as CourseData
+      } catch (err) {
+        console.error("[Lecture] Error loading course:", err)
+        throw err
+      }
+    },
+  })
+
+  // Set initial section if not provided
+  useEffect(() => {
+    if (courseData && !currentSectionId) {
+      const firstSection = courseData.sections.find(s => s.active && s.videos.length > 0)
+      if (firstSection) {
+        setCurrentSectionId(firstSection.id)
+        updateUrl(firstSection.id, currentLanguage)
+      }
+    }
+  }, [courseData, currentSectionId])
+
+  // Get current section
+  const currentSection = courseData?.sections.find(s => s.id === currentSectionId)
+  const currentVideo = currentSection?.videos[0] // Assuming one video per section for now
+
+  // Initialize HLS player when section changes
+  useEffect(() => {
+    if (!currentSection || !currentVideo || !videoRef.current) {
+      console.log("[Lecture] Missing requirements for video playback:", {
+        section: !!currentSection,
+        video: !!currentVideo,
+        videoRef: !!videoRef.current
+      })
+      return
+    }
+
+    const cdn = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
+    const masterUrl = `${cdn.replace(/\/$/, "")}/assets/curriculumsection/${currentSection.id}/master.m3u8`
+
+    console.log("[Lecture] Initializing video player for section:", currentSection.id)
+    console.log("[Lecture] Master URL:", masterUrl)
+
+    // Cleanup previous HLS instance
+    if (hlsRef.current) {
+      console.log("[Lecture] Destroying previous HLS instance")
+      hlsRef.current.destroy()
+      hlsRef.current = null
+    }
+
+    const video = videoRef.current
+
+    // Test native HLS support first
+    const canPlayHls = video.canPlayType('application/vnd.apple.mpegurl')
+    console.log('[Lecture] Native HLS support:', canPlayHls)
+
+    if (canPlayHls) {
+      console.log('[Lecture] Using native HLS support')
+      video.src = masterUrl
+
+      video.addEventListener('loadedmetadata', () => {
+        console.log('[Lecture] Native HLS metadata loaded')
+      })
+
+      video.addEventListener('error', (e) => {
+        console.error('[Lecture] Native HLS error:', e)
+        toast.error('네이티브 HLS 재생 오류')
+      })
+
+    } else if (Hls.isSupported()) {
+      console.log('[Lecture] Using HLS.js')
+
+      const hls = new Hls({
+        debug: true,
+        enableWorker: true,
+        autoStartLoad: true,
+        startPosition: -1,
+        maxBufferLength: 30,
+        maxBufferSize: 60 * 1000 * 1000,
+        maxBufferHole: 0.5
+      })
+
+      hlsRef.current = hls
+
+      // Add all event listeners
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        console.log('[Lecture] Media attached successfully')
+      })
+
+      hls.on(Hls.Events.MANIFEST_LOADING, () => {
+        console.log('[Lecture] Manifest loading started...')
+      })
+
+      hls.on(Hls.Events.MANIFEST_LOADED, (event, data) => {
+        console.log('[Lecture] Manifest loaded:', data)
+      })
+
+      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+        console.log('[Lecture] Manifest parsed:', data)
+        console.log('[Lecture] Audio tracks:', hls.audioTracks)
+
+        // Extract audio tracks from HLS manifest
+        const tracks: TrackInfo[] = []
+
+        if (hls.audioTracks && hls.audioTracks.length > 0) {
+          hls.audioTracks.forEach((track, index) => {
+            const lang = track.lang || track.name || "unknown"
+            tracks.push({
+              lang: lang,
+              label: langNameMap[lang] || track.name || `Track ${index + 1}`,
+              url: track.url || ""
+            })
+          })
+        }
+
+        // If no tracks from HLS, try using dubTracks from API
+        if (tracks.length === 0 && currentSection?.dubTracks) {
+          console.log('[Lecture] No HLS tracks found, using dubTracks from API')
+          currentSection.dubTracks.forEach(dubTrack => {
+            tracks.push({
+              lang: dubTrack.lang,
+              label: langNameMap[dubTrack.lang] || dubTrack.lang,
+              url: dubTrack.url
+            })
+          })
+        }
+
+        console.log('[Lecture] Final audio tracks:', tracks)
+        setAudioTracks(tracks)
+
+        // Set default language
+        if (tracks.length > 0) {
+          const targetTrack = tracks.find(t => t.lang === currentLanguage) || tracks[0]
+          if (targetTrack && hls.audioTracks.length > 0) {
+            const trackIndex = hls.audioTracks.findIndex(t =>
+              t.lang === targetTrack.lang || t.name === targetTrack.lang
+            )
+            if (trackIndex >= 0) {
+              console.log('[Lecture] Setting audio track to:', trackIndex, targetTrack)
+              hls.audioTrack = trackIndex
+            }
+          }
+        }
+      })
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error('[Lecture] HLS error:', event, data)
+
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.error('[Lecture] Network error:', data.details)
+              toast.error(`네트워크 오류: ${data.details}`)
+              break
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.error('[Lecture] Media error:', data.details)
+              toast.error(`미디어 오류: ${data.details}`)
+              hls.recoverMediaError()
+              break
+            default:
+              console.error('[Lecture] Other error:', data.details)
+              toast.error(`재생 오류: ${data.details}`)
+              break
+          }
+        }
+      })
+
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (event, data) => {
+        console.log('[Lecture] Audio track switched to:', data)
+      })
+
+      // Attach and load
+      console.log('[Lecture] Attaching media to video element...')
+      hls.attachMedia(video)
+
+      console.log('[Lecture] Loading source:', masterUrl)
+      hls.loadSource(masterUrl)
+
+    } else {
+      console.error('[Lecture] HLS is not supported in this browser')
+      toast.error('이 브라우저에서는 HLS 재생이 지원되지 않습니다.')
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        console.log('[Lecture] Cleanup: destroying HLS instance')
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+    }
+  }, [currentSectionId]) // Only re-initialize when section changes, not language
+
+  // Update URL when section or language changes
+  const updateUrl = (sectionId: number, language: string) => {
+    const params = new URLSearchParams()
+    params.set("courseId", courseId || "")
+    params.set("sectionId", sectionId.toString())
+    params.set("subtitleLanguage", language)
+    router.push(`/course/lecture?${params.toString()}`)
+  }
+
+  // Handle section navigation
+  const handleSectionChange = (sectionId: number) => {
+    setCurrentSectionId(sectionId)
+    updateUrl(sectionId, currentLanguage)
+
+    // Save learning progress (for future "continue learning" feature)
+    if (courseId) {
+      localStorage.setItem(`course_${courseId}_lastSection`, sectionId.toString())
+      localStorage.setItem(`course_${courseId}_lastLanguage`, currentLanguage)
+    }
+  }
+
+  // Handle language change
+  const handleLanguageChange = (language: string) => {
+    console.log('[Lecture] Changing language to:', language)
+    setCurrentLanguage(language)
+    updateUrl(currentSectionId || 0, language)
+
+    if (hlsRef.current && hlsRef.current.audioTracks && hlsRef.current.audioTracks.length > 0) {
+      const trackIndex = hlsRef.current.audioTracks.findIndex(t =>
+        t.lang === language || t.name === language
+      )
+      console.log('[Lecture] Found track index:', trackIndex, 'for language:', language)
+
+      if (trackIndex >= 0) {
+        hlsRef.current.audioTrack = trackIndex
+        toast.success(`${langNameMap[language] || language}로 전환되었습니다`)
+      } else {
+        console.warn('[Lecture] Track not found for language:', language)
+        toast.error(`${langNameMap[language] || language} 트랙을 찾을 수 없습니다`)
+      }
+    } else {
+      console.warn('[Lecture] No audio tracks available for switching')
+    }
+
+    setShowLanguageSelector(false)
+  }
+
+  // Navigate to next/previous section
+  const navigateSection = (direction: "next" | "prev") => {
+    if (!courseData) return
+
+    const currentIndex = courseData.sections.findIndex(s => s.id === currentSectionId)
+    const newIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1
+
+    if (newIndex >= 0 && newIndex < courseData.sections.length) {
+      const newSection = courseData.sections[newIndex]
+      if (newSection.active && newSection.videos.length > 0) {
+        handleSectionChange(newSection.id)
+      }
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-muted-foreground">로딩 중...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    console.error("[Lecture] Query error:", error)
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="text-muted-foreground mb-2">강의를 불러올 수 없습니다.</div>
+          <div className="text-sm text-muted-foreground">
+            Course ID: {courseId || "없음"}
+          </div>
+          <div className="text-xs text-red-500 mt-2">
+            {error instanceof Error ? error.message : "Unknown error"}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!courseData) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="text-muted-foreground mb-2">강의를 찾을 수 없습니다.</div>
+          <div className="text-sm text-muted-foreground">
+            Course ID: {courseId || "없음"}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? "w-80" : "w-0"} transition-all duration-300 overflow-hidden border-r bg-card`}>
+        <div className="p-4 border-b">
+          <h2 className="font-semibold text-lg truncate">{courseData.title}</h2>
+          <div className="text-sm text-muted-foreground mt-1">
+            {courseData.sections.filter(s => s.active).length}개 수업
+          </div>
+        </div>
+
+        <div className="overflow-y-auto h-[calc(100vh-80px)]">
+          {courseData.sections.map((section, index) => (
+            <button
+              key={section.id}
+              onClick={() => section.active && section.videos.length > 0 && handleSectionChange(section.id)}
+              disabled={!section.active || section.videos.length === 0}
+              className={`w-full text-left p-4 border-b transition-colors ${
+                currentSectionId === section.id
+                  ? "bg-primary/10 border-l-4 border-l-primary"
+                  : "hover:bg-muted/50"
+              } ${
+                !section.active || section.videos.length === 0
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="text-sm font-medium text-muted-foreground min-w-[24px]">
+                  {index + 1}
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium">{section.title}</div>
+                  {section.description && (
+                    <div className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {section.description}
+                    </div>
+                  )}
+                  {section.dubTracks && section.dubTracks.length > 0 && (
+                    <div className="flex gap-1 mt-2">
+                      {section.dubTracks.map(track => (
+                        <span
+                          key={track.lang}
+                          className="text-xs px-1.5 py-0.5 bg-muted rounded"
+                        >
+                          {langNameMap[track.lang] || track.lang}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Video Player */}
+        <div className="flex-1 relative bg-black">
+          {currentSection && currentVideo ? (
+            <video
+              ref={videoRef}
+              controls
+              className="w-full h-full"
+              crossOrigin="anonymous"
+              onLoadStart={() => console.log('[Lecture] Video load started')}
+              onLoadedData={() => console.log('[Lecture] Video data loaded')}
+              onLoadedMetadata={() => console.log('[Lecture] Video metadata loaded')}
+              onCanPlay={() => console.log('[Lecture] Video can play')}
+              onError={(e) => {
+                console.error('[Lecture] Video element error:', e)
+                const video = e.currentTarget
+                if (video.error) {
+                  console.error('[Lecture] Video error code:', video.error.code)
+                  console.error('[Lecture] Video error message:', video.error.message)
+                }
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white">
+              <div className="text-center">
+                <div className="mb-2">섹션을 선택해주세요</div>
+                <div className="text-sm text-gray-400">
+                  {!currentSection && "섹션이 선택되지 않았습니다"}
+                  {currentSection && !currentVideo && "이 섹션에는 비디오가 없습니다"}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sidebar Toggle */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="absolute top-4 left-4 z-10 p-2 bg-black/70 hover:bg-black/90 text-white rounded-md transition-colors"
+          >
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+
+          {/* Language Selector */}
+          {audioTracks.length > 0 && (
+            <div className="absolute top-4 right-4 z-10">
+              <div className="relative">
+                <button
+                  onClick={() => setShowLanguageSelector(!showLanguageSelector)}
+                  className="bg-black/70 hover:bg-black/90 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <Languages className="h-4 w-4" />
+                  <span>{langNameMap[currentLanguage] || currentLanguage}</span>
+                </button>
+
+                {showLanguageSelector && (
+                  <div className="absolute top-full right-0 mt-2 bg-black/90 backdrop-blur-md rounded-md overflow-hidden shadow-xl border border-white/20 min-w-[160px]">
+                    {audioTracks.map((track) => (
+                      <button
+                        key={track.lang}
+                        onClick={() => {
+                          handleLanguageChange(track.lang)
+                          setShowLanguageSelector(false)
+                        }}
+                        className={`w-full text-left px-4 py-3 text-sm transition-colors ${
+                          currentLanguage === track.lang
+                            ? "bg-primary/80 text-primary-foreground"
+                            : "text-white hover:bg-white/10"
+                        }`}
+                      >
+                        {track.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Controls Bar */}
+        <div className="border-t bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateSection("prev")}
+                disabled={
+                  !courseData ||
+                  courseData.sections.findIndex(s => s.id === currentSectionId) === 0
+                }
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                이전
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateSection("next")}
+                disabled={
+                  !courseData ||
+                  courseData.sections.findIndex(s => s.id === currentSectionId) ===
+                  courseData.sections.length - 1
+                }
+              >
+                다음
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+
+            <div className="flex-1 text-center">
+              <h3 className="font-medium">{currentSection?.title}</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  console.group('[Lecture] Debug Info')
+                  console.log('Current Section:', currentSection)
+                  console.log('Current Video:', currentVideo)
+                  console.log('Section ID:', currentSectionId)
+                  console.log('CDN URL:', process.env.NEXT_PUBLIC_CDN_URL)
+                  console.log('Master URL:', `${process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"}/assets/curriculumsection/${currentSectionId}/master.m3u8`)
+                  console.log('Video Ref:', videoRef.current)
+                  console.log('HLS Instance:', hlsRef.current)
+                  console.log('Audio Tracks:', audioTracks)
+                  console.groupEnd()
+                }}
+                className="text-xs ml-2"
+              >
+                디버그
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {currentSection?.files && currentSection.files.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Download files
+                    currentSection.files.forEach(file => {
+                      const a = document.createElement("a")
+                      a.href = file.url
+                      a.download = file.filename
+                      a.click()
+                    })
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  자료 ({currentSection.files.length})
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
