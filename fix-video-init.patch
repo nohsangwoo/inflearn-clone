@@ -1,0 +1,47 @@
+--- a/src/app/course/lecture/page.tsx
++++ b/src/app/course/lecture/page.tsx
+@@ -91,9 +91,7 @@ export default function LecturePage() {
+   const subtitleLanguage = searchParams.get("subtitleLanguage") || "origin"
+ 
+   const [sidebarOpen, setSidebarOpen] = useState(true)
+-  const [currentSectionId, setCurrentSectionId] = useState<number | null>(
+-    sectionId ? parseInt(sectionId) : null
+-  )
++  const [currentSectionId, setCurrentSectionId] = useState<number | null>(null)
+   const [currentLanguage, setCurrentLanguage] = useState(subtitleLanguage)
+   const [audioTracks, setAudioTracks] = useState<TrackInfo[]>([])
+   const [showLanguageSelector, setShowLanguageSelector] = useState(false)
+@@ -118,16 +116,30 @@ export default function LecturePage() {
+ 
+   // Set initial section if not provided
+   useEffect(() => {
+-    if (courseData && !currentSectionId) {
++    if (!courseData || courseData.sections.length === 0) return
++
++    // If sectionId is in query string, use it
++    if (sectionId) {
++      const sectionIdNum = parseInt(sectionId)
++      const sectionExists = courseData.sections.find(s => s.id === sectionIdNum)
++      if (sectionExists) {
++        console.log("[Lecture] Setting section from query string:", sectionIdNum)
++        setCurrentSectionId(sectionIdNum)
++        return
++      } else {
++        console.log("[Lecture] Section", sectionIdNum, "not found in available sections")
++      }
++    }
++
++    // Fallback: if no section is selected, use the first active section
++    if (!currentSectionId) {
+       const firstSection = courseData.sections.find(s => s.active && s.videos.length > 0)
+       if (firstSection) {
++        console.log("[Lecture] Setting first active section as fallback:", firstSection.id)
+         setCurrentSectionId(firstSection.id)
+-        // Don't update URL here to avoid infinite loop
+       }
+     }
+-  }, [courseData]) // Remove currentSectionId from dependencies
++  }, [courseData, sectionId]) // Re-run when courseData or sectionId changes
+ 
+   // Get current section
+   const currentSection = courseData?.sections.find(s => s.id === currentSectionId)

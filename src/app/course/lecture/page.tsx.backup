@@ -91,7 +91,7 @@ export default function LecturePage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [currentSectionId, setCurrentSectionId] = useState<number | null>(
-    null
+    sectionId ? parseInt(sectionId) : null
   )
   const [currentLanguage, setCurrentLanguage] = useState(subtitleLanguage)
   const [audioTracks, setAudioTracks] = useState<TrackInfo[]>([])
