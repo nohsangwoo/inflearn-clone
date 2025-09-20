@@ -1,0 +1,64 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /me/
+Disallow: /_next/
+Disallow: /static/
+Disallow: /*.json$
+Crawl-delay: 1
+
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /me/
+Crawl-delay: 0
+
+User-agent: Googlebot-Image
+Allow: /images/
+Allow: /og-image.png
+Allow: /logo.png
+Allow: /favicon.ico
+
+User-agent: bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /me/
+Crawl-delay: 1
+
+User-agent: Yeti
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /me/
+Crawl-delay: 1
+
+User-agent: Yandex
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /me/
+Crawl-delay: 2
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: Slackbot
+Allow: /
+
+User-agent: *
+Disallow: /cdn-cgi/
+
+Sitemap: https://www.lingoost.com/sitemap.xml
+Sitemap: https://www.lingoost.com/sitemap-0.xml
