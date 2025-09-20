@@ -104,7 +104,7 @@ export default function LecturePage() {
     return locales.includes(firstSegment) ? firstSegment : 'ko'
   })()
   const [currentSectionId, setCurrentSectionId] = useState<number | null>(
-    null
+    sectionId ? parseInt(sectionId) : null
   )
   const [currentLanguage, setCurrentLanguage] = useState(subtitleLanguage)
   const [audioTracks, setAudioTracks] = useState<TrackInfo[]>([])
@@ -129,16 +129,19 @@ export default function LecturePage() {
     },
   })
 
-  // Set initial section if not provided
+  // Set initial section from URL or use first available section
   useEffect(() => {
-    if (courseData && !currentSectionId) {
+    if (sectionId) {
+      // If sectionId is provided in URL, use it
+      setCurrentSectionId(parseInt(sectionId))
+    } else if (courseData && !currentSectionId) {
+      // Otherwise, find first available section
       const firstSection = courseData.sections.find(s => s.active && s.videos.length > 0)
       if (firstSection) {
         setCurrentSectionId(firstSection.id)
-        // Don't update URL here to avoid infinite loop
       }
     }
-  }, [courseData]) // Remove currentSectionId from dependencies
+  }, [courseData, sectionId]) // Include sectionId in dependencies
 
   // Get current section
   const currentSection = courseData?.sections.find(s => s.id === currentSectionId)
@@ -316,7 +319,8 @@ export default function LecturePage() {
     params.set("courseId", courseId || "")
     params.set("sectionId", sectionId.toString())
     params.set("subtitleLanguage", language)
-    router.push(`/course/lecture?${params.toString()}`)
+    // Include locale in the URL path (모든 언어에 locale prefix 포함)
+    router.push(`/${currentLocale}/course/lecture?${params.toString()}`)
   }
 
   // Handle section navigation
@@ -418,7 +422,7 @@ export default function LecturePage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(currentLocale === 'ko' ? `/course/${courseId}` : `/${currentLocale}/course/${courseId}`)}
+            onClick={() => router.push(`/${currentLocale}/course/${courseId}`)}
             className="w-full justify-start gap-2"
           >
             <ArrowLeft className="h-4 w-4" />

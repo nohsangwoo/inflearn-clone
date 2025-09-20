@@ -201,11 +201,12 @@ export default function CourseDetailPageWrapper() {
     }
 
     if (targetSectionId) {
-      // locale을 포함한 경로로 수정
-      const localePrefix = locale === 'ko' ? '' : `/${locale}`
-      router.push(
-        `${localePrefix}/course/lecture?courseId=${detail.id}&sectionId=${targetSectionId}&subtitleLanguage=${targetLanguage}`,
-      )
+      // 모든 언어에 locale prefix 포함 (한국어도 /ko 사용)
+      const url = `/${locale}/course/lecture?courseId=${detail.id}&sectionId=${targetSectionId}&subtitleLanguage=${targetLanguage}`
+      console.log('[PageWrapper] Navigating to:', url)
+      router.push(url)
+    } else {
+      console.log('[PageWrapper] No targetSectionId found')
     }
   }
 
