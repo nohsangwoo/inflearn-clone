@@ -19,7 +19,9 @@
       "Bash(awk:*)",
       "Bash(npm run typecheck:*)",
       "Bash(npm run lint)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(cmd /c:*)",
+      "Bash(tasklist)"
     ],
     "deny": [],
     "ask": []

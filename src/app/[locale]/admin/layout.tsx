@@ -1,4 +1,11 @@
-import { AdminSidebar } from "./_components/sidebar"
+'use client'
+
+import dynamic from 'next/dynamic'
+
+const AdminSidebar = dynamic(() => import('./_components/sidebar').then(mod => mod.AdminSidebar), {
+  ssr: false,
+  loading: () => <div className="w-64 md:w-72 shrink-0 border-r bg-sidebar animate-pulse" />
+})
 
 export default function AdminLayout({
   children,
@@ -16,5 +23,3 @@ export default function AdminLayout({
     </div>
   )
 }
-
-

@@ -68,18 +68,9 @@ export function SiteHeader() {
             </Link>
           </div>
 
-          <nav className="flex-1 flex items-center justify-center gap-6 text-sm">
-            <Link href={localePath('/company')} className="hover:text-primary">
-              회사소개 {/* 회사소개 */}
-            </Link>
-          </nav>
+          <div className="flex-1"></div>
 
           <div className="flex items-center gap-2">
-            <Link href={localePath('/admin')} className="hidden sm:block">
-              <Button variant="outline" size="sm">
-                지식공유자 {/* 지식공유자 */}
-              </Button>
-            </Link>
             <LanguageSwitcher />
             <ModeToggle />
             {!user ? (
@@ -109,6 +100,16 @@ export function SiteHeader() {
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href={localePath('/me')}>대시보드 {/* 대시보드 */}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href={localePath('/company')}>회사소개 {/* 회사소개 */}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={localePath('/privacy')}>개인정보처리방침 {/* 개인정보처리방침 */}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={localePath('/terms')}>이용약관 {/* 이용약관 */}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} disabled={isLoading}>
