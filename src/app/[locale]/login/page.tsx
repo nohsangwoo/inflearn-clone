@@ -1,14 +1,19 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Apple } from "lucide-react"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { toast } from "sonner"
+import { getTranslation, useLocale } from "@/lib/translations"
 
 export default function LoginPage() {
   const router = useRouter()
+  const pathname = usePathname()
+  const locale = useLocale(pathname)
+  const t = getTranslation(locale).login
+
   const {
     user,
     isLoading,
@@ -38,41 +43,41 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
     if (!email || !password) {
-      setError("이메일과 비밀번호를 입력해 주세요")
+      setError(t.errors.required) // "이메일과 비밀번호를 입력해 주세요"
       return
     }
     if (!isValidEmail(email)) {
-      setError("올바른 이메일 형식이 아닙니다")
+      setError(t.errors.invalidEmail) // "올바른 이메일 형식이 아닙니다"
       return
     }
     if (password.length < 8) {
-      setError("비밀번호는 8자 이상이어야 합니다")
+      setError(t.errors.passwordLength) // "비밀번호는 8자 이상이어야 합니다"
       return
     }
     if (mode === "signup" && password !== confirmPassword) {
-      setError("비밀번호가 일치하지 않습니다")
+      setError(t.errors.passwordMismatch) // "비밀번호가 일치하지 않습니다"
       return
     }
     try {
       setLoading(true)
       if (mode === "login") {
         await loginWithEmailPassword(email, password)
-        toast.success("로그인에 성공했습니다")
+        toast.success(t.success.login) // "로그인에 성공했습니다"
       } else {
         const { needsEmailVerification } = await signUpWithEmailPassword(
           email,
           password,
         )
         if (needsEmailVerification) {
-          toast.success("확인 메일이 전송되었습니다. 메일함을 확인해 주세요.")
+          toast.success(t.success.emailVerification) // "확인 메일이 전송되었습니다. 메일함을 확인해 주세요."
         }
         if (!needsEmailVerification) {
-          toast.success("회원가입이 완료되었습니다")
+          toast.success(t.success.signup) // "회원가입이 완료되었습니다"
         }
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      setError(message || (mode === "login" ? "로그인에 실패했습니다." : "회원가입에 실패했습니다."))
+      setError(message || (mode === "login" ? t.errors.loginFailed : t.errors.signupFailed)) // "로그인에 실패했습니다." : "회원가입에 실패했습니다."
     } finally {
       setLoading(false)
     }
@@ -85,7 +90,7 @@ export default function LoginPage() {
       // OAuth는 외부로 리다이렉트되므로 여기서 추가 동작 없음
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
-      toast.error(message || "소셜 로그인에 실패했습니다")
+      toast.error(message || t.errors.socialLoginFailed) // "소셜 로그인에 실패했습니다"
     } finally {
       setLoading(false)
     }
@@ -95,8 +100,8 @@ export default function LoginPage() {
     <div className="min-h-[calc(100dvh-56px)] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{mode === "login" ? "로그인" : "회원가입"}</h1>
-          <p className="text-sm text-muted-foreground">계속하려면 아래 방법 중 하나를 선택하세요</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{mode === "login" ? t.login : t.signup}</h1> {/* "로그인" : "회원가입" */}
+          <p className="text-sm text-muted-foreground">{t.subtitle}</p> {/* "계속하려면 아래 방법 중 하나를 선택하세요" */}
         </div>
 
         <div className="mt-6 space-y-3">
@@ -107,7 +112,7 @@ export default function LoginPage() {
             disabled={isLoading}
           >
             <GoogleIcon className="mr-2 h-4 w-4" />
-            Google로 계속하기
+            {t.google} {/* "Google로 계속하기" */}
           </Button>
           <Button
             variant="outline"
@@ -116,19 +121,19 @@ export default function LoginPage() {
             disabled={isLoading}
           >
             <Apple className="mr-2 h-4 w-4" />
-            Apple로 계속하기
+            {t.apple} {/* "Apple로 계속하기" */}
           </Button>
         </div>
 
         <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
           <div className="h-px flex-1 bg-border" />
-          <span>또는</span>
+          <span>{t.or}</span> {/* "또는" */}
           <div className="h-px flex-1 bg-border" />
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium">이메일</label>
+            <label htmlFor="email" className="text-sm font-medium">{t.email}</label> {/* "이메일" */}
             <input
               id="email"
               type="email"
@@ -136,12 +141,12 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="you@example.com"
+              placeholder={t.emailPlaceholder} // "you@example.com"
               disabled={isLoading}
             />
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="password" className="text-sm font-medium">비밀번호</label>
+            <label htmlFor="password" className="text-sm font-medium">{t.password}</label> {/* "비밀번호" */}
             <input
               id="password"
               type="password"
@@ -149,13 +154,13 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="********"
+              placeholder={t.passwordPlaceholder} // "********"
               disabled={isLoading}
             />
           </div>
           {mode === "signup" && (
             <div className="space-y-1.5">
-              <label htmlFor="confirmPassword" className="text-sm font-medium">비밀번호 확인</label>
+              <label htmlFor="confirmPassword" className="text-sm font-medium">{t.confirmPassword}</label> {/* "비밀번호 확인" */}
               <input
                 id="confirmPassword"
                 type="password"
@@ -163,7 +168,7 @@ export default function LoginPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="********"
+                placeholder={t.passwordPlaceholder} // "********"
                 disabled={isLoading}
               />
             </div>
@@ -172,7 +177,7 @@ export default function LoginPage() {
             <p className="text-sm text-destructive">{error}</p>
           )}
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (mode === "login" ? "로그인 중..." : "회원가입 중...") : (mode === "login" ? "이메일로 로그인" : "이메일로 회원가입")}
+            {isLoading ? (mode === "login" ? t.loggingIn : t.signingUp) : (mode === "login" ? t.loginButton : t.signupButton)} {/* "로그인 중..." : "회원가입 중..." : "이메일로 로그인" : "이메일로 회원가입" */}
           </Button>
         </form>
 
@@ -184,7 +189,7 @@ export default function LoginPage() {
               onClick={() => setMode("signup")}
               disabled={isLoading}
             >
-              계정이 없으신가요? 회원가입
+              {t.noAccount} {/* "계정이 없으신가요? 회원가입" */}
             </button>
           ) : (
             <button
@@ -193,13 +198,13 @@ export default function LoginPage() {
               onClick={() => setMode("login")}
               disabled={isLoading}
             >
-              이미 계정이 있으신가요? 로그인
+              {t.hasAccount} {/* "이미 계정이 있으신가요? 로그인" */}
             </button>
           )}
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground leading-relaxed">
-          로그인 시 서비스 약관 및 개인정보 처리방침에 동의한 것으로 간주됩니다.
+          {t.agreement} {/* "로그인 시 서비스 약관 및 개인정보 처리방침에 동의한 것으로 간주됩니다." */}
         </p>
       </div>
     </div>
@@ -223,5 +228,3 @@ function GoogleIcon({ className }: { className?: string }) {
     </svg>
   )
 }
-
-

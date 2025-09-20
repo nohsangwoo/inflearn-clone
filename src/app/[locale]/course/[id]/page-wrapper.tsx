@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import axios from 'axios'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, usePathname } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
+import { getTranslation, useLocale } from '@/lib/translations'
 
 type Detail = {
   id: number
@@ -55,6 +56,9 @@ export default function CourseDetailPageWrapper() {
   const params = useParams<{ id: string }>()
   const lectureId = Number(params?.id)
   const router = useRouter()
+  const pathname = usePathname()
+  const locale = useLocale(pathname)
+  const t = getTranslation(locale).course
   const queryClient = useQueryClient()
   const [like, setLike] = useState(false)
   const [inCart, setInCart] = useState(false)
@@ -96,8 +100,8 @@ export default function CourseDetailPageWrapper() {
     const effective = hasDiscount
       ? (detail.discountPrice as number)
       : detail.price
-    return effective === 0 ? '무료' : `₩${effective.toLocaleString()}`
-  }, [detail])
+    return effective === 0 ? t.free : `₩${effective.toLocaleString()}` // "무료"
+  }, [detail, t.free])
 
   // 액션
   const addToCart = useMutation({
@@ -206,7 +210,7 @@ export default function CourseDetailPageWrapper() {
   if (isLoading || !detail) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="text-sm text-muted-foreground">불러오는 중...</div>
+        <div className="text-sm text-muted-foreground">{t.loading}</div> {/* "불러오는 중..." */}
       </div>
     )
   }
@@ -230,7 +234,7 @@ export default function CourseDetailPageWrapper() {
               </div>
               <div className="inline-flex items-center gap-1">
                 <Users className="h-4 w-4" />
-                <span>수강생 {detail.purchaseCount.toLocaleString()}명</span>
+                <span>{t.students} {detail.purchaseCount.toLocaleString()}</span> {/* "수강생" */}
               </div>
               <span className="hidden sm:inline">·</span>
               <div className="inline-flex items-center gap-2">
@@ -258,12 +262,12 @@ export default function CourseDetailPageWrapper() {
           {/* 커리큘럼 요약 */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">커리큘럼</h2>
+              <h2 className="text-lg font-medium">{t.curriculum}</h2> {/* "커리큘럼" */}
             </div>
             <div className="divide-y rounded-md border">
               {detail.sections.length === 0 ? (
                 <div className="p-3 text-sm text-muted-foreground">
-                  커리큘럼이 아직 없습니다.
+                  {t.noCurriculum} {/* "커리큘럼이 아직 없습니다." */}
                 </div>
               ) : (
                 detail.sections.map(s => (
@@ -275,7 +279,7 @@ export default function CourseDetailPageWrapper() {
                       <div className="font-medium truncate">{s.title}</div>
                       {!s.active && (
                         <div className="text-xs text-muted-foreground">
-                          비공개
+                          {t.private} {/* "비공개" */}
                         </div>
                       )}
                     </div>
@@ -305,7 +309,7 @@ export default function CourseDetailPageWrapper() {
                 {typeof detail.discountPrice === 'number' &&
                   (detail.discountPrice as number) < detail.price && (
                     <div className="text-xs text-muted-foreground">
-                      정가 ₩{detail.price.toLocaleString()}
+                      {t.originalPrice} ₩{detail.price.toLocaleString()} {/* "정가" */}
                     </div>
                   )}
                 <div className="flex gap-2">
@@ -314,7 +318,7 @@ export default function CourseDetailPageWrapper() {
                     onClick={() => purchase.mutate()}
                     disabled={purchase.isPending}
                   >
-                    수강 신청
+                    {t.enroll} {/* "수강 신청" */}
                   </Button>
                   <Button
                     variant={inCart ? 'secondary' : 'outline'}
@@ -323,7 +327,7 @@ export default function CourseDetailPageWrapper() {
                     disabled={addToCart.isPending}
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />{' '}
-                    {inCart ? '담김' : '장바구니'}
+                    {inCart ? t.inCart : t.addToCart} {/* "담김" : "장바구니" */}
                   </Button>
                 </div>
 
@@ -334,7 +338,7 @@ export default function CourseDetailPageWrapper() {
                   onClick={handleStartLearning}
                 >
                   <BookOpen className="h-4 w-4 mr-2" />
-                  학습하기
+                  {t.startLearning} {/* "학습하기" */}
                 </Button>
 
                 <Button
@@ -348,7 +352,7 @@ export default function CourseDetailPageWrapper() {
                       like ? 'fill-red-500 text-red-500' : ''
                     }`}
                   />{' '}
-                  {detail.likeCount.toLocaleString()}명이 좋아함
+                  {detail.likeCount.toLocaleString()}{t.peoplesLikes} {/* "명이 좋아함" */}
                 </Button>
               </CardContent>
             </Card>
@@ -361,6 +365,9 @@ export default function CourseDetailPageWrapper() {
 
 // 리뷰 컴포넌트
 function Reviews({ lectureId }: { lectureId: number }) {
+  const pathname = usePathname()
+  const locale = useLocale(pathname)
+  const t = getTranslation(locale).course
   const [rating, setRating] = useState(5)
   const { data: reviews = [], refetch } = useQuery({
     queryKey: ['course-reviews', lectureId],
@@ -394,12 +401,12 @@ function Reviews({ lectureId }: { lectureId: number }) {
   })
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-medium">리뷰 ({reviews.length})</h2>
+      <h2 className="text-lg font-medium">{t.reviews} ({reviews.length})</h2> {/* "리뷰" */}
       <div className="space-y-3">
         {/* 작성 */}
         <Card>
           <CardContent className="p-3">
-            <div className="text-sm font-medium mb-1">리뷰 작성</div>
+            <div className="text-sm font-medium mb-1">{t.writeReview}</div> {/* "리뷰 작성" */}
             <div className="flex gap-1 mb-2">
               {[1, 2, 3, 4, 5].map(i => (
                 <button
@@ -414,7 +421,7 @@ function Reviews({ lectureId }: { lectureId: number }) {
               ))}
             </div>
             <textarea
-              placeholder="강의 리뷰를 남겨주세요"
+              placeholder={t.reviewPlaceholder} // "강의 리뷰를 남겨주세요"
               className="w-full border rounded px-2 py-1 text-sm bg-background"
               rows={2}
               onKeyDown={e => {
@@ -428,7 +435,7 @@ function Reviews({ lectureId }: { lectureId: number }) {
               }}
             />
             <div className="text-xs text-muted-foreground mt-1">
-              Ctrl+Enter로 전송
+              {t.sendWithCtrlEnter} {/* "Ctrl+Enter로 전송" */}
             </div>
           </CardContent>
         </Card>
@@ -436,7 +443,7 @@ function Reviews({ lectureId }: { lectureId: number }) {
         <div className="space-y-2">
           {reviews.length === 0 && (
             <div className="text-sm text-muted-foreground">
-              아직 리뷰가 없습니다.
+              {t.noReviews} {/* "아직 리뷰가 없습니다." */}
             </div>
           )}
           {reviews.map(
@@ -475,14 +482,14 @@ function Reviews({ lectureId }: { lectureId: number }) {
                     {(rv.replies ?? []).map(rep => (
                       <div key={rep.id} className="text-sm text-foreground/90">
                         <span className="text-xs text-muted-foreground mr-1">
-                          답글
+                          {t.reply} {/* "답글" */}
                         </span>
                         {rep.content}
                       </div>
                     ))}
                     <div className="flex items-center gap-2">
                       <input
-                        placeholder="답글 작성"
+                        placeholder={t.replyPlaceholder} // "답글 작성"
                         className="flex-1 border rounded px-2 py-1 text-xs bg-background"
                         onKeyDown={e => {
                           const v = (e.target as HTMLInputElement).value
