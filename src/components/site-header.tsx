@@ -35,11 +35,8 @@ export function SiteHeader() {
     return locales.includes(firstSegment) ? firstSegment : 'ko'
   }, [pathname])
 
-  // locale을 포함한 경로 생성 헬퍼
+  // locale을 포함한 경로 생성 헬퍼 (모든 언어에 locale prefix 포함)
   const localePath = (path: string) => {
-    if (currentLocale === 'ko') {
-      return path // 한국어는 prefix 없음
-    }
     return `/${currentLocale}${path}`
   }
 
@@ -59,7 +56,14 @@ export function SiteHeader() {
         <div className="flex h-14 items-center gap-4">
           <div className="flex items-center gap-2">
             <Link href={localePath('/')} className="flex items-center gap-2">
-              <Image src="/logo.png" alt="logo" width={24} height={24} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="lingoost logo"
+                width={24}
+                height={24}
+                className="h-6 w-6"
+              />
               <span className="font-semibold">lingoost</span>
             </Link>
           </div>
