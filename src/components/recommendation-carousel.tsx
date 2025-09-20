@@ -1,16 +1,30 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 type Course = { id: string; title: string; thumbnail: string; author?: string; price?: string }
 
 export function RecommendationCarousel({ items }: { items: Course[] }) {
   const visibleItems = items.slice(0, 20)
   const [viewportRef, embla] = useEmblaCarousel({ dragFree: true, loop: false, align: "start" })
+  const pathname = usePathname()
+
+  // URL에서 현재 locale 추출
+  const currentLocale = useMemo(() => {
+    const segments = pathname.split('/').filter(Boolean)
+    const firstSegment = segments[0]
+    const locales = [
+      'ko', 'en', 'ja', 'vi', 'ru', 'zh', 'zh-CN', 'zh-TW',
+      'fr', 'de', 'es', 'pt', 'it', 'id', 'th', 'hi',
+      'ar', 'tr', 'pl', 'uk'
+    ]
+    return locales.includes(firstSegment) ? firstSegment : 'ko'
+  }, [pathname])
 
   const scrollPrev = useCallback(() => embla?.scrollPrev(), [embla])
   const scrollNext = useCallback(() => embla?.scrollNext(), [embla])
@@ -36,7 +50,7 @@ export function RecommendationCarousel({ items }: { items: Course[] }) {
               key={c.id}
               className="shrink-0 basis-[85%] sm:basis-1/2 md:basis-1/3 lg:basis-1/5"
             >
-              <Link href={`/course/${c.id}`} className="block h-full">
+              <Link href={currentLocale === 'ko' ? `/course/${c.id}` : `/${currentLocale}/course/${c.id}`} className="block h-full">
                 <div className="rounded-lg border overflow-hidden bg-card h-full hover:shadow-sm transition-shadow">
                   <div className="aspect-video bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}

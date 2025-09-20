@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useLocaleStore, type Locale } from "@/lib/stores/locale-store"
 
 const locales = [
   { code: "ko", label: "한국어" },
@@ -36,17 +37,33 @@ const locales = [
 export function LanguageSwitcher() {
   const router = useRouter()
   const pathname = usePathname()
+  const { locale: storedLocale, setLocale: setStoredLocale } = useLocaleStore()
 
+  // URL에서 현재 locale 추출
   const currentLocale = useMemo(() => {
     const seg = pathname.split("/").filter(Boolean)[0]
     return locales.find((l) => l.code === seg)?.code ?? "ko"
   }, [pathname])
 
-  function switchLocale(nextLocale: string) {
+  // 페이지 로드시 저장된 locale이 있으면 해당 locale로 이동
+  useEffect(() => {
+    if (storedLocale && storedLocale !== currentLocale) {
+      switchLocale(storedLocale, false) // 재귀 방지를 위해 store 업데이트 없이 이동
+    }
+  }, []) // 의도적으로 의존성 배열을 비워두어 초기 로드시에만 실행
+
+  function switchLocale(nextLocale: string, updateStore = true) {
     if (nextLocale === currentLocale) return
+
+    // store에 저장
+    if (updateStore) {
+      setStoredLocale(nextLocale as Locale)
+    }
+
     const parts = pathname.split("/")
     const first = parts[1] ?? ""
     const hasLocalePrefix = locales.some((l) => l.code === first)
+
     if (nextLocale === "ko") {
       const withoutPrefix = hasLocalePrefix ? ["", ...parts.slice(2)].join("/") || "/" : pathname
       router.push(withoutPrefix || "/")
@@ -66,7 +83,11 @@ export function LanguageSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         {locales.map((l) => (
-          <DropdownMenuItem key={l.code} onClick={() => switchLocale(l.code)} data-state={l.code === currentLocale ? "checked" : undefined}>
+          <DropdownMenuItem
+            key={l.code}
+            onClick={() => switchLocale(l.code)}
+            data-state={l.code === currentLocale ? "checked" : undefined}
+          >
             {l.label}
           </DropdownMenuItem>
         ))}
@@ -74,5 +95,3 @@ export function LanguageSwitcher() {
     </DropdownMenu>
   )
 }
-
-

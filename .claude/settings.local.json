@@ -16,7 +16,10 @@
       "Bash(node fix-translations.js)",
       "Bash(cut:*)",
       "Bash(node:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

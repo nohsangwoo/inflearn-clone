@@ -201,8 +201,10 @@ export default function CourseDetailPageWrapper() {
     }
 
     if (targetSectionId) {
+      // locale을 포함한 경로로 수정
+      const localePrefix = locale === 'ko' ? '' : `/${locale}`
       router.push(
-        `/course/lecture?courseId=${detail.id}&sectionId=${targetSectionId}&subtitleLanguage=${targetLanguage}`,
+        `${localePrefix}/course/lecture?courseId=${detail.id}&sectionId=${targetSectionId}&subtitleLanguage=${targetLanguage}`,
       )
     }
   }

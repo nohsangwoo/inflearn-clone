@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { Button } from "@/components/ui/button"
@@ -81,6 +81,7 @@ const langNameMap: Record<string, string> = {
 }
 
 export default function LecturePage() {
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -90,6 +91,18 @@ export default function LecturePage() {
   const subtitleLanguage = searchParams.get("subtitleLanguage") || "origin"
 
   const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  // URL에서 현재 locale 추출
+  const currentLocale = (() => {
+    const segments = pathname.split('/').filter(Boolean)
+    const firstSegment = segments[0]
+    const locales = [
+      'ko', 'en', 'ja', 'vi', 'ru', 'zh', 'zh-CN', 'zh-TW',
+      'fr', 'de', 'es', 'pt', 'it', 'id', 'th', 'hi',
+      'ar', 'tr', 'pl', 'uk'
+    ]
+    return locales.includes(firstSegment) ? firstSegment : 'ko'
+  })()
   const [currentSectionId, setCurrentSectionId] = useState<number | null>(
     null
   )
@@ -405,7 +418,7 @@ export default function LecturePage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(`/course/${courseId}`)}
+            onClick={() => router.push(currentLocale === 'ko' ? `/course/${courseId}` : `/${currentLocale}/course/${courseId}`)}
             className="w-full justify-start gap-2"
           >
             <ArrowLeft className="h-4 w-4" />

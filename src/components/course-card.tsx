@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Heart, ShoppingCart } from "lucide-react"
@@ -21,9 +22,25 @@ export type CourseItem = {
 
 export function CourseCard({ course }: { course: CourseItem }) {
   const [liked, setLiked] = useState(false)
+  const pathname = usePathname()
+
+  // URL에서 현재 locale 추출
+  const currentLocale = useMemo(() => {
+    const segments = pathname.split('/').filter(Boolean)
+    const firstSegment = segments[0]
+    const locales = [
+      'ko', 'en', 'ja', 'vi', 'ru', 'zh', 'zh-CN', 'zh-TW',
+      'fr', 'de', 'es', 'pt', 'it', 'id', 'th', 'hi',
+      'ar', 'tr', 'pl', 'uk'
+    ]
+    return locales.includes(firstSegment) ? firstSegment : 'ko'
+  }, [pathname])
+
+  // locale을 포함한 경로 생성
+  const courseUrl = currentLocale === 'ko' ? `/course/${course.id}` : `/${currentLocale}/course/${course.id}`
 
   return (
-    <Link href={`/course/${course.id}`} className="block h-full">
+    <Link href={courseUrl} className="block h-full">
       <Card className="group h-full overflow-hidden">
         <div className="relative aspect-video bg-muted overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
