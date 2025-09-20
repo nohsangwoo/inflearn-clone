@@ -522,22 +522,34 @@ export default function LecturePage() {
 
                 {showLanguageSelector && (
                   <div className="absolute top-full right-0 mt-2 bg-black/90 backdrop-blur-md rounded-md overflow-hidden shadow-xl border border-white/20 min-w-[160px]">
-                    {audioTracks.map((track) => (
-                      <button
-                        key={track.lang}
-                        onClick={() => {
-                          handleLanguageChange(track.lang)
-                          setShowLanguageSelector(false)
-                        }}
-                        className={`w-full text-left px-4 py-3 text-sm transition-colors ${
-                          currentLanguage === track.lang
-                            ? "bg-primary/80 text-primary-foreground"
-                            : "text-white hover:bg-white/10"
-                        }`}
-                      >
-                        {track.label}
-                      </button>
-                    ))}
+                    {[...audioTracks]
+                      .sort((a, b) => {
+                        // Check if either track is "origin" (case-insensitive)
+                        const aIsOrigin = a.lang.toLowerCase() === "origin"
+                        const bIsOrigin = b.lang.toLowerCase() === "origin"
+
+                        if (aIsOrigin) return -1
+                        if (bIsOrigin) return 1
+
+                        // Sort other languages alphabetically by label
+                        return (a.label || a.lang).localeCompare(b.label || b.lang)
+                      })
+                      .map((track) => (
+                        <button
+                          key={track.lang}
+                          onClick={() => {
+                            handleLanguageChange(track.lang)
+                            setShowLanguageSelector(false)
+                          }}
+                          className={`w-full text-left px-4 py-3 text-sm transition-colors ${
+                            currentLanguage === track.lang
+                              ? "bg-primary/80 text-primary-foreground"
+                              : "text-white hover:bg-white/10"
+                          }`}
+                        >
+                          {track.label}
+                        </button>
+                      ))}
                   </div>
                 )}
               </div>
