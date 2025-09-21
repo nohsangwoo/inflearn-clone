@@ -1,11 +1,7 @@
 'use client'
 
-import dynamic from 'next/dynamic'
-
-const AdminSidebar = dynamic(() => import('./_components/sidebar').then(mod => mod.AdminSidebar), {
-  ssr: false,
-  loading: () => <div className="w-64 md:w-72 shrink-0 border-r bg-sidebar animate-pulse" />
-})
+import { AdminSidebar } from './_components/sidebar'
+import { AdminMobileSidebar } from './_components/mobile-sidebar'
 
 export default function AdminLayout({
   children,
@@ -13,12 +9,22 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="mx-auto max-w-6xl px-4">
-      <div className="flex gap-6 py-6">
-        <AdminSidebar />
-        <div className="flex-1 min-w-0">
-          {children}
+    <div className="min-h-screen">
+      <div className="md:hidden sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-4 px-4 h-14">
+          <AdminMobileSidebar />
+          <h1 className="font-semibold text-lg">강의 제공자</h1>
         </div>
+      </div>
+
+      <div className="flex">
+        <AdminSidebar />
+
+        <main className="flex-1 min-w-0">
+          <div className="container max-w-6xl px-4 md:px-6 py-6">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   )

@@ -9,6 +9,7 @@ import {
   Star,
   Wallet,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 type NavItem = {
   href: string
@@ -29,15 +30,15 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   return (
     <Link
       href={item.href}
-      className={
-        `flex items-center gap-2 md:gap-3 rounded-md px-3 py-2 md:px-4 md:py-3 text-sm md:text-base transition-colors ` +
-        (isActive
-          ? "bg-sidebar-accent text-sidebar-foreground"
-          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground")
-      }
+      className={cn(
+        "flex items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors",
+        isActive
+          ? "bg-secondary text-secondary-foreground"
+          : "text-muted-foreground hover:bg-secondary/50 hover:text-secondary-foreground"
+      )}
       aria-current={isActive ? "page" : undefined}
     >
-      <Icon className="h-4 w-4 md:h-5 md:w-5" />
+      <Icon className="h-5 w-5" />
       <span>{item.label}</span>
     </Link>
   )
@@ -47,9 +48,11 @@ export function AdminSidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 md:w-72 shrink-0 border-r bg-sidebar text-sidebar-foreground">
-      <div className="h-14 md:h-16 flex items-center px-4 md:px-5 font-semibold md:text-lg">강의 제공자</div>
-      <nav className="flex flex-col gap-1 md:gap-2 px-2 md:px-3 pb-4">
+    <aside className="hidden md:block w-72 shrink-0 border-r bg-background">
+      <div className="h-16 flex items-center px-5 font-semibold text-lg border-b">
+        강의 제공자
+      </div>
+      <nav className="flex flex-col gap-2 px-3 py-4">
         {navItems.map((item) => (
           <NavLink key={item.href} item={item} isActive={pathname === item.href} />
         ))}
@@ -59,5 +62,3 @@ export function AdminSidebar() {
 }
 
 export default AdminSidebar
-
-
