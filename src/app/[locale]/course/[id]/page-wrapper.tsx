@@ -186,8 +186,8 @@ export default function CourseDetailPageWrapper() {
       const toss = await loadTossPayments(clientKey)
       const widgets = toss.widgets({ customerKey: ANONYMOUS })
 
-      const successUrl = `${window.location.origin}/api/payments/success`
-      const failUrl = `${window.location.origin}/api/payments/fail`
+      const successUrl = `${window.location.origin}/${locale}/payments/success`
+      const failUrl = `${window.location.origin}/${locale}/payments/fail`
 
       const amount = Number(order.amount)
       if (!Number.isFinite(amount) || amount < 100) {
