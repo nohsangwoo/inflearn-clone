@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
 
     await prisma.webhookEventLog.updateMany({ where: { signature: signature ?? undefined }, data: { processed: true } })
     return NextResponse.json({ ok: true })
-  } catch (e: any) {
-    return NextResponse.json({ message: e?.message ?? "webhook error" }, { status: 500 })
+  } catch (e: unknown) {
+    return NextResponse.json({ message: getErrorMessage(e) }, { status: 500 })
   }
 }
 
@@ -73,4 +73,12 @@ function mapStatus(status?: string) {
 
 function safeJson(text: string) {
   try { return JSON.parse(text) } catch { return null }
+}
+
+function getErrorMessage(err: unknown): string {
+  if (typeof err === "object" && err !== null && "message" in err) {
+    const m = (err as { message?: unknown }).message
+    if (typeof m === "string") return m
+  }
+  return "webhook error"
 }

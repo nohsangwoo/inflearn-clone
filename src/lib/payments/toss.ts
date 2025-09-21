@@ -27,14 +27,14 @@ export async function confirmTossPayment(params: ConfirmParams) {
     const message = typeof err?.message === "string" ? err.message : `confirm failed: ${res.status}`
     const code = typeof err?.code === "string" ? err.code : undefined
     const name = typeof err?.name === "string" ? err.name : undefined
-    const error = new Error(message) as Error & { code?: string; name?: string; raw?: any }
+    const error = new Error(message) as Error & { code?: string; name?: string; raw?: unknown }
     error.code = code
     error.name = name
-    error.raw = err
+    error.raw = err as unknown
     throw error
   }
 
-  return (await res.json()) as any
+  return (await res.json()) as unknown
 }
 
 export function generateOrderId() {

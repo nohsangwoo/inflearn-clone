@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prismaClient"
 import { confirmTossPayment } from "@/lib/payments/toss"
 
+type TossConfirmResponse = {
+  method?: string
+  approvedAt?: string
+  totalAmount?: number
+  vat?: number
+  receipt?: { url?: string }
+  paymentMethod?: string
+  card?: { company?: string }
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const paymentKey: string = body?.paymentKey
@@ -19,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const confirmed = await confirmTossPayment({ paymentKey, orderId, amount })
+    const confirmed = (await confirmTossPayment({ paymentKey, orderId, amount })) as TossConfirmResponse
 
     await prisma.$transaction(async (tx) => {
       await tx.paymentOrder.update({
@@ -59,7 +69,7 @@ export async function POST(req: NextRequest) {
       })
     })
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, orderId, lectureId: order.lectureId })
   } catch (e: unknown) {
     let message = "confirm failed"
     let code: string | number | undefined

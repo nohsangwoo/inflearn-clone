@@ -81,6 +81,19 @@ export default function CourseDetailPageWrapper() {
     },
   })
 
+  // 구매 여부
+  const { data: purchasedRes } = useQuery({
+    queryKey: ['course-purchased', lectureId],
+    enabled: Number.isFinite(lectureId),
+    queryFn: async () => {
+      const { data } = await axios.get(`/api/courses/purchased`, { params: { lectureId } })
+      return data as { purchased: boolean }
+    },
+  })
+
+  console.log("purchasedRes: ",purchasedRes)
+  const purchased = Boolean(purchasedRes?.purchased)
+
   // 초기 좋아요/장바구니 상태
   useQuery({
     queryKey: ['course-like', lectureId],
@@ -221,6 +234,11 @@ export default function CourseDetailPageWrapper() {
         failUrl,
       }
       setIsWidgetOpen(true)
+    },
+    onSuccess: () => {
+      // 결제창 호출 직후에는 아직 결제 전일 수 있으나, 성공 후 페이지에서 확정됨
+      // 여기서는 낙관적 UX로 구매여부 재조회 트리거
+      queryClient.invalidateQueries({ queryKey: ['course-purchased', lectureId] })
     },
     onError: (err: unknown) => {
       const anyErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string }
@@ -400,22 +418,29 @@ export default function CourseDetailPageWrapper() {
                     </div>
                   )}
                 <div className="flex gap-2">
-                  <Button
-                    className="flex-1"
-                    onClick={() => purchase.mutate()}
-                    disabled={purchase.isPending}
-                  >
-                    {t.enroll} {/* "수강 신청" */}
-                  </Button>
-                  <Button
-                    variant={inCart ? 'secondary' : 'outline'}
-                    className="flex-1"
-                    onClick={() => addToCart.mutate()}
-                    disabled={addToCart.isPending}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />{' '}
-                    {inCart ? t.inCart : t.addToCart} {/* "담김" : "장바구니" */}
-                  </Button>
+                  {!purchased ? (
+                    <>
+                      <Button
+                        className="flex-1"
+                        onClick={() => purchase.mutate()}
+                        disabled={purchase.isPending}
+                      >
+                        {t.enroll}
+                      </Button>
+                      <Button
+                        variant={inCart ? 'secondary' : 'outline'}
+                        className="flex-1"
+                        onClick={() => addToCart.mutate()}
+                        disabled={addToCart.isPending}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" /> {inCart ? t.inCart : t.addToCart}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button className="flex-1" variant="secondary" disabled>
+                      구입 완료
+                    </Button>
+                  )}
                 </div>
 
               {isWidgetOpen && (
@@ -443,14 +468,14 @@ export default function CourseDetailPageWrapper() {
                 </div>
               )}
 
-                {/* 임시 학습하기 버튼 - 나중에 수강신청 로직과 연동 예정 */}
                 <Button
                   className="w-full"
-                  variant="default"
-                  onClick={handleStartLearning}
+                  variant={purchased ? 'default' : 'outline'}
+                  onClick={purchased ? handleStartLearning : undefined}
+                  disabled={!purchased}
                 >
                   <BookOpen className="h-4 w-4 mr-2" />
-                  {t.startLearning} {/* "학습하기" */}
+                  {purchased ? t.startLearning : '구매 후 이용 가능합니다'}
                 </Button>
 
                 <Button

@@ -1,6 +1,6 @@
 declare module '@tosspayments/tosspayments-sdk' {
   export function loadTossPayments(clientKey: string): Promise<{
-    payment(input: { customerKey: string }): { requestPayment(input: any): Promise<void> }
+    payment(input: { customerKey: string }): { requestPayment(input: Record<string, unknown>): Promise<void> }
     widgets(input: { customerKey: string }): {
       setAmount(input: { currency: string; value: number }): Promise<void>
       renderPaymentMethods(input: { selector: string; variantKey?: string }): Promise<void>

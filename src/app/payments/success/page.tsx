@@ -37,6 +37,8 @@ export default function PaymentSuccessPage() {
         if (res.ok) {
           setResult(json)
           setState('success')
+          // 구매 여부 캐시 무효화 유도: 성공 후 상세 페이지 재진입 시 버튼 상태 반영
+          try { await fetch('/api/revalidate?tag=course-purchased', { method: 'POST' }) } catch {}
         } else {
           setResult(json)
           setState('error')

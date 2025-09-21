@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prismaClient"
 import { confirmTossPayment } from "@/lib/payments/toss"
 
+type TossConfirmResponse = {
+  method?: string
+  approvedAt?: string
+  totalAmount?: number
+  vat?: number
+  receipt?: { url?: string }
+  paymentMethod?: string
+  card?: { company?: string }
+}
+
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
@@ -20,7 +30,7 @@ export async function GET(req: NextRequest) {
   if (order.amount !== amount) return NextResponse.json({ message: "amount mismatch" }, { status: 400 })
 
   try {
-    const confirmed = await confirmTossPayment({ paymentKey, orderId, amount })
+    const confirmed = (await confirmTossPayment({ paymentKey, orderId, amount })) as TossConfirmResponse
 
     await prisma.$transaction(async (tx) => {
       await tx.paymentOrder.update({ where: { orderId }, data: { status: "SUCCESS", paymentKey } })

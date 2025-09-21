@@ -37,6 +37,7 @@ export default function PaymentSuccessPage() {
         if (res.ok) {
           setResult(json)
           setState('success')
+          try { await fetch('/api/revalidate?tag=course-purchased', { method: 'POST' }) } catch {}
         } else {
           setResult(json)
           setState('error')
