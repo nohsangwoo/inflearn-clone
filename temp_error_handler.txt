@@ -1,0 +1,45 @@
+      } catch (err: unknown) {
+        console.error('[Purchase] Full error object:', err)
+
+        let errorMessage = '결제 요청 중 오류가 발생했습니다.'
+
+        if (err instanceof Error) {
+          errorMessage = err.message
+          console.error('[Purchase] Error instance:', {
+            name: err.name,
+            message: err.message,
+            stack: err.stack
+          })
+        } else if (typeof err === 'object' && err \!== null) {
+          const anyErr = err as {
+            response?: {
+              status?: number
+              data?: { message?: string }
+            }
+            message?: string
+            code?: string
+            error?: string
+          }
+
+          if (anyErr.response) {
+            errorMessage = anyErr.response.data?.message || anyErr.message || errorMessage
+            console.error('[Purchase] Response error:', {
+              status: anyErr.response.status,
+              data: anyErr.response.data
+            })
+          } else if (anyErr.code || anyErr.error) {
+            errorMessage = anyErr.error || anyErr.message || errorMessage
+            console.error('[Purchase] Toss error:', {
+              code: anyErr.code,
+              error: anyErr.error,
+              message: anyErr.message
+            })
+          } else {
+            console.error('[Purchase] Unknown error object:', err)
+          }
+        } else {
+          console.error('[Purchase] Non-object error:', err)
+        }
+
+        alert(\)
+      }

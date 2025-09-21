@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useParams, useRouter, usePathname } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -11,13 +11,13 @@ import { Separator } from '@/components/ui/separator'
 import {
   Heart,
   ShoppingCart,
+  PlayCircle,
   Star,
   Users,
   BookOpen,
 } from 'lucide-react'
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
 import { getTranslation, useLocale } from '@/lib/translations'
-import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk'
 
 type Detail = {
   id: number
@@ -62,15 +62,6 @@ export default function CourseDetailPageWrapper() {
   const queryClient = useQueryClient()
   const [like, setLike] = useState(false)
   const [inCart, setInCart] = useState(false)
-  const [isWidgetOpen, setIsWidgetOpen] = useState(false)
-  const widgetsRef = useRef<unknown>(null)
-  const orderRef = useRef<{
-    orderId: string
-    orderName: string
-    amount: number
-    successUrl: string
-    failUrl: string
-  } | null>(null)
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['course-detail', lectureId],
@@ -167,87 +158,12 @@ export default function CourseDetailPageWrapper() {
   })
   const purchase = useMutation({
     mutationFn: async () => {
-      if (!detail) return
-      console.log('[Purchase] creating order for lecture', detail.id)
-      // 1) 서버에서 주문 생성
-      const { data: order } = await axios.post(`/api/payments/orders`, {
-        lectureId: detail.id,
-        force: true,
-      })
-
-      // 2) 결제 위젯 호출 (Redirect 방식)
-      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
-      if (!clientKey) {
-        console.error('[Purchase] missing env NEXT_PUBLIC_TOSS_CLIENT_KEY')
-        alert('결제 설정이 올바르지 않습니다. 관리자에게 문의해주세요. (clientKey)')
-        return
-      }
-
-      const toss = await loadTossPayments(clientKey)
-      const widgets = toss.widgets({ customerKey: ANONYMOUS })
-
-      const successUrl = `${window.location.origin}/api/payments/success`
-      const failUrl = `${window.location.origin}/api/payments/fail`
-
-      const amount = Number(order.amount)
-      if (!Number.isFinite(amount) || amount < 100) {
-        alert('결제 금액이 유효하지 않습니다. (최소 100원)')
-        return
-      }
-
-      // 결제창에서 허용될만한 안전한 주문명으로 정규화 (개행/제어문자 제거)
-      const normalizedOrderName = String(order.orderName || '')
-        .replace(/\s+/g, ' ')
-        .replace(/[\r\n\t]/g, ' ')
-        .replace(/[^\p{L}\p{N} _\-\[\]\(\)·.,!?]/gu, '')
-        .trim()
-        .slice(0, 100) || '강의 결제'
-
-      console.log('[Purchase] opening payment widget (v2 widgets)', {
-        orderId: order.orderId,
-        amount,
-        orderName: normalizedOrderName,
-        successUrl,
-        failUrl,
-      })
-
-      // 위젯 UI 렌더 후 사용자가 결제수단 선택 → 결제하기 버튼으로 요청
-      widgetsRef.current = widgets
-      orderRef.current = {
-        orderId: order.orderId,
-        orderName: normalizedOrderName,
-        amount,
-        successUrl,
-        failUrl,
-      }
-      setIsWidgetOpen(true)
+      await axios.post(`/api/courses/${lectureId}/purchase`)
     },
-    onError: (err: unknown) => {
-      const anyErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string }
-      const status = anyErr?.response?.status
-      const message = anyErr?.response?.data?.message || anyErr?.message || '결제 요청 중 오류가 발생했습니다.'
-      console.error('[Purchase] error', { status, message, err })
-      alert(`결제 요청에 실패했습니다.\n${message}`)
+    onSuccess: () => {
+      // 결제 연동 전: 임시로 수강 페이지 이동 혹은 토스트 등을 넣을 수 있음
     },
   })
-
-  // 위젯 오픈 시 결제수단/약관 UI 렌더링
-  useEffect(() => {
-    const renderWidgets = async () => {
-      if (!isWidgetOpen) return
-      const widgets = widgetsRef.current as
-        | { setAmount: (p: { currency: string; value: number }) => Promise<void>; renderPaymentMethods: (p: { selector: string; variantKey?: string }) => Promise<void>; renderAgreement: (p: { selector: string; variantKey?: string }) => Promise<void> }
-        | null
-      const ord = orderRef.current
-      if (!widgets || !ord) return
-      await widgets.setAmount({ currency: 'KRW', value: ord.amount })
-      await Promise.all([
-        widgets.renderPaymentMethods({ selector: '#toss-payments-methods', variantKey: 'DEFAULT' }),
-        widgets.renderAgreement({ selector: '#toss-payments-agreement', variantKey: 'AGREEMENT' }),
-      ])
-    }
-    void renderWidgets()
-  }, [isWidgetOpen])
 
   // 학습하기 버튼 핸들러
   const handleStartLearning = () => {
@@ -417,31 +333,6 @@ export default function CourseDetailPageWrapper() {
                     {inCart ? t.inCart : t.addToCart} {/* "담김" : "장바구니" */}
                   </Button>
                 </div>
-
-              {isWidgetOpen && (
-                <div className="space-y-3">
-                  <div id="toss-payments-methods" />
-                  <div id="toss-payments-agreement" />
-                  <Button
-                    className="w-full"
-                    onClick={async () => {
-                      const widgets = widgetsRef.current as
-                        | { requestPayment: (p: { orderId: string; orderName: string; successUrl: string; failUrl: string }) => Promise<void> }
-                        | null
-                      const ord = orderRef.current
-                      if (!widgets || !ord) return
-                      await widgets.requestPayment({
-                        orderId: ord.orderId,
-                        orderName: ord.orderName,
-                        successUrl: ord.successUrl,
-                        failUrl: ord.failUrl,
-                      })
-                    }}
-                  >
-                    {t.enroll}
-                  </Button>
-                </div>
-              )}
 
                 {/* 임시 학습하기 버튼 - 나중에 수강신청 로직과 연동 예정 */}
                 <Button

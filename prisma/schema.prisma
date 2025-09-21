@@ -42,6 +42,8 @@ model User {
   purchasedLectures Purchase[]
   /// 리뷰
   Reviews           Review[]
+  /// 결제 주문
+  PaymentOrders     PaymentOrder[]
 }
 
 model Lecture {
@@ -75,6 +77,8 @@ model Lecture {
   Reviews       Review[]
   /// 장바구니
   Cart          Cart[]       @relation("CartToLecture")
+  /// 결제 주문
+  PaymentOrders PaymentOrder[]
 }
 
 model Review {
@@ -246,6 +250,76 @@ model Purchase {
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, lectureId])
+}
+
+/// 결제 주문(주문 생성 시점에 기록)
+model PaymentOrder {
+  id          String         @id @default(cuid())
+  /// 토스에 전달하는 주문번호(고유)
+  orderId     String         @unique
+  /// 주문명(강의 제목 등)
+  orderName   String
+  /// 결제 금액(원)
+  amount      Int
+  /// 통화 (기본 KRW)
+  currency    String         @default("KRW")
+  /// 주문 상태
+  status      PaymentStatus  @default(PENDING)
+  /// 실패 사유
+  failReason  String?
+  /// 결제 키(성공 후 저장)
+  paymentKey  String?
+  /// 사용자 및 강의 참조
+  userId      Int
+  lectureId   Int
+  user        User           @relation(fields: [userId], references: [id])
+  lecture     Lecture        @relation(fields: [lectureId], references: [id])
+  /// 원시 메타데이터(JSON)
+  metadata    Json?
+  /// 생성/수정일
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  /// 연결된 결제 레코드
+  payment     Payment?
+}
+
+/// 결제(토스 confirm 및 웹훅 최종 상태)
+model Payment {
+  id            String        @id @default(cuid())
+  /// 토스 결제 키(고유)
+  paymentKey    String        @unique
+  orderId       String        @unique
+  order         PaymentOrder  @relation(fields: [orderId], references: [orderId])
+  /// 최종 결제 상태
+  status        PaymentStatus @default(PENDING)
+  /// 결제수단(method) 등 요약 정보
+  method        String?
+  approvedAt    DateTime?
+  totalAmount   Int
+  vat           Int?
+  receiptUrl    String?
+  /// 토스 원본 응답(JSON)
+  raw           Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+/// 웹훅 수신 로그
+model WebhookEventLog {
+  id          String   @id @default(cuid())
+  eventType   String
+  signature   String?
+  payload     Json
+  receivedAt  DateTime @default(now())
+  processed   Boolean  @default(false)
+  error       String?
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELED
 }
 
 enum Role {

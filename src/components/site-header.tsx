@@ -28,9 +28,26 @@ export function SiteHeader() {
     const segments = pathname.split('/').filter(Boolean)
     const firstSegment = segments[0]
     const locales = [
-      'ko', 'en', 'ja', 'vi', 'ru', 'zh', 'zh-CN', 'zh-TW',
-      'fr', 'de', 'es', 'pt', 'it', 'id', 'th', 'hi',
-      'ar', 'tr', 'pl', 'uk'
+      'ko',
+      'en',
+      'ja',
+      'vi',
+      'ru',
+      'zh',
+      'zh-CN',
+      'zh-TW',
+      'fr',
+      'de',
+      'es',
+      'pt',
+      'it',
+      'id',
+      'th',
+      'hi',
+      'ar',
+      'tr',
+      'pl',
+      'uk',
     ]
     return locales.includes(firstSegment) ? firstSegment : 'ko'
   }, [pathname])
@@ -93,23 +110,42 @@ export function SiteHeader() {
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href={localePath('/me/profile')}>프로필 {/* 프로필 */}</Link>
+                    <Link href={localePath('/me/profile')}>
+                      프로필 {/* 프로필 */}
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={localePath('/me/courses')}>내 강의 {/* 내 강의 */}</Link>
+                    <Link href={localePath('/me/courses')}>
+                      내 강의 {/* 내 강의 */}
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={localePath('/me')}>대시보드 {/* 대시보드 */}</Link>
+                    <Link href={localePath('/me')}>
+                      대시보드 {/* 대시보드 */}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {/* 지식공유자 */}
+                  <DropdownMenuItem asChild>
+                    <Link href={localePath('/admin')}>
+                      지식공유자 {/* 지식공유자 */}
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href={localePath('/company')}>회사소개 {/* 회사소개 */}</Link>
+                    <Link href={localePath('/company')}>
+                      회사소개 {/* 회사소개 */}
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={localePath('/privacy')}>개인정보처리방침 {/* 개인정보처리방침 */}</Link>
+                    <Link href={localePath('/privacy')}>
+                      개인정보처리방침 {/* 개인정보처리방침 */}
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={localePath('/terms')}>이용약관 {/* 이용약관 */}</Link>
+                    <Link href={localePath('/terms')}>
+                      이용약관 {/* 이용약관 */}
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} disabled={isLoading}>

@@ -1,0 +1,1 @@
+import { loadTossPayments } from '@tosspayments/payment-sdk'
