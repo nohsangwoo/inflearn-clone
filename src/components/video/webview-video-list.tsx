@@ -1,8 +1,15 @@
 'use client'
 
-import { Play, Clock, CheckCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Play, Clock, CheckCircle, Languages, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 interface Video {
   id: string
@@ -11,6 +18,11 @@ interface Video {
   url: string
   thumbnail?: string
   completed?: boolean
+  dubTracks?: Array<{
+    lang: string
+    status: string
+    url: string
+  }>
 }
 
 interface WebViewVideoListProps {
@@ -19,27 +31,65 @@ interface WebViewVideoListProps {
   courseTitle?: string
 }
 
+const langNameMap: Record<string, string> = {
+  origin: '원본',
+  ORIGIN: '원본',
+  ko: '한국어',
+  en: '영어',
+  ja: '일본어',
+  zh: '중국어',
+  es: '스페인어',
+  fr: '프랑스어',
+  de: '독일어',
+  ru: '러시아어',
+  pt: '포르투갈어',
+  it: '이탈리아어',
+  ar: '아랍어',
+  hi: '힌디어',
+  th: '태국어',
+  vi: '베트남어',
+  id: '인도네시아어',
+}
+
 export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebViewVideoListProps) {
+  // Track selected language for each video
+  const [selectedLanguages, setSelectedLanguages] = useState<Record<string, string>>({});
   const handlePlayVideo = (video: Video) => {
     try {
+      // Get selected language for this video
+      const selectedLang = selectedLanguages[video.id] || 'origin'
+
+      // Log for debugging
+      console.log('[WebViewVideoList] Video URL (master):', video.url)
+      if (video.dubTracks) {
+        console.log('[WebViewVideoList] Available dub tracks:', video.dubTracks)
+      }
+      console.log('[WebViewVideoList] Selected language:', selectedLang)
+
       // Send video info to Flutter app
       const videoData = {
         id: video.id,
         title: video.title,
-        url: video.url,
+        url: video.url, // Always use master URL for video
         courseTitle: courseTitle || 'Course',
+        selectedLanguage: selectedLang,
+        dubTracks: video.dubTracks || [], // Send all tracks for reference
       }
 
       // Try JavaScript channel first (preferred method)
       const lingoostVideoPlayer = (window as any).LingoostVideoPlayer
       if (lingoostVideoPlayer && typeof lingoostVideoPlayer.postMessage === 'function') {
-        const params = new URLSearchParams({
-          url: video.url,
+        // Send as JSON string with master URL and selected language
+        const message = JSON.stringify({
+          url: video.url, // Master URL for video
           title: video.title,
           courseTitle: courseTitle || '',
+          selectedLanguage: selectedLang,
+          dubTracks: video.dubTracks || []
         })
-        lingoostVideoPlayer.postMessage(params.toString())
+        lingoostVideoPlayer.postMessage(message)
         console.log('[WebViewVideoList] Sent via JavaScript channel:', videoData)
+        console.log('[WebViewVideoList] DubTracks:', video.dubTracks)
         return
       }
 
@@ -147,18 +197,66 @@ export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebVie
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant={isActive ? "default" : "outline"}
-                  className="flex-shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handlePlayVideo(video)
-                  }}
-                >
-                  <Play className="h-4 w-4 mr-1" />
-                  재생
-                </Button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Language Selection Dropdown */}
+                  {video.dubTracks && video.dubTracks.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Languages className="h-3 w-3" />
+                          <span className="text-xs">
+                            {langNameMap[selectedLanguages[video.id] || 'origin'] || '원본'}
+                          </span>
+                          <ChevronDown className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-[120px]">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedLanguages(prev => ({ ...prev, [video.id]: 'origin' }))
+                          }}
+                        >
+                          <span className={selectedLanguages[video.id] === 'origin' || !selectedLanguages[video.id] ? 'font-semibold' : ''}>
+                            원본
+                          </span>
+                        </DropdownMenuItem>
+                        {video.dubTracks.map((track) => (
+                          <DropdownMenuItem
+                            key={track.lang}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedLanguages(prev => ({ ...prev, [video.id]: track.lang }))
+                            }}
+                          >
+                            <span className={selectedLanguages[video.id] === track.lang ? 'font-semibold' : ''}>
+                              {langNameMap[track.lang] || track.lang}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
+                  {/* Play Button */}
+                  <Button
+                    size="sm"
+                    variant={isActive ? "default" : "outline"}
+                    className="gap-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handlePlayVideo(video)
+                    }}
+                  >
+                    <Play className="h-4 w-4" />
+                    재생
+                  </Button>
+                </div>
               </div>
             </Card>
           )

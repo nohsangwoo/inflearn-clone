@@ -520,8 +520,9 @@ export default function LecturePage() {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? "w-80" : "w-0"} transition-all duration-300 overflow-hidden border-r bg-card`}>
+      {/* Sidebar - Hide in WebView */}
+      {!isInWebView && (
+        <div className={`${sidebarOpen ? "w-80" : "w-0"} transition-all duration-300 overflow-hidden border-r bg-card`}>
         <div className="p-4 border-b space-y-3">
           <Button
             variant="ghost"
@@ -584,7 +585,8 @@ export default function LecturePage() {
             </button>
           ))}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
@@ -600,12 +602,28 @@ export default function LecturePage() {
                     .map(s => {
                       const cdn = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
                       const masterUrl = `${cdn.replace(/\/$/, "")}/assets/curriculumsection/${s.id}/master.m3u8`
+
+                      // Process dubTracks to ensure they have complete URLs
+                      const processedDubTracks = s.dubTracks?.map(track => {
+                        // If the track URL is relative, make it absolute
+                        let trackUrl = track.url
+                        if (trackUrl && !trackUrl.startsWith('http')) {
+                          trackUrl = `${cdn.replace(/\/$/, "")}${trackUrl.startsWith('/') ? '' : '/'}${trackUrl}`
+                        }
+                        return {
+                          ...track,
+                          url: trackUrl
+                        }
+                      }) || []
+
                       return {
                         id: s.id.toString(),
                         title: s.title,
                         url: masterUrl,
                         duration: undefined,
-                        completed: false
+                        completed: false,
+                        dubTracks: processedDubTracks,
+                        sectionId: s.id // Keep section ID for constructing URLs
                       }
                     })}
                   currentVideoId={currentSectionId?.toString()}
