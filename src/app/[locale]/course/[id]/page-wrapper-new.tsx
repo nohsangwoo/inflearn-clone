@@ -11,7 +11,6 @@ import { Separator } from '@/components/ui/separator'
 import {
   Heart,
   ShoppingCart,
-  PlayCircle,
   Star,
   Users,
   BookOpen,

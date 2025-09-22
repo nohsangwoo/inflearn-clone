@@ -5,7 +5,6 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
 import axios from "axios"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Languages, Menu, X } from "lucide-react"
 import Hls from "hls.js"
 import { toast } from "sonner"
@@ -141,7 +140,7 @@ export default function LecturePage() {
         setCurrentSectionId(firstSection.id)
       }
     }
-  }, [courseData, sectionId]) // Include sectionId in dependencies
+  }, [courseData, sectionId, currentSectionId]) // Include all dependencies
 
   // Get current section
   const currentSection = courseData?.sections.find(s => s.id === currentSectionId)
@@ -214,11 +213,11 @@ export default function LecturePage() {
         console.log('[Lecture] Manifest loading started...')
       })
 
-      hls.on(Hls.Events.MANIFEST_LOADED, (event, data) => {
+      hls.on(Hls.Events.MANIFEST_LOADED, (_event, data) => {
         console.log('[Lecture] Manifest loaded:', data)
       })
 
-      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
         console.log('[Lecture] Manifest parsed:', data)
         console.log('[Lecture] Audio tracks:', hls.audioTracks)
 
@@ -288,7 +287,7 @@ export default function LecturePage() {
         }
       })
 
-      hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (event, data) => {
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (_event, data) => {
         console.log('[Lecture] Audio track switched to:', data)
       })
 
@@ -311,7 +310,7 @@ export default function LecturePage() {
         hlsRef.current = null
       }
     }
-  }, [currentSectionId]) // Only re-initialize when section changes, not language
+  }, [currentSectionId, currentSection, currentVideo, currentLanguage]) // Include all dependencies
 
   // Update URL when section or language changes
   const updateUrl = (sectionId: number, language: string) => {
@@ -531,10 +530,11 @@ export default function LecturePage() {
               <div className="relative">
                 <button
                   onClick={() => setShowLanguageSelector(!showLanguageSelector)}
-                  className="bg-black/70 hover:bg-black/90 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
+                  className="bg-black/70 hover:bg-black/90 text-white px-2 py-1.5 md:px-3 md:py-2 rounded-md text-xs md:text-sm font-medium transition-colors flex items-center gap-1 md:gap-2"
                 >
-                  <Languages className="h-4 w-4" />
-                  <span>{langNameMap[currentLanguage] || currentLanguage}</span>
+                  <Languages className="h-3 w-3 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">{langNameMap[currentLanguage] || currentLanguage}</span>
+                  <span className="sm:hidden">{(langNameMap[currentLanguage] || currentLanguage).slice(0, 2).toUpperCase()}</span>
                 </button>
 
                 {showLanguageSelector && (
