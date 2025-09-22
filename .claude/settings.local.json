@@ -21,7 +21,8 @@
       "Bash(npm run lint)",
       "Bash(npm run build:*)",
       "Bash(cmd /c:*)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": []
