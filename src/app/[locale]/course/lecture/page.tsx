@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, ChevronLeft, ChevronRight, Download, Languages, Menu, X } from "lucide-react"
 import Hls from "hls.js"
 import { toast } from "sonner"
+import { useDeviceDetection } from "@/hooks/useDeviceDetection"
+import { WebViewVideoList } from "@/components/video/webview-video-list"
 
 type CourseData = {
   id: number
@@ -82,6 +84,10 @@ const langNameMap: Record<string, string> = {
 export default function LecturePage() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+
+  // Device detection for WebView
+  const deviceInfo = useDeviceDetection()
+  const isInWebView = deviceInfo.isWebView
   const router = useRouter()
 
   // Query parameters
@@ -582,15 +588,38 @@ export default function LecturePage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Video Player */}
+        {/* Video Player or WebView List */}
         <div className="flex-1 relative bg-black">
           {currentSection && currentVideo ? (
-            <video
-              ref={videoRef}
-              controls
-              playsInline
-              webkit-playsinline="true"
-              autoPlay={false}
+            isInWebView ? (
+              // WebView mode - show video list instead of player
+              <div className="bg-background h-full overflow-auto p-4">
+                <WebViewVideoList
+                  videos={courseData.sections
+                    .filter(s => s.active && s.videos.length > 0)
+                    .map(s => {
+                      const cdn = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
+                      const masterUrl = `${cdn.replace(/\/$/, "")}/assets/curriculumsection/${s.id}/master.m3u8`
+                      return {
+                        id: s.id.toString(),
+                        title: s.title,
+                        url: masterUrl,
+                        duration: undefined,
+                        completed: false
+                      }
+                    })}
+                  currentVideoId={currentSectionId?.toString()}
+                  courseTitle={courseData.title}
+                />
+              </div>
+            ) : (
+              // Normal web mode - show video player
+              <video
+                ref={videoRef}
+                controls
+                playsInline
+                webkit-playsinline="true"
+                autoPlay={false}
               preload="auto"
               className="w-full h-full object-contain"
               crossOrigin="anonymous"
@@ -607,6 +636,7 @@ export default function LecturePage() {
                 }
               }}
             />
+            )
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white">
               <div className="text-center">
