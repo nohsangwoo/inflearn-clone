@@ -301,7 +301,7 @@ export default function CachedHlsPlayerModal({ sectionId, lectureId, title }: Pr
 
           video.addEventListener('error', (e) => {
             console.error('[CachedHlsPlayerModal] Native HLS error:', e)
-            setError('네이티브 HLS 재생 오류')
+            setError('네이티브 HLS 재생 오류ㄱㄱㄱ')
           })
         } else {
           console.error('[CachedHlsPlayerModal] HLS is not supported in this browser')

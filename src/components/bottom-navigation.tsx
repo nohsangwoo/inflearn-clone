@@ -29,7 +29,9 @@ export function BottomNavigation() {
   }, [pathname])
 
   const localePath = (path: string) => {
-    return `/${currentLocale}${path}`
+    // path가 이미 /로 시작하는지 확인
+    const cleanPath = path.startsWith('/') ? path : `/${path}`
+    return `/${currentLocale}${cleanPath}`
   }
 
   const getCurrentTab = () => {
@@ -77,6 +79,7 @@ export function BottomNavigation() {
             >
               <Link
                 href={localePath(item.href)}
+                prefetch={false}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 h-full w-full relative",
                   "transition-all duration-200",

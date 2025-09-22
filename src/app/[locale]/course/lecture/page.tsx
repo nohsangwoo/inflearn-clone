@@ -162,6 +162,7 @@ export default function LecturePage() {
 
     console.log("[Lecture] Initializing video player for section:", currentSection.id)
     console.log("[Lecture] Master URL:", masterUrl)
+    console.log("[Lecture] User Agent:", navigator.userAgent)
 
     // Cleanup previous HLS instance
     if (hlsRef.current) {
@@ -172,25 +173,108 @@ export default function LecturePage() {
 
     const video = videoRef.current
 
-    // Test native HLS support first
-    const canPlayHls = video.canPlayType('application/vnd.apple.mpegurl')
-    console.log('[Lecture] Native HLS support:', canPlayHls)
+    // Detect platform more accurately
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    const isWebView = navigator.userAgent.includes('WebView') ||
+                     (window as any).webkit?.messageHandlers ||
+                     (window as any).ReactNativeWebView ||
+                     (navigator as any).standalone === true
 
-    if (canPlayHls) {
-      console.log('[Lecture] Using native HLS support')
-      video.src = masterUrl
+    console.log('[Lecture] Platform detection:', {
+      isIOS,
+      isSafari,
+      isWebView,
+      userAgent: navigator.userAgent
+    })
 
-      video.addEventListener('loadedmetadata', () => {
+    // Function to setup native HLS
+    const setupNativeHLS = () => {
+      console.log('[Lecture] Setting up native HLS playback')
+
+      // Set video attributes for better compatibility
+      video.setAttribute('playsinline', 'true')
+      video.setAttribute('webkit-playsinline', 'true')
+      video.setAttribute('x5-video-player-type', 'h5')
+      video.setAttribute('x5-video-player-fullscreen', 'false')
+      video.setAttribute('x5-video-orientation', 'portraint')
+      video.setAttribute('controls', 'true')
+
+      let hasPlayed = false
+      let retryCount = 0
+      const maxRetries = 3
+
+      const loadVideo = () => {
+        video.src = masterUrl
+        video.load()
+      }
+
+      const handleLoadedMetadata = () => {
         console.log('[Lecture] Native HLS metadata loaded')
-      })
+        hasPlayed = true
+      }
 
-      video.addEventListener('error', (e) => {
-        console.error('[Lecture] Native HLS error:', e)
-        toast.error('네이티브 HLS 재생 오류')
-      })
+      const handleCanPlay = () => {
+        console.log('[Lecture] Native HLS can play')
+        hasPlayed = true
+      }
 
-    } else if (Hls.isSupported()) {
-      console.log('[Lecture] Using HLS.js')
+      const handleError = (e: Event) => {
+        const videoError = video.error
+        console.error('[Lecture] Native HLS error:', {
+          event: e,
+          error: videoError,
+          code: videoError?.code,
+          message: videoError?.message,
+          hasPlayed,
+          retryCount
+        })
+
+        if (!hasPlayed && retryCount < maxRetries) {
+          retryCount++
+          console.log(`[Lecture] Retrying native HLS (attempt ${retryCount}/${maxRetries})`)
+          setTimeout(() => {
+            video.src = ''
+            loadVideo()
+          }, 1000)
+        } else if (!hasPlayed) {
+          console.log('[Lecture] Native HLS failed, trying HLS.js fallback')
+          // Cleanup native listeners
+          video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+          video.removeEventListener('canplay', handleCanPlay)
+          video.removeEventListener('error', handleError)
+
+          // Try HLS.js as fallback
+          if (Hls.isSupported()) {
+            setupHlsJs()
+          } else {
+            toast.error('비디오 재생이 지원되지 않습니다')
+          }
+        }
+      }
+
+      video.addEventListener('loadedmetadata', handleLoadedMetadata)
+      video.addEventListener('canplay', handleCanPlay)
+      video.addEventListener('error', handleError)
+
+      // Start loading
+      loadVideo()
+
+      return () => {
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        video.removeEventListener('canplay', handleCanPlay)
+        video.removeEventListener('error', handleError)
+      }
+    }
+
+    // Function to setup HLS.js
+    const setupHlsJs = () => {
+      if (!Hls.isSupported()) {
+        console.error('[Lecture] HLS.js is not supported')
+        toast.error('이 브라우저에서는 비디오 재생이 지원되지 않습니다')
+        return
+      }
+      console.log('[Lecture] Setting up HLS.js playback')
 
       const hls = new Hls({
         debug: true,
@@ -265,23 +349,22 @@ export default function LecturePage() {
         }
       })
 
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error('[Lecture] HLS error:', event, data)
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        console.error('[Lecture] HLS.js error:', data)
 
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.error('[Lecture] Network error:', data.details)
-              toast.error(`네트워크 오류: ${data.details}`)
+              console.error('[Lecture] Network error, attempting recovery:', data.details)
+              hls.startLoad()
               break
             case Hls.ErrorTypes.MEDIA_ERROR:
-              console.error('[Lecture] Media error:', data.details)
-              toast.error(`미디어 오류: ${data.details}`)
+              console.error('[Lecture] Media error, attempting recovery:', data.details)
               hls.recoverMediaError()
               break
             default:
-              console.error('[Lecture] Other error:', data.details)
-              toast.error(`재생 오류: ${data.details}`)
+              console.error('[Lecture] Unrecoverable error:', data.details)
+              toast.error(`재생 오류가 발생했습니다`)
               break
           }
         }
@@ -297,10 +380,26 @@ export default function LecturePage() {
 
       console.log('[Lecture] Loading source:', masterUrl)
       hls.loadSource(masterUrl)
+    }
 
+    // Decide which method to use based on platform
+    if (isIOS || (isSafari && !isWebView)) {
+      // iOS Safari or macOS Safari - use native HLS
+      console.log('[Lecture] Detected iOS/Safari, using native HLS')
+      const cleanup = setupNativeHLS()
+      return cleanup
+    } else if (Hls.isSupported()) {
+      // Other browsers - use HLS.js
+      console.log('[Lecture] Using HLS.js for playback')
+      setupHlsJs()
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Fallback to native if HLS.js not supported but native might work
+      console.log('[Lecture] HLS.js not supported, trying native as fallback')
+      const cleanup = setupNativeHLS()
+      return cleanup
     } else {
-      console.error('[Lecture] HLS is not supported in this browser')
-      toast.error('이 브라우저에서는 HLS 재생이 지원되지 않습니다.')
+      console.error('[Lecture] No HLS support available')
+      toast.error('이 브라우저에서는 비디오 재생이 지원되지 않습니다')
     }
 
     return () => {
@@ -489,7 +588,11 @@ export default function LecturePage() {
             <video
               ref={videoRef}
               controls
-              className="w-full h-full"
+              playsInline
+              webkit-playsinline="true"
+              autoPlay={false}
+              preload="auto"
+              className="w-full h-full object-contain"
               crossOrigin="anonymous"
               onLoadStart={() => console.log('[Lecture] Video load started')}
               onLoadedData={() => console.log('[Lecture] Video data loaded')}
