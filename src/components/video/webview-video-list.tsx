@@ -59,8 +59,27 @@ export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebVie
       // Get selected language for this video
       const selectedLang = selectedLanguages[video.id] || 'origin'
 
+      // Build the playback URL based on selected language
+      let playbackUrl = video.url // Default to master URL
+
+      // Try to construct a language-specific playlist URL
+      if (selectedLang !== 'origin' && video.url.includes('/master.m3u8')) {
+        // Replace master.m3u8 with language-specific playlist if pattern exists
+        // Common patterns: playlist_ko.m3u8, ko/playlist.m3u8, etc.
+        const baseUrl = video.url.replace('/master.m3u8', '')
+
+        // Try different URL patterns that might work
+        // Pattern 1: Same directory with language suffix
+        const langSpecificUrl = `${baseUrl}/playlist_${selectedLang}.m3u8`
+
+        // For now, we'll use master and rely on HLS auto-selection
+        // But log the attempted URL for debugging
+        console.log('[WebViewVideoList] Attempted lang-specific URL:', langSpecificUrl)
+      }
+
       // Log for debugging
       console.log('[WebViewVideoList] Video URL (master):', video.url)
+      console.log('[WebViewVideoList] Playback URL:', playbackUrl)
       if (video.dubTracks) {
         console.log('[WebViewVideoList] Available dub tracks:', video.dubTracks)
       }
@@ -70,7 +89,8 @@ export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebVie
       const videoData = {
         id: video.id,
         title: video.title,
-        url: video.url, // Always use master URL for video
+        url: playbackUrl,
+        masterUrl: video.url, // Keep master URL as backup
         courseTitle: courseTitle || 'Course',
         selectedLanguage: selectedLang,
         dubTracks: video.dubTracks || [], // Send all tracks for reference
@@ -79,9 +99,10 @@ export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebVie
       // Try JavaScript channel first (preferred method)
       const lingoostVideoPlayer = (window as any).LingoostVideoPlayer
       if (lingoostVideoPlayer && typeof lingoostVideoPlayer.postMessage === 'function') {
-        // Send as JSON string with master URL and selected language
+        // Send as JSON string with playback URL and selected language
         const message = JSON.stringify({
-          url: video.url, // Master URL for video
+          url: playbackUrl,
+          masterUrl: video.url,
           title: video.title,
           courseTitle: courseTitle || '',
           selectedLanguage: selectedLang,

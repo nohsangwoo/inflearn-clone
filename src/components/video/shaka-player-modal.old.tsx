@@ -302,7 +302,7 @@ export default function ShakaPlayerModal({ sectionId, title }: Props) {
                 onClick={handleDebug}
                 className="text-xs"
               >
-                디버그 정보
+                디버그 정보ㅋㅋ
               </Button>
             </DialogTitle>
           </DialogHeader>
