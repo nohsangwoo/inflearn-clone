@@ -7,12 +7,15 @@ import { Apple } from "lucide-react"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { toast } from "sonner"
 import { getTranslation, useLocale } from "@/lib/translations"
+import { useDeviceDetection } from "@/hooks/useDeviceDetection"
+import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
   const pathname = usePathname()
   const locale = useLocale(pathname)
   const t = getTranslation(locale).login
+  const device = useDeviceDetection()
 
   const {
     user,
@@ -32,6 +35,60 @@ export default function LoginPage() {
   useEffect(() => {
     initialize()
   }, [initialize])
+
+  // Expose Supabase client and native token handler for WebView bridge
+  useEffect(() => {
+    const supabase = createClient()
+    ;(window as any).__supabase = supabase
+    ;(window as any).supabase = supabase
+
+    const consumePendingSession = async () => {
+      try {
+        const s = (window as any).__pendingSupabaseSession
+        if (!s) return
+        const { error } = await supabase.auth.setSession({
+          access_token: s.access_token,
+          refresh_token: s.refresh_token,
+        })
+        if (!error) {
+          delete (window as any).__pendingSupabaseSession
+          await useAuthStore.getState().initialize()
+          router.replace('/')
+        }
+      } catch (e) {
+        console.error('consumePendingSession failed', e)
+      }
+    }
+
+    void consumePendingSession()
+    const onPending = () => { void consumePendingSession() }
+    window.addEventListener('pendingSupabaseSession', onPending)
+
+    ;(window as any).handleGoogleSignInToken = async (payload: {
+      success: boolean
+      idToken?: string
+      accessToken?: string
+      user?: unknown
+    }) => {
+      if (!payload?.success) return
+      try {
+        if (payload.idToken) {
+          const { error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: payload.idToken,
+            access_token: payload.accessToken,
+          } as any)
+          if (!error) {
+            await useAuthStore.getState().initialize()
+            router.replace('/')
+          }
+        }
+      } catch (e) {
+        console.error('handleGoogleSignInToken failed', e)
+      }
+    }
+    return () => { window.removeEventListener('pendingSupabaseSession', onPending) }
+  }, [router])
 
   useEffect(() => {
     if (user) {
@@ -86,6 +143,32 @@ export default function LoginPage() {
   const handleOAuth = async (provider: "google" | "apple") => {
     try {
       setLoading(true)
+      // 앱(WebView) 환경이면 네이티브 브리지 호출로 분기
+      if (typeof window !== 'undefined') {
+        const w = window as any
+        const isWebView = device.isWebView || !!w.LingoostApp?.isWebView
+
+        if (isWebView) {
+          if (provider === 'google') {
+            // webview_flutter: JavaScriptChannel("LingoostAuth") 사용
+            if (w.LingoostAuth && typeof w.LingoostAuth.postMessage === 'function') {
+              try {
+                w.LingoostAuth.postMessage(JSON.stringify({ action: 'google' }))
+                return
+              } catch (_) {}
+            }
+            // flutter_inappwebview fallback
+            if (w.flutter_inappwebview && typeof w.flutter_inappwebview.callHandler === 'function') {
+              try {
+                await w.flutter_inappwebview.callHandler('googleSignIn')
+                return
+              } catch (_) {}
+            }
+          }
+          // Apple의 경우 기존 웹 OAuth 흐름 유지 (Android는 웹, iOS는 네이티브에서 가로채도록 설계됨)
+        }
+      }
+
       await useAuthStore.getState().loginWithOAuth(provider)
       // OAuth는 외부로 리다이렉트되므로 여기서 추가 동작 없음
     } catch (err: unknown) {
