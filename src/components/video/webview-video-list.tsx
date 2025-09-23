@@ -23,6 +23,7 @@ interface Video {
     status: string
     url: string
   }>
+  sectionId?: number
 }
 
 interface WebViewVideoListProps {
@@ -61,20 +62,35 @@ export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebVie
 
       // Build the playback URL based on selected language
       let playbackUrl = video.url // Default to master URL
+      const cdn = process.env.NEXT_PUBLIC_CDN_URL ?? 'https://storage.lingoost.com'
+      const ensureAbsolute = (u: string) => {
+        if (!u) return u
+        if (u.startsWith('http')) return u
+        return `${cdn.replace(/\/$/, '')}${u.startsWith('/') ? '' : '/'}${u}`
+      }
+      const candidates: string[] = []
 
       // Try to construct a language-specific playlist URL
       if (selectedLang !== 'origin' && video.url.includes('/master.m3u8')) {
         // Replace master.m3u8 with language-specific playlist if pattern exists
-        // Common patterns: playlist_ko.m3u8, ko/playlist.m3u8, etc.
+        // Common patterns: master_ko.m3u8, playlist_ko.m3u8, ko/master.m3u8
         const baseUrl = video.url.replace('/master.m3u8', '')
 
-        // Try different URL patterns that might work
-        // Pattern 1: Same directory with language suffix
-        const langSpecificUrl = `${baseUrl}/playlist_${selectedLang}.m3u8`
+        // Derive strong candidate and also set as playbackUrl hint
+        const primaryLangMaster = `${baseUrl}/master_${selectedLang}.m3u8`
+        playbackUrl = primaryLangMaster
 
-        // For now, we'll use master and rely on HLS auto-selection
-        // But log the attempted URL for debugging
-        console.log('[WebViewVideoList] Attempted lang-specific URL:', langSpecificUrl)
+        // Additional patterns to try
+        const patternUrls = [
+          primaryLangMaster,
+          `${baseUrl}/playlist_${selectedLang}.m3u8`,
+          `${baseUrl}/${selectedLang}/master.m3u8`,
+          `${baseUrl}/dub_${selectedLang}.m3u8`,
+          // NOTE: audio-only playlists like /dubTracks/{lang}.m3u8 are intentionally excluded
+        ]
+        patternUrls.forEach(u => candidates.push(u))
+
+        console.log('[WebViewVideoList] Candidate lang-specific URLs:', patternUrls)
       }
 
       // Log for debugging
@@ -93,7 +109,9 @@ export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebVie
         masterUrl: video.url, // Keep master URL as backup
         courseTitle: courseTitle || 'Course',
         selectedLanguage: selectedLang,
-        dubTracks: video.dubTracks || [], // Send all tracks for reference
+        dubTracks: (video.dubTracks || []).map(t => ({ ...t, url: ensureAbsolute(t.url) })), // absolute urls
+        sectionId: video.sectionId,
+        candidates: candidates,
       }
 
       // Try JavaScript channel first (preferred method)
@@ -106,7 +124,8 @@ export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebVie
           title: video.title,
           courseTitle: courseTitle || '',
           selectedLanguage: selectedLang,
-          dubTracks: video.dubTracks || []
+          dubTracks: (video.dubTracks || []).map(t => ({ ...t, url: ensureAbsolute(t.url) })),
+          candidates: candidates,
         })
         lingoostVideoPlayer.postMessage(message)
         console.log('[WebViewVideoList] Sent via JavaScript channel:', videoData)
