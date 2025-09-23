@@ -334,7 +334,7 @@ export default function HlsPlayerModal({ sectionId, title }: Props) {
                 onClick={handleDebug}
                 className="text-xs"
               >
-                디버그 정보ㅇㅇ
+                디버그 정보
               </Button>
             </DialogTitle>
           </DialogHeader>

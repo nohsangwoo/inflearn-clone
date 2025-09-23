@@ -250,7 +250,7 @@ export function WebViewVideoList({ videos, currentVideoId, courseTitle }: WebVie
                         >
                           <Languages className="h-3 w-3" />
                           <span className="text-xs">
-                            {langNameMap[selectedLanguages[video.id] || 'origin'] || '원본'}
+                            {langNameMap[selectedLanguages[video.id] || 'origin'] || (selectedLanguages[video.id]?.toUpperCase() || '원본')}
                           </span>
                           <ChevronDown className="h-3 w-3" />
                         </Button>
