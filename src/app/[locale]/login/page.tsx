@@ -129,6 +129,25 @@ export default function LoginPage() {
     return () => { window.removeEventListener('pendingSupabaseSession', onPending) }
   }, [router])
 
+  // Android WebView 등에서 OAuth redirect 후 code 쿼리로 돌아온 경우, 클라이언트에서 직접 세션 교환
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const url = new URL(window.location.href)
+        const code = url.searchParams.get('code')
+        const error = url.searchParams.get('error')
+        if (!code || error) return
+        const supabase = (window as any).__supabase || createClient()
+        const { error: exErr } = await supabase.auth.exchangeCodeForSession(code)
+        if (!exErr) {
+          await useAuthStore.getState().initialize()
+          router.replace('/')
+        }
+      } catch (_) {}
+    }
+    run()
+  }, [router])
+
   useEffect(() => {
     if (user) {
       router.replace("/")
@@ -205,20 +224,23 @@ export default function LoginPage() {
             }
           }
           if (provider === 'apple') {
-            // webview_flutter: JavaScriptChannel("LingoostAuth") 사용
-            if (w.LingoostAuth && typeof w.LingoostAuth.postMessage === 'function') {
-              try {
-                w.LingoostAuth.postMessage(JSON.stringify({ action: 'apple' }))
-                return
-              } catch (_) {}
+            // iOS WebView에서는 네이티브로 처리
+            const isIOS = device?.isIOS || /\(i[^;]+;( U;)? CPU.+Mac OS X/.test(navigator.userAgent)
+            if (isIOS) {
+              if (w.LingoostAuth && typeof w.LingoostAuth.postMessage === 'function') {
+                try {
+                  w.LingoostAuth.postMessage(JSON.stringify({ action: 'apple' }))
+                  return
+                } catch (_) {}
+              }
+              if (w.flutter_inappwebview && typeof w.flutter_inappwebview.callHandler === 'function') {
+                try {
+                  await w.flutter_inappwebview.callHandler('appleSignIn')
+                  return
+                } catch (_) {}
+              }
             }
-            // flutter_inappwebview fallback
-            if (w.flutter_inappwebview && typeof w.flutter_inappwebview.callHandler === 'function') {
-              try {
-                await w.flutter_inappwebview.callHandler('appleSignIn')
-                return
-              } catch (_) {}
-            }
+            // Android WebView에서는 웹 OAuth로 진행 (네이티브 호출 안 함)
           }
         }
       }
