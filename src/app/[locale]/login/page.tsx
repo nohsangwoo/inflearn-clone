@@ -87,6 +87,45 @@ export default function LoginPage() {
         console.error('handleGoogleSignInToken failed', e)
       }
     }
+    ;(window as any).handleAppleSignInToken = async (payload: {
+      success: boolean
+      idToken?: string
+      authorizationCode?: string
+    }) => {
+      if (!payload?.success) return
+      try {
+        if (payload.idToken) {
+          const { error } = await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token: payload.idToken,
+          } as any)
+          if (!error) {
+            await useAuthStore.getState().initialize()
+            router.replace('/')
+          }
+        }
+      } catch (e) {
+        console.error('handleAppleSignInToken failed', e)
+      }
+    }
+
+    ;(window as any).receiveSupabaseSession = async (sessionData: {
+      access_token: string
+      refresh_token: string
+    }) => {
+      try {
+        const { error } = await supabase.auth.setSession({
+          access_token: sessionData.access_token,
+          refresh_token: sessionData.refresh_token,
+        })
+        if (!error) {
+          await useAuthStore.getState().initialize()
+          router.replace('/')
+        }
+      } catch (e) {
+        console.error('receiveSupabaseSession failed', e)
+      }
+    }
     return () => { window.removeEventListener('pendingSupabaseSession', onPending) }
   }, [router])
 
@@ -165,7 +204,22 @@ export default function LoginPage() {
               } catch (_) {}
             }
           }
-          // Apple의 경우 기존 웹 OAuth 흐름 유지 (Android는 웹, iOS는 네이티브에서 가로채도록 설계됨)
+          if (provider === 'apple') {
+            // webview_flutter: JavaScriptChannel("LingoostAuth") 사용
+            if (w.LingoostAuth && typeof w.LingoostAuth.postMessage === 'function') {
+              try {
+                w.LingoostAuth.postMessage(JSON.stringify({ action: 'apple' }))
+                return
+              } catch (_) {}
+            }
+            // flutter_inappwebview fallback
+            if (w.flutter_inappwebview && typeof w.flutter_inappwebview.callHandler === 'function') {
+              try {
+                await w.flutter_inappwebview.callHandler('appleSignIn')
+                return
+              } catch (_) {}
+            }
+          }
         }
       }
 
