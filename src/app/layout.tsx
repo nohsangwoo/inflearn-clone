@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { generateSeoMetadata } from "@/lib/seo-metadata";
 import { JsonLd } from "@/components/json-ld";
+import { WebViewBridgeInitializer } from "@/components/webview-bridge-initializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +48,7 @@ export default async function RootLayout({
       >
         <Providers>
           <JsonLd type="website" locale={locale as 'ko' | 'en' | 'ja' | 'zh'} />
+          <WebViewBridgeInitializer />
           <SiteHeader />
           <main className="min-h-[calc(100dvh-56px-64px)] pb-16">
             {children}

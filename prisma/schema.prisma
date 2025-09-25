@@ -44,6 +44,11 @@ model User {
   Reviews           Review[]
   /// 결제 주문
   PaymentOrders     PaymentOrder[]
+
+  /// FCM 토큰 목록
+  FcmTokens        FcmToken[]
+  /// 푸시 발송 이력
+  PushNotifications PushNotification[]
 }
 
 model Lecture {
@@ -355,4 +360,69 @@ enum Language {
   TR
   PL
   UK
+}
+
+/// FCM 디바이스 토큰 저장 테이블
+model FcmToken {
+  id         String   @id @default(uuid())
+  /// Prisma User.id (Int)와 연동
+  userId     Int?
+  /// 디바이스 FCM 토큰 (고유)
+  token      String   @unique
+  /// 플랫폼 (ios|android|unknown)
+  platform   String
+  /// 디바이스 식별자(선택)
+  deviceId   String?
+  /// 활성 여부
+  isActive   Boolean  @default(true)
+  /// 마지막 사용 시각
+  lastUsedAt DateTime?
+  /// 생성/수정 시각
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  /// 관계
+  User       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([token])
+  @@index([deviceId])
+}
+
+/// 푸시 발송 이력 테이블
+model PushNotification {
+  id           String   @id @default(uuid())
+  /// 대상 사용자 (선택)
+  userId       Int?
+  /// 특정 토큰 대상(선택)
+  fcmTokenId   String?
+  /// 알림 제목/본문
+  title        String
+  body         String
+  /// 부가 데이터(JSON)
+  data         Json?
+  /// 타입(unicast|broadcast 등)
+  type         String   @default("pending")
+  /// 상태(sent|failed|pending)
+  status       String   @default("pending")
+  /// Firebase messageId
+  messageId    String?
+  /// 오류 메시지
+  error        String?
+  /// 재시도/시도수
+  attemptCount Int      @default(0)
+  /// 생성/발송 시각
+  createdAt    DateTime @default(now())
+  sentAt       DateTime?
+  /// 읽음 처리
+  isRead       Boolean  @default(false)
+  readAt       DateTime?
+
+  /// 관계
+  User         User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
 }
