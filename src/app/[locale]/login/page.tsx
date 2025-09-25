@@ -10,6 +10,25 @@ import { getTranslation, useLocale } from "@/lib/translations"
 import { useDeviceDetection } from "@/hooks/useDeviceDetection"
 import { createClient } from "@/lib/supabase/client"
 
+type SupabaseAuthLike = {
+  setSession: (params: { access_token: string; refresh_token: string }) => Promise<{ data: unknown; error: unknown }>
+  signInWithIdToken: (params: { provider: 'google' | 'apple'; token: string; access_token?: string }) => Promise<{ data: unknown; error: unknown }>
+  exchangeCodeForSession: (code: string) => Promise<{ data: unknown; error: unknown }>
+}
+type SupabaseLike = { auth: SupabaseAuthLike }
+
+type NativeBridgeWindow = Window & {
+  LingoostApp?: { isWebView?: boolean }
+  LingoostAuth?: { postMessage: (message: string) => void }
+  flutter_inappwebview?: { callHandler: (name: string, ...args: unknown[]) => Promise<unknown> }
+  __supabase?: SupabaseLike
+  supabase?: SupabaseLike
+  __pendingSupabaseSession?: { access_token: string; refresh_token: string }
+  handleGoogleSignInToken?: (payload: { success: boolean; idToken?: string; accessToken?: string; user?: unknown }) => Promise<void>
+  handleAppleSignInToken?: (payload: { success: boolean; idToken?: string; authorizationCode?: string }) => Promise<void>
+  receiveSupabaseSession?: (sessionData: { access_token: string; refresh_token: string }) => Promise<void>
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const pathname = usePathname()
@@ -38,13 +57,14 @@ export default function LoginPage() {
 
   // Expose Supabase client and native token handler for WebView bridge
   useEffect(() => {
-    const supabase = createClient()
-    ;(window as any).__supabase = supabase
-    ;(window as any).supabase = supabase
+    const supabase: SupabaseLike = createClient() as unknown as SupabaseLike
+    const w = window as unknown as NativeBridgeWindow
+    w.__supabase = supabase
+    w.supabase = supabase
 
     const consumePendingSession = async () => {
       try {
-        const s = (window as any).__pendingSupabaseSession
+        const s = (window as unknown as NativeBridgeWindow).__pendingSupabaseSession
         if (!s) return
         const { error } = await supabase.auth.setSession({
           access_token: s.access_token,
@@ -64,12 +84,7 @@ export default function LoginPage() {
     const onPending = () => { void consumePendingSession() }
     window.addEventListener('pendingSupabaseSession', onPending)
 
-    ;(window as any).handleGoogleSignInToken = async (payload: {
-      success: boolean
-      idToken?: string
-      accessToken?: string
-      user?: unknown
-    }) => {
+    w.handleGoogleSignInToken = async (payload: { success: boolean; idToken?: string; accessToken?: string; user?: unknown }) => {
       if (!payload?.success) return
       try {
         if (payload.idToken) {
@@ -77,42 +92,35 @@ export default function LoginPage() {
             provider: 'google',
             token: payload.idToken,
             access_token: payload.accessToken,
-          } as any)
+          })
           if (!error) {
             await useAuthStore.getState().initialize()
             router.replace('/')
           }
         }
-      } catch (e) {
-        console.error('handleGoogleSignInToken failed', e)
+      } catch {
+        console.error('handleGoogleSignInToken failed')
       }
     }
-    ;(window as any).handleAppleSignInToken = async (payload: {
-      success: boolean
-      idToken?: string
-      authorizationCode?: string
-    }) => {
+    w.handleAppleSignInToken = async (payload: { success: boolean; idToken?: string; authorizationCode?: string }) => {
       if (!payload?.success) return
       try {
         if (payload.idToken) {
           const { error } = await supabase.auth.signInWithIdToken({
             provider: 'apple',
             token: payload.idToken,
-          } as any)
+          })
           if (!error) {
             await useAuthStore.getState().initialize()
             router.replace('/')
           }
         }
-      } catch (e) {
-        console.error('handleAppleSignInToken failed', e)
+      } catch {
+        console.error('handleAppleSignInToken failed')
       }
     }
 
-    ;(window as any).receiveSupabaseSession = async (sessionData: {
-      access_token: string
-      refresh_token: string
-    }) => {
+    w.receiveSupabaseSession = async (sessionData: { access_token: string; refresh_token: string }) => {
       try {
         const { error } = await supabase.auth.setSession({
           access_token: sessionData.access_token,
@@ -122,8 +130,8 @@ export default function LoginPage() {
           await useAuthStore.getState().initialize()
           router.replace('/')
         }
-      } catch (e) {
-        console.error('receiveSupabaseSession failed', e)
+      } catch {
+        console.error('receiveSupabaseSession failed')
       }
     }
     return () => { window.removeEventListener('pendingSupabaseSession', onPending) }
@@ -137,13 +145,13 @@ export default function LoginPage() {
         const code = url.searchParams.get('code')
         const error = url.searchParams.get('error')
         if (!code || error) return
-        const supabase = (window as any).__supabase || createClient()
+        const supabase: SupabaseLike = (window as unknown as NativeBridgeWindow).__supabase || (createClient() as unknown as SupabaseLike)
         const { error: exErr } = await supabase.auth.exchangeCodeForSession(code)
         if (!exErr) {
           await useAuthStore.getState().initialize()
           router.replace('/')
         }
-      } catch (_) {}
+      } catch {}
     }
     run()
   }, [router])
@@ -203,7 +211,7 @@ export default function LoginPage() {
       setLoading(true)
       // 앱(WebView) 환경이면 네이티브 브리지 호출로 분기
       if (typeof window !== 'undefined') {
-        const w = window as any
+        const w = window as unknown as NativeBridgeWindow
         const isWebView = device.isWebView || !!w.LingoostApp?.isWebView
 
         if (isWebView) {
@@ -213,14 +221,14 @@ export default function LoginPage() {
               try {
                 w.LingoostAuth.postMessage(JSON.stringify({ action: 'google' }))
                 return
-              } catch (_) {}
+              } catch {}
             }
             // flutter_inappwebview fallback
             if (w.flutter_inappwebview && typeof w.flutter_inappwebview.callHandler === 'function') {
               try {
                 await w.flutter_inappwebview.callHandler('googleSignIn')
                 return
-              } catch (_) {}
+              } catch {}
             }
           }
           if (provider === 'apple') {
@@ -231,13 +239,13 @@ export default function LoginPage() {
                 try {
                   w.LingoostAuth.postMessage(JSON.stringify({ action: 'apple' }))
                   return
-                } catch (_) {}
+                } catch {}
               }
               if (w.flutter_inappwebview && typeof w.flutter_inappwebview.callHandler === 'function') {
                 try {
                   await w.flutter_inappwebview.callHandler('appleSignIn')
                   return
-                } catch (_) {}
+                } catch {}
               }
             }
             // Android WebView에서는 웹 OAuth로 진행 (네이티브 호출 안 함)

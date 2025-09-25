@@ -3,6 +3,15 @@ import prisma from '@/lib/prismaClient'
 import { createClient } from '@/lib/supabase/server'
 import { getMessaging } from '@/lib/firebase-admin'
 
+type UnicastBody = {
+  userId?: number
+  token?: string
+  title: string
+  body: string
+  data?: Record<string, string>
+  foreground?: boolean
+}
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3) Parse body
-    let payload: any
+    let payload: UnicastBody | null = null
     try {
       payload = await request.json()
     } catch (e: any) {
@@ -42,7 +51,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'invalid_json' }, { status: 400 })
     }
 
-    const { userId, token, title, body: msgBody, data, foreground = false } = payload || {}
+    const { userId, token, title, body: msgBody, data, foreground = false } = payload || ({} as UnicastBody)
     if ((!userId && !token) || !title || !msgBody) {
       console.warn(LOG, 'missing fields', { hasUserId: !!userId, hasToken: !!token, hasTitle: !!title, hasBody: !!msgBody })
       return NextResponse.json({ success: false, error: 'missing_fields' }, { status: 400 })
@@ -74,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 6) Build message
-    const message: any = {
+    const message = {
       token: target,
       notification: { title, body: msgBody },
       data: { ...(data || {}), showForeground: foreground ? 'true' : 'false' },
@@ -83,7 +92,7 @@ export async function POST(request: NextRequest) {
           aps: { alert: { title, body: msgBody }, sound: 'default', badge: 1 },
         },
       },
-    }
+    } as const
     console.log(LOG, 'sending', { hasApnsTopic: false, foreground })
 
     // 7) Send and persist
@@ -96,14 +105,15 @@ export async function POST(request: NextRequest) {
         console.error(LOG, 'db log (sent) failed', dbErr?.message || dbErr)
       }
       return NextResponse.json({ success: true })
-    } catch (e: any) {
-      console.error(LOG, 'send failed', { message: e?.message, code: e?.code })
+    } catch (e: unknown) {
+      const err = e as { message?: string; code?: string }
+      console.error(LOG, 'send failed', { message: err?.message, code: err?.code })
       try {
-        await prisma.pushNotification.create({ data: { userId: targetUserId ?? (userId ? Number(userId) : null), title, body: msgBody, data: data || {}, type: 'unicast', status: 'failed', error: e?.message || 'unknown', attemptCount: 1 } })
+        await prisma.pushNotification.create({ data: { userId: targetUserId ?? (userId ? Number(userId) : null), title, body: msgBody, data: data || {}, type: 'unicast', status: 'failed', error: err?.message || 'unknown', attemptCount: 1 } })
       } catch (dbErr: any) {
         console.error(LOG, 'db log (failed) failed', dbErr?.message || dbErr)
       }
-      return NextResponse.json({ success: false, error: e?.message || 'send_failed' }, { status: 500 })
+      return NextResponse.json({ success: false, error: err?.message || 'send_failed' }, { status: 500 })
     }
   } catch (fatal: any) {
     console.error('[FCM Unicast] fatal', fatal?.message || fatal, fatal?.stack)
