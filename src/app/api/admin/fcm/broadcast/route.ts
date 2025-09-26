@@ -35,6 +35,16 @@ export async function POST(request: NextRequest) {
       token: t.token,
       notification: { title, body: msgBody },
       data: { ...(data || {}), showForeground: foreground ? 'true' : 'false' },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'lingoost_notification_channel',
+          priority: 'max',
+          defaultSound: true,
+          defaultVibrateTimings: true,
+          icon: 'launcher_icon',
+        },
+      },
       apns: {
         headers: {
           ...(apnsTopic ? { 'apns-topic': apnsTopic } : {}),
