@@ -10,9 +10,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   // TODO: Translate metadata based on locale
   return generateSeoMetadata({
-    title: "온라인 강의 플랫폼",
-    description: "프로그래밍, IT, 비즈니스부터 다양한 분야의 온라인 강의를 제공합니다. 전문가의 노하우를 배우고 성장하세요.",
-    keywords: "온라인 강의, 프로그래밍, 코딩, IT 교육, 비즈니스, 디자인, 마케팅",
+    title: "박살강의",
+    description: "결제, HLS 수강, 더빙, 자막, SEO와 판매자 정산까지 갖춘 웹 우선 강의 교환 플랫폼입니다.",
+    keywords: "박살강의, 온라인 강의, 강의 판매, HLS 강의, 토스페이먼츠, 지식 공유, 강의 플랫폼",
     path: `/${locale}`,
   });
 }

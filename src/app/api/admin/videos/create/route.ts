@@ -1,5 +1,6 @@
-import prisma from "@/lib/prismaClient"
 import { NextRequest, NextResponse } from "next/server"
+import { and, eq } from "drizzle-orm"
+import { db, curriculumSections, curriculums, lectures, videos } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
 // POST: 비디오 레코드 생성 (원본 업로드용)
@@ -21,26 +22,30 @@ export async function POST(req: NextRequest) {
   }
 
   // 소유권 확인: 섹션 → 커리큘럼 → 강의 → instructorId === user.id
-  const can = await prisma.curriculumSection.findFirst({
-    where: { id: curriculumSectionId, Curriculum: { Lecture: { instructorId: user.id } } },
-    select: { id: true },
-  })
+  const can = await db
+    .select({ id: curriculumSections.id })
+    .from(curriculumSections)
+    .innerJoin(curriculums, eq(curriculumSections.curriculumId, curriculums.id))
+    .innerJoin(lectures, eq(curriculums.lectureId, lectures.id))
+    .where(and(eq(curriculumSections.id, curriculumSectionId), eq(lectures.instructorId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0])
   if (!can) return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
   try {
-    // 임시 masterKey 생성
-    const videoId = Math.random().toString(36).substring(7)
-    const masterKey = `assets/${videoId}/master.m3u8`
+    const masterKey = `assets/curriculumsection/${curriculumSectionId}/master.m3u8`
 
     // Video 레코드 생성
-    const video = await prisma.video.create({
-      data: {
+    const [video] = await db
+      .insert(videos)
+      .values({
         curriculumSectionId,
         videoUrl,
         title: title || "제목 없음",
         masterKey,
-      },
-    })
+        hlsStatus: "PENDING",
+      })
+      .returning()
 
     return NextResponse.json(video, { status: 201 })
   } catch (error) {

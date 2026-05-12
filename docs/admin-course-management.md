@@ -10,22 +10,21 @@
 - **Curriculum**: 강의 하위의 커리큘럼 묶음. 섹션(수업)의 컨테이너 역할.
 - **CurriculumSection**: 실제 수업 단위. 제목/설명/공개여부(`isActive`).
 - **Video / File**: 섹션 내 영상/파일 (현재 문서의 범위에선 CRUD 일부만 사용).
-- **User**: Supabase Auth 사용자와 1:1 매핑된 Prisma `User`.
+- **User**: Supabase Auth 사용자와 1:1 매핑된 Drizzle `User` 레코드.
 
-관련 Prisma 필드 요약(전체 스키마는 `prisma/schema.prisma` 참고)
+관련 Drizzle 필드 요약(전체 스키마는 `src/db/schema.ts` 참고)
 
-```12:30:prisma/schema.prisma
-model Lecture {
-  id            Int       @id @default(autoincrement())
-  title         String
-  description   String?
-  price         Int
-  discountPrice Int?
-  isActive      Boolean   @default(true)
-  imageUrl      String?   // CDN 없이 S3 키만 저장
-  instructorId  Int?
-  Curriculums   Curriculum[]
-}
+```ts
+export const lectures = pgTable("Lecture", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  price: integer("price").notNull(),
+  discountPrice: integer("discountPrice"),
+  isActive: boolean("isActive").notNull().default(true),
+  imageUrl: text("imageUrl"),
+  instructorId: integer("instructorId").references(() => users.id),
+});
 ```
 
 ---
@@ -35,7 +34,7 @@ model Lecture {
 - Supabase 세션 기반 인증을 사용하며, 모든 어드민 API는 로그인 확인 및 소유권 검사를 수행.
 - 헬퍼: `src/lib/auth/get-auth-user.ts`
   - `getAuthUserFromRequest(req)` → `{ id, email, supabaseId } | null`
-  - Prisma `User` 레코드를 upsert/동기화 후 최소 필드만 반환.
+  - Drizzle로 `User` 레코드를 upsert/동기화 후 최소 필드만 반환.
 
 ---
 
@@ -47,6 +46,10 @@ model Lecture {
   - `NEXT_PUBLIC_CDN_URL` (기본값: `https://storage.lingoost.com`)
 - Supabase
   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- 로컬 HLS/더빙 처리
+  - `ELEVENLABS_API_KEY`: 선택한 언어의 자동 더빙 생성
+  - `FFMPEG_PATH`: 선택 사항. 없으면 `ffmpeg-static` 또는 시스템 `ffmpeg`를 사용
+  - `LOCAL_ENCODING_ENABLED`: 배포 환경에서 강제로 켤 때만 `true`. 기본 운영 배포에서는 꺼둔다.
 
 ---
 
@@ -80,7 +83,7 @@ model Lecture {
   - `DELETE /api/admin/curriculums/[lectureId]/sections/[sectionId]`
   - `DELETE /api/admin/curriculums/[lectureId]/[curriculumId]`
     - 주의: 하위 `Video`, `File`, `CurriculumSection` 일괄 삭제 후 `Curriculum` 삭제
-    - Prisma where 조건은 관계명 대소문자 정확히 사용: `CurriculumSection: { is: { curriculumId } }`
+    - Drizzle transaction에서 `Video`, `File`, `CurriculumSection`을 명시적으로 삭제한 뒤 `Curriculum`을 삭제.
 
 - 파일 업로드(프리사인)
   - `POST /api/admin/files/presign`
@@ -92,6 +95,10 @@ model Lecture {
   - `POST /api/admin/videos`
     - 바디: `{ curriculumSectionId: number, videoUrl: string, title?: string, description?: string, thumbnailUrl?: string, language?: Language }`
     - 동작: 섹션에 영상 레코드 생성(사전 업로드된 S3 키를 `videoUrl`로 저장)
+  - `POST /api/admin/videos/local-encode`
+    - 바디: `{ curriculumSectionId: number, targetLanguages?: string[], force?: boolean }`
+    - 동작: Next.js 앱 내부에서 원본 영상을 내려받아 HLS(`master.m3u8`)와 언어별 오디오 트랙을 만들고 S3/CDN 경로에 업로드
+    - 제한: 로컬 개발 환경에서 관리자/강의 소유자만 실행. Vercel 배포 환경에서는 기본적으로 409로 막는다.
   - `PATCH /api/admin/videos/[videoId]`
     - 바디(부분 갱신): `{ title?, description?, thumbnailUrl?, language?, videoUrl?, duration? }`
   - `DELETE /api/admin/videos/[videoId]`
@@ -135,8 +142,9 @@ Next.js 15 주의점
     - 수업 제목/설명 수정, 공개 토글(`CurriculumSection.isActive`), 수업 삭제
     - 커리큘럼 삭제 시 하위 리소스 일괄 삭제
   - 섹션 업로드 UI(드래그앤드랍)
-    - 강의 영상: `react-dropzone` + `uploadBinary` → presign → S3 PUT → `POST /api/admin/videos`
+    - 강의 영상: `react-dropzone` + `uploadBinary` → presign → S3 PUT → `POST /api/admin/videos/create`
       - 목록 표시, 제목 인라인 수정(`PATCH /api/admin/videos/[id]`), 삭제(`DELETE /api/admin/videos/[id]`)
+      - HLS/더빙 처리: 같은 Next 앱의 `POST /api/admin/videos/local-encode` 호출. 별도 Express 더빙 서버나 별도 도메인을 사용하지 않음.
     - 참고 자료: `react-dropzone` + `uploadBinary` → presign → S3 PUT → `POST /api/admin/files`
       - 목록 표시, 삭제(`DELETE /api/admin/files/[id]`)
   - 레이아웃
@@ -208,7 +216,7 @@ export async function uploadBinary(
 
 - 소유권 체크 실패 시 403, 인증 미확인 401을 클라이언트에서 처리하여 UX 명확화.
 - 섹션 번호 표시는 강의 내부 인덱스로 처리했으나, 실제 정렬 보장 필요 시 `order` 컬럼 도입 권장(생성 시 `max(order)+1`).
-- 커리큘럼 삭제 트랜잭션에서 Prisma 관계 이름 대소문자를 반드시 정확히 사용.
+- 커리큘럼 삭제 트랜잭션에서 하위 `Video`, `File`, `CurriculumSection` 삭제 순서를 명시적으로 유지.
 - Next.js 15 App Router의 동적 API에서 `params`는 Promise이므로 항상 `await params`로 언래핑.
 - 현재 S3 객체 삭제는 DB 레코드 삭제와 별개로 동작. 필요 시 S3 삭제 API를 추가하여 동기화 권장.
 - 토스트 알림으로 사용자 피드백을 명확히 제공하여 편집 UX를 개선.
@@ -218,5 +226,3 @@ export async function uploadBinary(
 ### 앞으로의 확장 아이디어
 
 - 섹션/수업 Drag & Drop 정렬, 일괄 공개/비공개, 배지/아이콘, 썸네일 크롭/썸네일 생성, S3 객체 삭제 API, 배포 환경에서 Signed Cookie/Signed URL로 보호된 HLS 등.
-
-

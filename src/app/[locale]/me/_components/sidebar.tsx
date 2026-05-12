@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { LayoutDashboard, Bell, Heart, User, Library } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { withLocalePath } from "@/lib/brand"
 
 type NavItem = {
   href: string
@@ -21,9 +22,10 @@ const navItems: NavItem[] = [
 
 function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   const Icon = item.icon
+  const pathname = usePathname()
   return (
     <Link
-      href={item.href}
+      href={withLocalePath(pathname, item.href)}
       className={cn(
         "flex items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors",
         isActive
@@ -40,6 +42,7 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
 
 export function MeSidebar() {
   const pathname = usePathname()
+  const cleanPath = pathname.replace(/^\/(ko|en|ja|vi|ru|zh|zh-CN|zh-TW|fr|de|es|pt|it|id|th|hi|ar|tr|pl|uk)/, "") || "/"
 
   return (
     <aside className="hidden md:block w-72 shrink-0 border-r bg-background">
@@ -48,7 +51,7 @@ export function MeSidebar() {
       </div>
       <nav className="flex flex-col gap-2 px-3 py-4">
         {navItems.map((item) => (
-          <NavLink key={item.href} item={item} isActive={pathname === item.href} />
+          <NavLink key={item.href} item={item} isActive={cleanPath === item.href} />
         ))}
       </nav>
     </aside>

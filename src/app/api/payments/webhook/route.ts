@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prismaClient"
+import { eq, isNull } from "drizzle-orm"
+import { db, paymentOrders, payments, webhookEventLogs, type PaymentStatus } from "@/db"
 import { verifyTossWebhookSignature } from "@/lib/payments/toss"
 
 export const dynamic = "force-dynamic"
@@ -12,13 +13,11 @@ export async function POST(req: NextRequest) {
   const payload = safeJson(raw)
 
   // 로그 저장 (서명 실패도 기록)
-  await prisma.webhookEventLog.create({
-    data: {
+  await db.insert(webhookEventLogs).values({
       eventType: typeof payload?.eventType === "string" ? payload.eventType : "unknown",
-      signature: signature ?? undefined,
+      signature,
       payload: payload ?? {},
       processed: false,
-    }
   })
 
   if (hasSecret && !verified) {
@@ -33,29 +32,28 @@ export async function POST(req: NextRequest) {
       const orderId: string | undefined = payload?.data?.orderId
 
       if (paymentKey && orderId) {
-        await prisma.$transaction(async (tx) => {
-          await tx.paymentOrder.updateMany({ where: { orderId }, data: { status: mapStatus(status) } })
-          await tx.payment.updateMany({ where: { paymentKey }, data: { status: mapStatus(status), raw: payload } })
-
-          if (mapStatus(status) === "CANCELED") {
-            const order = await tx.paymentOrder.findUnique({ where: { orderId } })
-            if (order) {
-              // 취소 시 필요한 후속 처리(수강권 회수 등) 정책에 맞게 구현
-              // 여기서는 구매 기록 유지(테스트 환경)로 둡니다.
-            }
-          }
+        await db.transaction(async (tx) => {
+          const mappedStatus = mapStatus(status)
+          await tx.update(paymentOrders).set({ status: mappedStatus }).where(eq(paymentOrders.orderId, orderId))
+          await tx
+            .update(payments)
+            .set({ status: mappedStatus, raw: (payload ?? null) as Record<string, unknown> | null })
+            .where(eq(payments.paymentKey, paymentKey))
         })
       }
     }
 
-    await prisma.webhookEventLog.updateMany({ where: { signature: signature ?? undefined }, data: { processed: true } })
+    await db
+      .update(webhookEventLogs)
+      .set({ processed: true })
+      .where(signature ? eq(webhookEventLogs.signature, signature) : isNull(webhookEventLogs.signature))
     return NextResponse.json({ ok: true })
   } catch (e: unknown) {
     return NextResponse.json({ message: getErrorMessage(e) }, { status: 500 })
   }
 }
 
-function mapStatus(status?: string) {
+function mapStatus(status?: string): PaymentStatus {
   switch (status) {
     case "DONE":
     case "SUCCESS":

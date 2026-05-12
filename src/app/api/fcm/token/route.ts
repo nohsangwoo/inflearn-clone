@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prismaClient'
+import { eq } from 'drizzle-orm'
+import { db, fcmTokens } from '@/db'
 import { getAuthUserFromRequest } from '@/lib/auth/get-auth-user'
 
 export async function POST(req: NextRequest) {
@@ -22,24 +23,19 @@ export async function POST(req: NextRequest) {
     const normalized = (platform ?? '').toString().trim().toLowerCase()
     const platformValue = normalized === 'ios' || normalized === 'android' ? normalized : 'unknown'
 
-    const saved = await prisma.fcmToken.upsert({
-      where: { token },
-      create: {
+    const values = {
         token,
         platform: platformValue,
-        deviceId,
+        deviceId: deviceId ?? null,
         userId: userId ?? undefined,
         isActive: true,
         lastUsedAt: new Date(),
-      },
-      update: {
-        platform: platformValue,
-        deviceId,
-        userId: userId ?? undefined,
-        isActive: true,
-        lastUsedAt: new Date(),
-      },
-    })
+      }
+    const [saved] = await db
+      .insert(fcmTokens)
+      .values(values)
+      .onConflictDoUpdate({ target: fcmTokens.token, set: values })
+      .returning()
 
     return NextResponse.json({ success: true, token: saved })
   } catch (e) {
@@ -54,18 +50,14 @@ export async function DELETE(req: NextRequest) {
     if (!token || typeof token !== 'string') {
       return NextResponse.json({ success: false, message: 'token required' }, { status: 400 })
     }
-    const existing = await prisma.fcmToken.findUnique({ where: { token } })
+    const existing = await db.query.fcmTokens.findFirst({ where: eq(fcmTokens.token, token) })
     if (!existing) {
       return NextResponse.json({ success: false, message: 'not found' }, { status: 404 })
     }
-    const updated = await prisma.fcmToken.update({
-      where: { token },
-      data: { isActive: false, lastUsedAt: new Date() },
-    })
+    const [updated] = await db.update(fcmTokens).set({ isActive: false, lastUsedAt: new Date() }).where(eq(fcmTokens.token, token)).returning()
     return NextResponse.json({ success: true, token: updated })
   } catch (e) {
     return NextResponse.json({ success: false, message: 'server error' }, { status: 500 })
   }
 }
-
 

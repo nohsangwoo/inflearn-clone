@@ -1,13 +1,15 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { withLocalePath } from '@/lib/brand'
 
 export default function PaymentFailPage() {
   const search = useSearchParams()
   const router = useRouter()
+  const pathname = usePathname()
   const code = search.get('code') || ''
   const message = search.get('message') || ''
   const orderId = search.get('orderId') || ''
@@ -26,7 +28,7 @@ export default function PaymentFailPage() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button className="flex-1" onClick={() => router.push('/')}>홈으로</Button>
+            <Button className="flex-1" onClick={() => router.push(withLocalePath(pathname, '/'))}>홈으로</Button>
             <Button variant="outline" className="flex-1" onClick={() => router.back()}>이전으로</Button>
           </div>
         </CardContent>
@@ -34,5 +36,4 @@ export default function PaymentFailPage() {
     </div>
   )
 }
-
 

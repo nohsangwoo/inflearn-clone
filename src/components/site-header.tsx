@@ -1,205 +1,144 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
-import { ModeToggle } from '@/components/mode-toggle'
-import { LanguageSwitcher } from '@/components/language-switcher'
-import { Button } from '@/components/ui/button'
-import { useDeviceDetection } from '@/hooks/useDeviceDetection'
-import { Smartphone } from 'lucide-react'
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { BarChart3, BookOpen, Compass, GraduationCap, LogOut, ShieldCheck, User } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { useAuthStore } from '@/lib/stores/auth-store'
-import { toast } from 'sonner'
-import { useMemo } from 'react'
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { LanguageSwitcher } from "@/components/language-switcher"
+import { ModeToggle } from "@/components/mode-toggle"
+import { brand, withLocalePath } from "@/lib/brand"
+import { useAuthStore } from "@/lib/stores/auth-store"
+import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+
+const navItems = [
+  { href: "/", label: "탐색", icon: Compass },
+  { href: "/me", label: "내 학습", icon: BookOpen },
+  { href: "/admin", label: "판매자", icon: GraduationCap },
+  { href: "/master", label: "관리자", icon: ShieldCheck },
+]
 
 export function SiteHeader() {
-  const router = useRouter()
   const pathname = usePathname()
+  const router = useRouter()
   const { user, logout, isLoading } = useAuthStore()
-  const deviceInfo = useDeviceDetection()
-
-  // URL에서 현재 locale 추출
-  const currentLocale = useMemo(() => {
-    const segments = pathname.split('/').filter(Boolean)
-    const firstSegment = segments[0]
-    const locales = [
-      'ko',
-      'en',
-      'ja',
-      'vi',
-      'ru',
-      'zh',
-      'zh-CN',
-      'zh-TW',
-      'fr',
-      'de',
-      'es',
-      'pt',
-      'it',
-      'id',
-      'th',
-      'hi',
-      'ar',
-      'tr',
-      'pl',
-      'uk',
-    ]
-    return locales.includes(firstSegment) ? firstSegment : 'ko'
-  }, [pathname])
-
-  // locale을 포함한 경로 생성 헬퍼 (모든 언어에 locale prefix 포함)
-  const localePath = (path: string) => {
-    // path가 이미 /로 시작하는지 확인
-    const cleanPath = path.startsWith('/') ? path : `/${path}`
-    return `/${currentLocale}${cleanPath}`
-  }
 
   const handleLogout = async () => {
     try {
       await logout()
-      toast.success('로그아웃되었습니다')
-      router.replace(localePath('/'))
+      toast.success("로그아웃되었습니다")
+      router.replace(withLocalePath(pathname, "/"))
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
-      toast.error(message || '로그아웃에 실패했습니다')
+      toast.error(message || "로그아웃에 실패했습니다")
     }
   }
 
-  const showDeviceInfo = () => {
-    const lingoostApp = (window as any).LingoostApp
-    const message = `
-📱 Device Detection Info:
-• isWebView: ${deviceInfo.isWebView}
-• isIOS: ${deviceInfo.isIOS}
-• isIPad: ${deviceInfo.isIPad}
-• isAndroid: ${deviceInfo.isAndroid}
-• User Agent: ${navigator.userAgent.substring(0, 100)}...
-• LingoostApp: ${lingoostApp ? JSON.stringify(lingoostApp, null, 2) : 'Not detected'}
-    `.trim()
-
-    console.log('[DeviceInfo]', {
-      deviceInfo,
-      lingoostApp,
-      userAgent: navigator.userAgent
-    })
-
-    toast.info(message, {
-      duration: 10000,
-      style: {
-        whiteSpace: 'pre-wrap',
-        fontFamily: 'monospace',
-        fontSize: '12px',
-        textAlign: 'left'
-      }
-    })
-  }
   return (
-    <header className="border-b sticky top-0 z-40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="flex h-14 items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Link href={localePath('/')} className="flex items-center gap-2" prefetch={false}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.png"
-                alt="lingoost logo"
-                width={24}
-                height={24}
-                className="h-6 w-6"
-              />
-              <span className="font-semibold">lingoost</span>
-            </Link>
-          </div>
+    <header className="sticky top-0 z-40 border-b bg-background/88 backdrop-blur supports-[backdrop-filter]:bg-background/72">
+      <div className="mx-auto max-w-7xl px-4 md:px-6">
+        <div className="flex h-16 items-center gap-4">
+          <Link href={withLocalePath(pathname, "/")} className="flex items-center gap-3" prefetch={false}>
+            <span className="grid size-9 place-items-center rounded-lg bg-primary text-sm font-black text-primary-foreground">
+              박
+            </span>
+            <span className="leading-tight">
+              <span className="block text-base font-black">{brand.name}</span>
+              <span className="hidden text-xs text-muted-foreground sm:block">Course exchange platform</span>
+            </span>
+          </Link>
 
-          <div className="flex-1"></div>
+          <nav className="ml-4 hidden items-center gap-1 md:flex">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const href = withLocalePath(pathname, item.href)
+              const active =
+                item.href === "/"
+                  ? pathname === href || pathname === "/ko"
+                  : pathname.startsWith(href)
+              return (
+                <Link
+                  key={item.href}
+                  href={href}
+                  prefetch={false}
+                  className={cn(
+                    "inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors",
+                    active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-4" />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
 
-          <div className="flex items-center gap-2">
-            {/* Device Info Test Button */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={showDeviceInfo}
-              className="gap-1"
-              title="Show Device Info"
-            >
-              <Smartphone className="h-4 w-4" />
-              <span className="hidden sm:inline">Device</span>
-            </Button>
+          <div className="flex-1" />
 
+          <div className="hidden items-center gap-2 sm:flex">
             <LanguageSwitcher />
             <ModeToggle />
-            {!user ? (
-              <Link href={localePath('/login')} prefetch={false}>
-                <Button size="sm">로그인 {/* 로그인 */}</Button>
-              </Link>
-            ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="p-1">
-                    <Avatar>
-                      <AvatarImage src="/avatar.png" alt="profile" />
-                      <AvatarFallback>ME</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    {user?.email || ''}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href={localePath('/me/profile')} prefetch={false}>
-                      프로필 {/* 프로필 */}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={localePath('/me/courses')} prefetch={false}>
-                      내 강의 {/* 내 강의 */}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={localePath('/me')} prefetch={false}>
-                      대시보드 {/* 대시보드 */}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {/* 지식공유자 */}
-                  <DropdownMenuItem asChild>
-                    <Link href={localePath('/admin')} prefetch={false}>
-                      지식공유자 {/* 지식공유자 */}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href={localePath('/company')} prefetch={false}>
-                      회사소개 {/* 회사소개 */}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={localePath('/privacy')} prefetch={false}>
-                      개인정보처리방침 {/* 개인정보처리방침 */}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={localePath('/terms')} prefetch={false}>
-                      이용약관 {/* 이용약관 */}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} disabled={isLoading}>
-                    로그아웃 {/* 로그아웃 */}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
           </div>
+
+          {!user ? (
+            <Button asChild size="sm">
+              <Link href={withLocalePath(pathname, "/login")} prefetch={false}>
+                로그인
+              </Link>
+            </Button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="size-10 p-0">
+                  <Avatar>
+                    <AvatarImage src="/avatar.png" alt="profile" />
+                    <AvatarFallback>ME</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">{user.email}</div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href={withLocalePath(pathname, "/me")} prefetch={false}>
+                    <BarChart3 className="size-4" />
+                    내 대시보드
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={withLocalePath(pathname, "/me/profile")} prefetch={false}>
+                    <User className="size-4" />
+                    프로필
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={withLocalePath(pathname, "/admin")} prefetch={false}>
+                    <GraduationCap className="size-4" />
+                    판매자 스튜디오
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={withLocalePath(pathname, "/master")} prefetch={false}>
+                    <ShieldCheck className="size-4" />
+                    최고 관리자
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} disabled={isLoading}>
+                  <LogOut className="size-4" />
+                  로그아웃
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </header>

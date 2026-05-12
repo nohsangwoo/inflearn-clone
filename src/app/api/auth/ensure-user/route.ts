@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
-import prisma from "@/lib/prismaClient"
+import { db, users } from "@/db"
 
 export const runtime = "nodejs"
 
@@ -39,14 +39,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await prisma.user.upsert({
-      where: { supabaseId: user.id },
-      create: {
+    await db.insert(users).values({
         supabaseId: user.id,
         email,
         isVerified: true,
-      },
-      update: {
+      }).onConflictDoUpdate({
+      target: users.supabaseId,
+      set: {
         email,
         isVerified: true,
       },
@@ -57,5 +56,4 @@ export async function POST(request: NextRequest) {
 
   return response
 }
-
 

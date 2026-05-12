@@ -1,15 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { withLocalePath } from '@/lib/brand'
 
-type ConfirmResult = { ok?: boolean; orderId?: string; message?: string; code?: string | number }
+type ConfirmResult = { ok?: boolean; orderId?: string; lectureId?: number; message?: string; code?: string | number }
 
 export default function PaymentSuccessPage() {
   const search = useSearchParams()
   const router = useRouter()
+  const pathname = usePathname()
   const paymentKey = search.get('paymentKey') || ''
   const orderId = search.get('orderId') || ''
   const amountStr = search.get('amount') || ''
@@ -74,8 +76,8 @@ export default function PaymentSuccessPage() {
                 <div className="flex justify-between"><span className="text-muted-foreground">paymentKey</span><span className="truncate max-w-[260px]" title={paymentKey}>{paymentKey}</span></div>
               </div>
               <div className="flex gap-2">
-                <Button className="flex-1" onClick={() => router.push('/')}>홈으로</Button>
-                <Button variant="outline" className="flex-1" onClick={() => router.back()}>이전으로</Button>
+                <Button className="flex-1" onClick={() => router.push(withLocalePath(pathname, result.lectureId ? `/course/${result.lectureId}` : '/'))}>강의로 이동</Button>
+                <Button variant="outline" className="flex-1" onClick={() => router.push(withLocalePath(pathname, '/me/courses'))}>내 강의</Button>
               </div>
             </div>
           )}
@@ -87,7 +89,7 @@ export default function PaymentSuccessPage() {
                 {result?.message || '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.'}
               </div>
               <div className="flex gap-2">
-                <Button className="flex-1" onClick={() => router.push('/')}>홈으로</Button>
+                <Button className="flex-1" onClick={() => router.push(withLocalePath(pathname, '/'))}>홈으로</Button>
                 <Button variant="outline" className="flex-1" onClick={() => router.back()}>이전으로</Button>
               </div>
             </div>
@@ -97,5 +99,3 @@ export default function PaymentSuccessPage() {
     </div>
   )
 }
-
-

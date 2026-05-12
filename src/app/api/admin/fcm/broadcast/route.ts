@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prismaClient'
+import { and, desc, eq } from 'drizzle-orm'
+import { db, fcmTokens, pushNotifications, users } from '@/db'
 import { createClient } from '@/lib/supabase/server'
 import { getMessaging } from '@/lib/firebase-admin'
 
@@ -8,7 +9,10 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ success: false }, { status: 401 })
 
-  const me = await prisma.user.findUnique({ where: { supabaseId: user.id }, select: { role: true, id: true } })
+  const me = await db.query.users.findFirst({
+    where: eq(users.supabaseId, user.id),
+    columns: { role: true, id: true },
+  })
   if (!me || me.role !== 'ADMIN') return NextResponse.json({ success: false }, { status: 403 })
 
   const { title, body: msgBody, data, platform, onlyActive = true, foreground = false } = await request.json()
@@ -16,11 +20,16 @@ export async function POST(request: NextRequest) {
 
   const m = getMessaging(); if (!m) return NextResponse.json({ success: false }, { status: 500 })
 
-  const where: any = {}
-  if (onlyActive) where.isActive = true
-  if (platform) where.platform = platform
+  const conditions = []
+  if (onlyActive) conditions.push(eq(fcmTokens.isActive, true))
+  if (platform) conditions.push(eq(fcmTokens.platform, platform))
 
-  const tokens = await prisma.fcmToken.findMany({ where, orderBy: [{ lastUsedAt: 'desc' }, { updatedAt: 'desc' }], take: 5000 })
+  const tokens = await db
+    .select()
+    .from(fcmTokens)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(fcmTokens.lastUsedAt), desc(fcmTokens.updatedAt))
+    .limit(5000)
   if (tokens.length === 0) return NextResponse.json({ success: false, message: 'no tokens' }, { status: 400 })
 
   // FCM은 sendEachForMulticast를 제공하나, 여기서는 개별 메시지 배열로 처리
@@ -58,15 +67,14 @@ export async function POST(request: NextRequest) {
       try {
         const res = await m.send(message as any)
         sent++
-        await prisma.pushNotification.create({ data: { userId: null, fcmTokenId: null, title, body: msgBody, data: data || {}, type: 'broadcast', status: 'sent', messageId: res, sentAt: new Date() } })
+        await db.insert(pushNotifications).values({ userId: null, fcmTokenId: null, title, body: msgBody, data: data || {}, type: 'broadcast', status: 'sent', messageId: res, sentAt: new Date() })
       } catch (e: any) {
         failed++
-        await prisma.pushNotification.create({ data: { userId: null, title, body: msgBody, data: data || {}, type: 'broadcast', status: 'failed', error: e?.message || 'unknown', attemptCount: 1 } })
+        await db.insert(pushNotifications).values({ userId: null, title, body: msgBody, data: data || {}, type: 'broadcast', status: 'failed', error: e?.message || 'unknown', attemptCount: 1 })
       }
     }
   }
 
   return NextResponse.json({ success: true, sent, failed })
 }
-
 

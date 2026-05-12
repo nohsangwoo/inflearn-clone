@@ -1,6 +1,6 @@
-import prisma from "@/lib/prismaClient"
 import { NextRequest, NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
+import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { db, lectures, purchases, reviews, users } from "@/db"
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
@@ -10,46 +10,82 @@ export async function GET(req: NextRequest) {
   const q = sp.get("q")?.trim()
   const category = sp.get("category")?.toLowerCase() || undefined
 
-  const orderBy: Prisma.LectureOrderByWithRelationInput[] = (() => {
-    if (sort === "best") return [{ purchases: { _count: "desc" } }, { createdAt: "desc" }]
-    if (sort === "priceasc") return [{ discountPrice: "asc" }, { price: "asc" }]
-    if (sort === "pricedesc") return [{ discountPrice: "desc" }, { price: "desc" }]
-    return [{ createdAt: "desc" }]
+  const conditions = [eq(lectures.isActive, true)]
+  if (q) {
+    conditions.push(
+      or(
+        ilike(lectures.title, `%${q}%`),
+        ilike(lectures.shortDescription, `%${q}%`),
+        ilike(lectures.description, `%${q}%`),
+        sql`${q} = ANY(${lectures.tags})`,
+        sql`${q} = ANY(${lectures.seoKeywords})`,
+      )!,
+    )
+  }
+  if (category) {
+    conditions.push(sql`lower(${lectures.category}) = ${category}`)
+  }
+  const where = and(...conditions)
+
+  const purchaseCount = sql<number>`count(distinct ${purchases.id})`
+  const reviewCount = sql<number>`count(distinct ${reviews.id})`
+  const effectivePrice = sql<number>`coalesce(${lectures.discountPrice}, ${lectures.price})`
+  const orderBy = (() => {
+    if (sort === "best") return [desc(purchaseCount), desc(lectures.createdAt)]
+    if (sort === "priceasc") return [asc(effectivePrice), asc(lectures.price)]
+    if (sort === "pricedesc") return [desc(effectivePrice), desc(lectures.price)]
+    return [desc(lectures.createdAt)]
   })()
 
-  const where: Prisma.LectureWhereInput = { isActive: true }
-  if (q) {
-    where.OR = [
-      { title: { contains: q, mode: "insensitive" } },
-      { description: { contains: q, mode: "insensitive" } },
-    ]
-  }
-  // TODO: category 필터는 스키마 확장(카테고리/태그 필드) 후 활성화
-  if (category && ["frontend", "backend", "ai"].includes(category)) {
-    // 현재는 카테고리 컬럼이 없어 필터를 적용하지 않습니다.
-  }
+  try {
+    const [{ total }] = await db.select({ total: count() }).from(lectures).where(where)
+    const items = await db
+      .select({
+        id: lectures.id,
+        title: lectures.title,
+        slug: lectures.slug,
+        shortDescription: lectures.shortDescription,
+        description: lectures.description,
+        category: lectures.category,
+        level: lectures.level,
+        tags: lectures.tags,
+        price: lectures.price,
+        discountPrice: lectures.discountPrice,
+        imageUrl: lectures.imageUrl,
+        createdAt: lectures.createdAt,
+        instructorNickname: users.nickname,
+        instructorEmail: users.email,
+        purchaseCount,
+        reviewCount,
+      })
+      .from(lectures)
+      .leftJoin(users, eq(lectures.instructorId, users.id))
+      .leftJoin(purchases, eq(purchases.lectureId, lectures.id))
+      .leftJoin(reviews, eq(reviews.lectureId, lectures.id))
+      .where(where)
+      .groupBy(lectures.id, users.id)
+      .orderBy(...orderBy)
+      .offset((page - 1) * pageSize)
+      .limit(pageSize)
 
-  const [total, items] = await Promise.all([
-    prisma.lecture.count({ where }),
-    prisma.lecture.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        price: true,
-        discountPrice: true,
-        imageUrl: true,
-        createdAt: true,
-        instructor: { select: { nickname: true, email: true } },
-      },
-    }),
-  ])
-
-  return NextResponse.json({ page, pageSize, total, items })
+    return NextResponse.json({
+      page,
+      pageSize,
+      total,
+      items: items.map((item) => ({
+        ...item,
+        instructor: { nickname: item.instructorNickname, email: item.instructorEmail },
+        instructorNickname: undefined,
+        instructorEmail: undefined,
+      })),
+    })
+  } catch {
+    return NextResponse.json({
+      page,
+      pageSize,
+      total: 0,
+      items: [],
+      degraded: true,
+    })
+  }
 }
-
-

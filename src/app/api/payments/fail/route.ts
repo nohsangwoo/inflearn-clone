@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import prisma from "@/lib/prismaClient"
+import { eq } from "drizzle-orm"
+import { db, paymentOrders } from "@/db"
 
 export const dynamic = "force-dynamic"
 
@@ -10,7 +11,10 @@ export async function GET(req: NextRequest) {
   const orderId = searchParams.get("orderId") || ""
 
   if (orderId) {
-    await prisma.paymentOrder.updateMany({ where: { orderId }, data: { status: "FAILED", failReason: `${code}:${message}`.slice(0, 200) } })
+    await db
+      .update(paymentOrders)
+      .set({ status: "FAILED", failReason: `${code}:${message}`.slice(0, 200) })
+      .where(eq(paymentOrders.orderId, orderId))
   }
 
   return NextResponse.json({ ok: false, code, message, orderId })

@@ -8,6 +8,7 @@ import { BottomNavigation } from "@/components/bottom-navigation";
 import { generateSeoMetadata } from "@/lib/seo-metadata";
 import { JsonLd } from "@/components/json-ld";
 import { WebViewBridgeInitializer } from "@/components/webview-bridge-initializer";
+import { brand } from "@/lib/brand";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,8 +41,8 @@ export default async function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="링구스트" />
-        <meta name="theme-color" content="#10b981" />
+        <meta name="apple-mobile-web-app-title" content={brand.name} />
+        <meta name="theme-color" content="#123c69" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -50,7 +51,7 @@ export default async function RootLayout({
           <JsonLd type="website" locale={locale as 'ko' | 'en' | 'ja' | 'zh'} />
           <WebViewBridgeInitializer />
           <SiteHeader />
-          <main className="min-h-[calc(100dvh-56px-64px)] pb-16">
+          <main className="min-h-[calc(100dvh-56px-64px)] pb-16 md:pb-0">
             {children}
           </main>
           <BottomNavigation />

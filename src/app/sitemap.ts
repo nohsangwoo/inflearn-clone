@@ -1,7 +1,10 @@
 import { MetadataRoute } from 'next';
+import { desc, eq } from 'drizzle-orm';
+import { db, lectures } from '@/db';
+import { brand } from '@/lib/brand';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lingoost.com';
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = brand.url;
   const locales = ['ko', 'en', 'ja', 'zh'];
   const currentDate = new Date().toISOString();
 
@@ -72,6 +75,37 @@ export default function sitemap(): MetadataRoute.Sitemap {
       });
     });
   });
+
+  try {
+    const courses = await db
+      .select({ id: lectures.id, updatedAt: lectures.updatedAt })
+      .from(lectures)
+      .where(eq(lectures.isActive, true))
+      .orderBy(desc(lectures.updatedAt))
+      .limit(5000);
+
+    courses.forEach((course) => {
+      locales.forEach((locale) => {
+        const path = `/course/${course.id}`;
+        sitemapEntries.push({
+          url: locale === 'ko' ? `${baseUrl}${path}` : `${baseUrl}/${locale}${path}`,
+          lastModified: course.updatedAt,
+          changeFrequency: 'weekly',
+          priority: 0.8,
+          alternates: {
+            languages: {
+              ko: `${baseUrl}${path}`,
+              en: `${baseUrl}/en${path}`,
+              ja: `${baseUrl}/ja${path}`,
+              zh: `${baseUrl}/zh${path}`,
+            },
+          },
+        });
+      });
+    });
+  } catch {
+    // Keep builds and crawlers resilient when the database is temporarily unavailable.
+  }
 
   return sitemapEntries;
 }

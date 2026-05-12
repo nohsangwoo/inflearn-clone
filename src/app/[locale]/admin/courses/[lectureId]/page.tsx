@@ -39,9 +39,13 @@ type Video = {
   videoUrl: string
   thumbnailUrl?: string | null
   duration?: number | null
+  hlsStatus?: string
+  hlsError?: string | null
+  CaptionTracks?: CaptionTrack[]
 }
 
 type DubItem = { id: string; lang: string; status: string; url?: string | null }
+type CaptionTrack = { id: string; lang: string; label: string; url: string; format: string; isDefault: boolean }
 
 type FileItem = {
   id: number
@@ -58,13 +62,56 @@ export default function EditCoursePage() {
     queryKey: ["lecture", lectureIdNum],
     queryFn: async () => {
       const { data } = await axios.get(`/api/admin/courses/${lectureIdNum}`)
-      return data as { id: number; title: string; description: string | null; price: number; discountPrice?: number | null; imageUrl?: string | null; isActive: boolean }
+      return data as {
+        id: number
+        title: string
+        slug?: string | null
+        shortDescription?: string | null
+        description: string | null
+        category?: string | null
+        level?: string | null
+        languageCode?: string | null
+        tags?: string[]
+        seoKeywords?: string[]
+        targetAudience?: string | null
+        requirements?: string | null
+        learningOutcomes?: string[]
+        metaTitle?: string | null
+        metaDescription?: string | null
+        ogImageUrl?: string | null
+        canonicalUrl?: string | null
+        price: number
+        discountPrice?: number | null
+        imageUrl?: string | null
+        isActive: boolean
+      }
     },
     enabled: Number.isFinite(lectureIdNum),
   })
 
   const updateLecture = useMutation({
-    mutationFn: async (payload: Partial<{ title: string; description: string; price: number; discountPrice: number | null; imageUrl: string | null; isActive: boolean }>) => {
+    mutationFn: async (payload: Partial<{
+      title: string
+      slug: string
+      shortDescription: string
+      description: string
+      category: string
+      level: string
+      languageCode: string
+      tags: string[]
+      seoKeywords: string[]
+      targetAudience: string
+      requirements: string
+      learningOutcomes: string[]
+      metaTitle: string
+      metaDescription: string
+      ogImageUrl: string
+      canonicalUrl: string
+      price: number
+      discountPrice: number | null
+      imageUrl: string | null
+      isActive: boolean
+    }>) => {
       const { data } = await axios.patch(`/api/admin/courses/${lectureIdNum}`, payload)
       return data
     },
@@ -195,6 +242,38 @@ export default function EditCoursePage() {
             />
           </div>
           <div className="grid gap-2">
+            <label className="text-sm text-muted-foreground">슬러그</label>
+            <Input
+              defaultValue={lecture?.slug ?? ""}
+              placeholder="nextjs-hls-course"
+              onBlur={(e) =>
+                updateLecture.mutate(
+                  { slug: e.target.value },
+                  {
+                    onSuccess: () => toast.success("슬러그가 저장되었습니다"),
+                    onError: () => toast.error("슬러그 저장 실패"),
+                  },
+                )
+              }
+            />
+          </div>
+          <div className="grid gap-2">
+            <label className="text-sm text-muted-foreground">한 줄 요약</label>
+            <Input
+              defaultValue={lecture?.shortDescription ?? ""}
+              placeholder="검색 결과와 상세 상단에 노출될 짧은 설명"
+              onBlur={(e) =>
+                updateLecture.mutate(
+                  { shortDescription: e.target.value },
+                  {
+                    onSuccess: () => toast.success("한 줄 요약이 저장되었습니다"),
+                    onError: () => toast.error("한 줄 요약 저장 실패"),
+                  },
+                )
+              }
+            />
+          </div>
+          <div className="grid gap-2">
             <label className="text-sm text-muted-foreground">설명</label>
             <textarea
               defaultValue={lecture?.description ?? ""}
@@ -209,6 +288,104 @@ export default function EditCoursePage() {
               }
               className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">카테고리</label>
+              <Input
+                defaultValue={lecture?.category ?? ""}
+                placeholder="웹 개발"
+                onBlur={(e) => updateLecture.mutate({ category: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">난이도</label>
+              <Input
+                defaultValue={lecture?.level ?? ""}
+                placeholder="입문 / 중급 / 고급"
+                onBlur={(e) => updateLecture.mutate({ level: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">대표 언어</label>
+              <Input
+                defaultValue={lecture?.languageCode ?? "ko"}
+                placeholder="ko"
+                onBlur={(e) => updateLecture.mutate({ languageCode: e.target.value || "ko" })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">태그</label>
+              <Input
+                defaultValue={(lecture?.tags ?? []).join(", ")}
+                placeholder="Next.js, HLS, 결제"
+                onBlur={(e) => updateLecture.mutate({ tags: e.target.value.split(",").map((v) => v.trim()).filter(Boolean) })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">SEO 키워드</label>
+              <Input
+                defaultValue={(lecture?.seoKeywords ?? []).join(", ")}
+                placeholder="온라인 강의, 강의 판매, 웹 개발"
+                onBlur={(e) => updateLecture.mutate({ seoKeywords: e.target.value.split(",").map((v) => v.trim()).filter(Boolean) })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">추천 대상</label>
+              <textarea
+                defaultValue={lecture?.targetAudience ?? ""}
+                className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onBlur={(e) => updateLecture.mutate({ targetAudience: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">준비물/선수 지식</label>
+              <textarea
+                defaultValue={lecture?.requirements ?? ""}
+                className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onBlur={(e) => updateLecture.mutate({ requirements: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm text-muted-foreground">학습 결과</label>
+              <textarea
+                defaultValue={(lecture?.learningOutcomes ?? []).join("\n")}
+                placeholder="줄바꿈으로 여러 개 입력"
+                className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onBlur={(e) => updateLecture.mutate({ learningOutcomes: e.target.value.split("\n").map((v) => v.trim()).filter(Boolean) })}
+              />
+            </div>
+          </div>
+          <div className="rounded-md border bg-background p-4">
+            <div className="mb-3 text-sm font-medium">SEO 메타</div>
+            <div className="grid gap-3">
+              <Input
+                defaultValue={lecture?.metaTitle ?? ""}
+                placeholder="메타 타이틀"
+                onBlur={(e) => updateLecture.mutate({ metaTitle: e.target.value })}
+              />
+              <Input
+                defaultValue={lecture?.metaDescription ?? ""}
+                placeholder="메타 설명"
+                onBlur={(e) => updateLecture.mutate({ metaDescription: e.target.value })}
+              />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Input
+                  defaultValue={lecture?.ogImageUrl ?? ""}
+                  placeholder="OG 이미지 URL 또는 S3 key"
+                  onBlur={(e) => updateLecture.mutate({ ogImageUrl: e.target.value })}
+                />
+                <Input
+                  defaultValue={lecture?.canonicalUrl ?? ""}
+                  placeholder="Canonical URL"
+                  onBlur={(e) => updateLecture.mutate({ canonicalUrl: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">비공개</span>
@@ -422,8 +599,6 @@ export default function EditCoursePage() {
                                     <div className="text-sm text-muted-foreground">등록된 영상이 없습니다.</div>
                                   ) : (
                                     (sec.Videos ?? []).map((v) => {
-                                      const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
-                                      const href = /^(https?:)?\/\//.test(v.videoUrl) ? v.videoUrl : `${cdnBase}/${v.videoUrl}`
                                       return (
                                         <div key={v.id} className="space-y-2">
                                           <div className="flex items-center gap-2">
@@ -471,6 +646,7 @@ export default function EditCoursePage() {
                                               <span className="text-muted-foreground">더빙 트랙 없음</span>
                                             )}
                                           </div>
+                                          <CaptionManager videoId={v.id} captions={v.CaptionTracks ?? []} />
                                           {/* HLS 미리보기 */}
                                           <HlsPlayerModal sectionId={sec.id} title={sec.title} />
                                         </div>
@@ -570,5 +746,78 @@ function FileDropzone({ onFiles }: CommonDropzoneProps) {
   )
 }
 
+function CaptionManager({ videoId, captions }: { videoId: number; captions: CaptionTrack[] }) {
+  const qc = useQueryClient()
+  const [lang, setLang] = useState("ko")
+  const [label, setLabel] = useState("한국어")
+  const [url, setUrl] = useState("")
 
+  const addCaption = useMutation({
+    mutationFn: async () => {
+      if (!url.trim()) throw new Error("caption url required")
+      const { data } = await axios.post(`/api/admin/videos/${videoId}/captions`, {
+        lang,
+        label,
+        url,
+        format: url.toLowerCase().endsWith(".srt") ? "srt" : "vtt",
+        isDefault: false,
+      })
+      return data as CaptionTrack
+    },
+    onSuccess: async () => {
+      setUrl("")
+      await qc.invalidateQueries({ queryKey: ["curriculums"] })
+      toast.success("자막이 등록되었습니다")
+    },
+    onError: () => toast.error("자막 등록 실패"),
+  })
 
+  const deleteCaption = useMutation({
+    mutationFn: async (captionId: string) => {
+      await axios.delete(`/api/admin/videos/${videoId}/captions/${captionId}`)
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["curriculums"] })
+      toast.success("자막이 삭제되었습니다")
+    },
+    onError: () => toast.error("자막 삭제 실패"),
+  })
+
+  return (
+    <div className="rounded-md border bg-background p-3">
+      <div className="mb-2 text-sm font-medium">자막 트랙</div>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-[80px_120px_1fr_auto]">
+        <Input value={lang} onChange={(e) => setLang(e.target.value)} placeholder="ko" />
+        <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="한국어" />
+        <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="VTT/SRT S3 key 또는 URL" />
+        <Button type="button" variant="secondary" onClick={() => addCaption.mutate()} disabled={addCaption.isPending}>
+          등록
+        </Button>
+      </div>
+      <div className="mt-3 space-y-2">
+        {captions.length === 0 ? (
+          <div className="text-xs text-muted-foreground">
+            등록된 자막이 없습니다. 영상 자체에 자막이 박혀 있으면 등록하지 않아도 됩니다.
+          </div>
+        ) : (
+          captions.map((caption) => (
+            <div key={caption.id} className="flex items-center gap-2 text-xs">
+              <span className="rounded border px-2 py-1 font-medium">{caption.label}</span>
+              <span className="text-muted-foreground">{caption.lang} · {caption.format}</span>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">{caption.url}</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="text-red-600"
+                onClick={() => deleteCaption.mutate(caption.id)}
+              >
+                삭제
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}

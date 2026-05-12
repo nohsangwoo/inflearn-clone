@@ -1,5 +1,6 @@
-import prisma from "@/lib/prismaClient"
 import { NextRequest, NextResponse } from "next/server"
+import { and, eq } from "drizzle-orm"
+import { db, likes } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
 export async function GET(
@@ -11,7 +12,7 @@ export async function GET(
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
   if (!user) return NextResponse.json({ liked: false })
-  const liked = await prisma.like.findFirst({ where: { lectureId: id, userId: user.id } })
+  const liked = await db.query.likes.findFirst({ where: and(eq(likes.lectureId, id), eq(likes.userId, user.id)) })
   return NextResponse.json({ liked: !!liked })
 }
 
@@ -24,13 +25,12 @@ export async function POST(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  const exists = await prisma.like.findFirst({ where: { lectureId: id, userId: user.id } })
+  const exists = await db.query.likes.findFirst({ where: and(eq(likes.lectureId, id), eq(likes.userId, user.id)) })
   if (exists) {
-    await prisma.like.delete({ where: { id: exists.id } })
+    await db.delete(likes).where(eq(likes.id, exists.id))
     return NextResponse.json({ liked: false })
   }
-  const created = await prisma.like.create({ data: { lectureId: id, userId: user.id } })
+  const [created] = await db.insert(likes).values({ lectureId: id, userId: user.id }).returning({ id: likes.id })
   return NextResponse.json({ liked: !!created })
 }
-
 

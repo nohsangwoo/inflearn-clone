@@ -1,5 +1,6 @@
-import prisma from "@/lib/prismaClient"
 import { NextRequest, NextResponse } from "next/server"
+import { and, eq } from "drizzle-orm"
+import { db, curriculumSections, curriculums, lectures } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
 // POST: 기존 커리큘럼에 섹션 추가
@@ -24,22 +25,22 @@ export async function POST(
   const description: string | null = body?.description ?? null
 
   // 안전하게 해당 커리큘럼이 해당 강의의 것인지 확인
-  const curriculum = await prisma.curriculum.findFirst({
-    where: { id: curriculumId, lectureId: pLectureId, Lecture: { instructorId: user.id } },
-    select: { id: true },
-  })
+  const curriculum = await db
+    .select({ id: curriculums.id })
+    .from(curriculums)
+    .innerJoin(lectures, eq(curriculums.lectureId, lectures.id))
+    .where(and(eq(curriculums.id, curriculumId), eq(curriculums.lectureId, pLectureId), eq(lectures.instructorId, user.id)))
+    .limit(1)
+    .then((rows) => rows[0])
   if (!curriculum) {
     return NextResponse.json({ message: "curriculum not found" }, { status: 404 })
   }
 
-  const section = await prisma.curriculumSection.create({
-    data: {
+  const [section] = await db.insert(curriculumSections).values({
       title,
-      description: description ?? undefined,
+      description,
       curriculumId,
-    },
-  })
+    }).returning()
   return NextResponse.json(section, { status: 201 })
 }
-
 

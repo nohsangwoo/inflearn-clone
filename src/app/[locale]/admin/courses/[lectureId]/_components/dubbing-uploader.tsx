@@ -33,41 +33,28 @@ export default function DubbingUploader({ curriculumSectionId }: Props) {
   const [uploadedKey, setUploadedKey] = useState<string | null>(null)
   const [selected, setSelected] = useState<DubbingLanguageCode[]>([])
   const [videoCreated, setVideoCreated] = useState(false)
+  const [isEncoding, setIsEncoding] = useState(false)
 
   // 기존 비디오 및 더빙 트랙 정보 수집
   const { existingLangs, existingVideo } = useMemo(() => {
     const all = qc.getQueryCache().findAll({ queryKey: ["curriculums"] })
-    console.log("=== Query Cache Debug ===")
-    console.log("All queries found:", all.length)
-
-    const langs = new Set<string>()
+    const langs = new Set<DubbingLanguageCode>()
     let video: { videoUrl?: string; title?: string | null } | null = null
 
     for (const q of all) {
       const data = q.state.data as unknown
-      console.log("Query data:", data)
-
-      if (!Array.isArray(data)) {
-        console.log("Data is not array, skipping")
-        continue
-      }
+      if (!Array.isArray(data)) continue
 
       for (const cur of data) {
-        console.log("Curriculum:", cur)
         for (const sec of (cur?.CurriculumSections ?? [])) {
-          console.log(`Section ${sec?.id} vs curriculumSectionId ${curriculumSectionId}`)
           if (sec?.id !== curriculumSectionId) continue
 
-          console.log("Found matching section! Videos:", sec?.Videos)
           for (const v of (sec?.Videos ?? [])) {
-            // 첫 번째 비디오 정보를 저장
             if (!video && v?.videoUrl) {
               video = { videoUrl: v.videoUrl, title: v.title }
-              console.log("Found video:", video)
             }
             for (const t of (v?.DubTrack ?? [])) {
-              langs.add(String(t.lang))
-              console.log("Found language:", t.lang)
+              if (isDubbingLanguageCode(t.lang)) langs.add(t.lang)
             }
           }
         }
@@ -75,11 +62,8 @@ export default function DubbingUploader({ curriculumSectionId }: Props) {
       break
     }
 
-    console.log("Final existingVideo:", video)
-    console.log("Final existingLangs:", Array.from(langs))
-
     return {
-      existingLangs: Array.from(langs) as DubbingLanguageCode[],
+      existingLangs: Array.from(langs),
       existingVideo: video
     }
   }, [curriculumSectionId, qc])
@@ -122,7 +106,7 @@ export default function DubbingUploader({ curriculumSectionId }: Props) {
       await qc.invalidateQueries({ queryKey: ["curriculums"] })
 
       toast.success("영상 업로드가 완료되었습니다")
-    } catch (e) {
+    } catch {
       toast.error("영상 업로드 실패")
     } finally {
       setIsUploading(false)
@@ -132,66 +116,39 @@ export default function DubbingUploader({ curriculumSectionId }: Props) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ multiple: false, accept: { "video/*": [] }, onDrop })
 
   async function requestDubbing() {
-    // 업로드된 비디오 또는 기존 비디오가 있는지 확인
     const videoUrl = uploadedKey || existingVideo?.videoUrl
-
-    console.log("=== Dubbing Request Debug ===")
-    console.log("uploadedKey:", uploadedKey)
-    console.log("existingVideo:", existingVideo)
-    console.log("videoUrl:", videoUrl)
-    console.log("curriculumSectionId:", curriculumSectionId)
-    console.log("selected languages:", selected)
 
     if (!videoUrl) {
       toast.error("먼저 영상을 업로드하세요")
       return
     }
-    if (selected.length === 0) {
-      toast.error("언어를 하나 이상 선택하세요")
-      return
-    }
 
     try {
-      const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? 'https://storage.lingoost.com'
-      const fullVideoUrl = videoUrl.startsWith('http') ? videoUrl : `${cdnBase}/${videoUrl}`
+      setIsEncoding(true)
+      toast.info("로컬 HLS 인코딩을 시작합니다. 작업이 끝날 때까지 이 창을 유지하세요.")
 
-      console.log("fullVideoUrl:", fullVideoUrl)
-
-      // 더빙 서버의 API 엔드포인트
-      const dubbingServerUrl = process.env.NEXT_PUBLIC_DUBBING_SERVER || 'http://localhost:3500'
-      const endpoint = `${dubbingServerUrl}/api/dubbing`
-
-      const requestBody = {
-        inputVideoUrl: fullVideoUrl,
-        targetLanguages: selected,
-        curriculumSectionId,
-        sourceLanguage: "ko" // Korean as source language
-      }
-
-      console.log("Request endpoint:", endpoint)
-      console.log("Request body:", JSON.stringify(requestBody, null, 2))
-
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/admin/videos/local-encode", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          curriculumSectionId,
+          targetLanguages: selected,
+        }),
       })
 
       if (!res.ok) {
-        const error = await res.text()
-        toast.error(`더빙 요청 실패: ${error}`)
+        const error = await readErrorMessage(res)
+        toast.error(error)
         return
       }
 
-      toast.success("더빙 요청을 전송했습니다. 처리가 완료되면 언어별 트랙이 생성됩니다.")
-
-      // 선택한 언어 초기화
+      toast.success(selected.length > 0 ? "HLS 인코딩과 더빙 처리가 완료되었습니다" : "HLS 인코딩이 완료되었습니다")
       setSelected([])
-
-      // 목록 새로고침(비동기): DubTrack 반영되면 화면 최신화
       void qc.invalidateQueries({ queryKey: ["curriculums"] })
     } catch (error) {
-      toast.error(`더빙 요청 중 오류 발생: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+      toast.error(`로컬 인코딩 중 오류 발생: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+    } finally {
+      setIsEncoding(false)
     }
   }
 
@@ -256,9 +213,9 @@ export default function DubbingUploader({ curriculumSectionId }: Props) {
         <Button
           type="button"
           onClick={requestDubbing}
-          disabled={!currentVideoUrl || selected.length === 0}
+          disabled={!currentVideoUrl || isEncoding}
         >
-          번역 요청하기 {selected.length > 0 && `(${selected.length}개 언어)`}
+          {isEncoding ? "처리 중..." : selected.length > 0 ? `HLS + 번역 처리 (${selected.length}개 언어)` : "HLS 인코딩 처리"}
         </Button>
         <Button type="button" variant="secondary" onClick={() => void qc.invalidateQueries({ queryKey: ["curriculums"] })}>
           상태 새로고침
@@ -266,4 +223,20 @@ export default function DubbingUploader({ curriculumSectionId }: Props) {
       </div>
     </div>
   )
+}
+
+function isDubbingLanguageCode(value: unknown): value is DubbingLanguageCode {
+  return typeof value === "string" && value in LABEL
+}
+
+async function readErrorMessage(response: Response) {
+  const text = await response.text()
+  if (!text) return "로컬 인코딩 요청에 실패했습니다"
+
+  try {
+    const parsed = JSON.parse(text) as { message?: unknown }
+    return typeof parsed.message === "string" ? parsed.message : text
+  } catch {
+    return text
+  }
 }

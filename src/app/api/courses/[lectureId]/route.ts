@@ -1,5 +1,6 @@
-import prisma from "@/lib/prismaClient"
 import { NextRequest, NextResponse } from "next/server"
+import { and, avg, count, countDistinct, eq, asc } from "drizzle-orm"
+import { db, curriculumSections, curriculums, lectures, likes, purchases, reviews, users, videos } from "@/db"
 
 export async function GET(
   req: NextRequest,
@@ -11,67 +12,134 @@ export async function GET(
     return NextResponse.json({ message: "invalid id" }, { status: 400 })
   }
 
-  const lecture = await prisma.lecture.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      price: true,
-      discountPrice: true,
-      imageUrl: true,
-      createdAt: true,
-      instructor: { select: { id: true, email: true, nickname: true, profileImageUrl: true } },
-      isActive: true,
-      _count: { select: { purchases: true, Reviews: true, Likes: true } },
-    },
-  })
+  const lecture = await db
+    .select({
+      id: lectures.id,
+      title: lectures.title,
+      slug: lectures.slug,
+      shortDescription: lectures.shortDescription,
+      description: lectures.description,
+      category: lectures.category,
+      level: lectures.level,
+      languageCode: lectures.languageCode,
+      tags: lectures.tags,
+      seoKeywords: lectures.seoKeywords,
+      targetAudience: lectures.targetAudience,
+      requirements: lectures.requirements,
+      learningOutcomes: lectures.learningOutcomes,
+      metaTitle: lectures.metaTitle,
+      metaDescription: lectures.metaDescription,
+      ogImageUrl: lectures.ogImageUrl,
+      canonicalUrl: lectures.canonicalUrl,
+      price: lectures.price,
+      discountPrice: lectures.discountPrice,
+      imageUrl: lectures.imageUrl,
+      createdAt: lectures.createdAt,
+      isActive: lectures.isActive,
+      instructor: {
+        id: users.id,
+        email: users.email,
+        nickname: users.nickname,
+        profileImageUrl: users.profileImageUrl,
+      },
+    })
+    .from(lectures)
+    .leftJoin(users, eq(lectures.instructorId, users.id))
+    .where(eq(lectures.id, id))
+    .limit(1)
+    .then((rows) => rows[0])
 
   if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "not found" }, { status: 404 })
   }
 
-  const [ratingAgg, previewSection] = await Promise.all([
-    prisma.review.aggregate({
-      where: { lectureId: id, isDeleted: false },
-      _avg: { rating: true },
-      _count: { _all: true },
-    }),
-    prisma.curriculumSection.findFirst({
-      where: { Curriculum: { lectureId: id }, Videos: { some: {} } },
-      orderBy: { id: "asc" },
-      select: { id: true, title: true },
-    }),
+  const [ratingAgg, countRow, previewSection] = await Promise.all([
+    db
+      .select({ avgRating: avg(reviews.rating), reviewCount: count(reviews.id) })
+      .from(reviews)
+      .where(and(eq(reviews.lectureId, id), eq(reviews.isDeleted, false)))
+      .then((rows) => rows[0]),
+    db
+      .select({
+        purchaseCount: countDistinct(purchases.id),
+        likeCount: countDistinct(likes.id),
+      })
+      .from(lectures)
+      .leftJoin(purchases, eq(purchases.lectureId, lectures.id))
+      .leftJoin(likes, eq(likes.lectureId, lectures.id))
+      .where(eq(lectures.id, id))
+      .then((rows) => rows[0]),
+    db
+      .select({ id: curriculumSections.id, title: curriculumSections.title })
+      .from(curriculumSections)
+      .innerJoin(curriculums, eq(curriculumSections.curriculumId, curriculums.id))
+      .innerJoin(videos, eq(videos.curriculumSectionId, curriculumSections.id))
+      .where(eq(curriculums.lectureId, id))
+      .orderBy(asc(curriculumSections.id))
+      .limit(1)
+      .then((rows) => rows[0]),
   ])
 
   // 간단 커리큘럼 요약 (최대 8개 섹션)
-  const sections = await prisma.curriculumSection.findMany({
-    where: { Curriculum: { lectureId: id } },
-    orderBy: { id: "asc" },
-    take: 8,
-    select: { id: true, title: true, description: true, isActive: true, Videos: { select: { id: true } } },
-  })
+  const sectionRows = await db
+    .select({
+      id: curriculumSections.id,
+      title: curriculumSections.title,
+      description: curriculumSections.description,
+      isActive: curriculumSections.isActive,
+      videoId: videos.id,
+      hlsStatus: videos.hlsStatus,
+    })
+    .from(curriculumSections)
+    .innerJoin(curriculums, eq(curriculumSections.curriculumId, curriculums.id))
+    .leftJoin(videos, eq(videos.curriculumSectionId, curriculumSections.id))
+    .where(eq(curriculums.lectureId, id))
+    .orderBy(asc(curriculumSections.id))
+    .limit(24)
 
   const cdnBase = process.env.CDN_URL || process.env.NEXT_PUBLIC_CDN_URL || "https://storage.lingoost.com"
-  const imageUrl = lecture.imageUrl ? `${cdnBase.replace(/\/$/, "")}/${lecture.imageUrl}` : null
+  const imageUrl = lecture.imageUrl
+    ? /^(https?:)?\/\//.test(lecture.imageUrl)
+      ? lecture.imageUrl
+      : `${cdnBase.replace(/\/$/, "")}/${lecture.imageUrl}`
+    : null
 
   return NextResponse.json({
     id: lecture.id,
     title: lecture.title,
+    slug: lecture.slug,
+    shortDescription: lecture.shortDescription,
     description: lecture.description,
+    category: lecture.category,
+    level: lecture.level,
+    languageCode: lecture.languageCode,
+    tags: lecture.tags,
+    seoKeywords: lecture.seoKeywords,
+    targetAudience: lecture.targetAudience,
+    requirements: lecture.requirements,
+    learningOutcomes: lecture.learningOutcomes,
+    metaTitle: lecture.metaTitle,
+    metaDescription: lecture.metaDescription,
+    ogImageUrl: lecture.ogImageUrl,
+    canonicalUrl: lecture.canonicalUrl,
     price: lecture.price,
     discountPrice: lecture.discountPrice,
     imageUrl,
     createdAt: lecture.createdAt,
     instructor: lecture.instructor,
-    purchaseCount: lecture._count.purchases,
-    reviewCount: ratingAgg._count?._all ?? lecture._count.Reviews,
-    avgRating: ratingAgg._avg.rating ?? 0,
-    likeCount: lecture._count.Likes,
+    purchaseCount: countRow?.purchaseCount ?? 0,
+    reviewCount: ratingAgg?.reviewCount ?? 0,
+    avgRating: Number(ratingAgg?.avgRating ?? 0),
+    likeCount: countRow?.likeCount ?? 0,
     previewSectionId: previewSection?.id ?? null,
     previewSectionTitle: previewSection?.title ?? null,
-    sections: sections.map((s) => ({ id: s.id, title: s.title, active: s.isActive, hasVideo: s.Videos.length > 0 })),
+    sections: sectionRows.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      active: s.isActive,
+      hasVideo: Boolean(s.videoId),
+      hlsStatus: s.hlsStatus ?? null,
+    })),
   })
 }
-
-

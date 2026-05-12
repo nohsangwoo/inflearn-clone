@@ -1,5 +1,6 @@
-import prisma from "@/lib/prismaClient"
 import { NextRequest, NextResponse } from "next/server"
+import { and, eq } from "drizzle-orm"
+import { db, carts, cartToLecture } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
 export async function GET(
@@ -11,8 +12,14 @@ export async function GET(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  const cart = await prisma.cart.findFirst({ where: { userId: user.id }, include: { Lecture: { select: { id: true } } } })
-  const inCart = !!cart?.Lecture.some((l) => l.id === id)
+  const cart = await db.query.carts.findFirst({ where: eq(carts.userId, user.id), columns: { id: true } })
+  const inCart = cart
+    ? Boolean(
+        await db.query.cartToLecture.findFirst({
+          where: and(eq(cartToLecture.cartId, cart.id), eq(cartToLecture.lectureId, id)),
+        }),
+      )
+    : false
   return NextResponse.json({ inCart })
 }
 
@@ -27,28 +34,23 @@ export async function POST(
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
 
   // 장바구니 생성 또는 조회 (userId는 unique가 아니므로 upsert 불가)
-  let cart = await prisma.cart.findFirst({ where: { userId: user.id }, select: { id: true } })
+  let cart = await db.query.carts.findFirst({ where: eq(carts.userId, user.id), columns: { id: true } })
   if (!cart) {
-    cart = await prisma.cart.create({ data: { userId: user.id }, select: { id: true } })
+    const [created] = await db.insert(carts).values({ userId: user.id }).returning({ id: carts.id })
+    cart = created
   }
 
-  const existing = await prisma.cart.findUnique({
-    where: { id: cart.id },
-    include: { Lecture: { select: { id: true } } },
+  const existing = await db.query.cartToLecture.findFirst({
+    where: and(eq(cartToLecture.cartId, cart.id), eq(cartToLecture.lectureId, id)),
   })
-
-  const already = !!existing?.Lecture.some((l) => l.id === id)
+  const already = Boolean(existing)
   if (already) {
     // 토글 제거
-    await prisma.cart.update({
-      where: { id: cart.id },
-      data: { Lecture: { disconnect: { id } } },
-    })
+    await db.delete(cartToLecture).where(and(eq(cartToLecture.cartId, cart.id), eq(cartToLecture.lectureId, id)))
     return NextResponse.json({ inCart: false })
   }
 
-  await prisma.cart.update({ where: { id: cart.id }, data: { Lecture: { connect: { id } } } })
+  await db.insert(cartToLecture).values({ cartId: cart.id, lectureId: id }).onConflictDoNothing()
   return NextResponse.json({ inCart: true })
 }
-
 

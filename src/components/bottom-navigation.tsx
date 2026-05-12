@@ -1,115 +1,50 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Home, User, BookOpen } from 'lucide-react'
-import { useMemo } from 'react'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { BookOpen, Compass, GraduationCap } from "lucide-react"
+import { getLocaleFromPath, withLocalePath } from "@/lib/brand"
+import { cn } from "@/lib/utils"
 
-interface NavItem {
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string
-}
+const navItems = [
+  { href: "/", icon: Compass, label: "탐색", value: "home" },
+  { href: "/me", icon: BookOpen, label: "내 학습", value: "me" },
+  { href: "/admin", icon: GraduationCap, label: "판매자", value: "admin" },
+]
 
 export function BottomNavigation() {
   const pathname = usePathname()
+  const locale = getLocaleFromPath(pathname)
+  const cleanPath = pathname.replace(`/${locale}`, "") || "/"
 
-  const currentLocale = useMemo(() => {
-    const segments = pathname.split('/').filter(Boolean)
-    const firstSegment = segments[0]
-    const locales = [
-      'ko', 'en', 'ja', 'vi', 'ru', 'zh', 'zh-CN', 'zh-TW',
-      'fr', 'de', 'es', 'pt', 'it', 'id', 'th', 'hi',
-      'ar', 'tr', 'pl', 'uk'
-    ]
-    return locales.includes(firstSegment) ? firstSegment : 'ko'
-  }, [pathname])
-
-  const localePath = (path: string) => {
-    // path가 이미 /로 시작하는지 확인
-    const cleanPath = path.startsWith('/') ? path : `/${path}`
-    return `/${currentLocale}${cleanPath}`
+  function isActive(href: string) {
+    if (href === "/") return cleanPath === "/" || cleanPath === ""
+    return cleanPath.startsWith(href)
   }
-
-  const getCurrentTab = () => {
-    const cleanPath = pathname.replace(`/${currentLocale}`, '') || '/'
-    if (cleanPath === '/' || cleanPath === '') return 'home'
-    if (cleanPath.startsWith('/admin')) return 'admin'
-    if (cleanPath.startsWith('/me')) return 'me'
-    return 'home'
-  }
-
-  const navItems: NavItem[] = [
-    {
-      href: '/',
-      icon: Home,
-      label: '홈',
-      value: 'home'
-    },
-    {
-      href: '/admin',
-      icon: BookOpen,
-      label: '지식공유자',
-      value: 'admin'
-    },
-    {
-      href: '/me',
-      icon: User,
-      label: '내 메뉴',
-      value: 'me'
-    }
-  ]
 
   return (
-    <Tabs value={getCurrentTab()} className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-      <TabsList className="h-16 w-full rounded-none border-t bg-background grid grid-cols-3 p-0">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 backdrop-blur md:hidden">
+      <div className="grid h-16 grid-cols-3">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = getCurrentTab() === item.value
-
+          const active = isActive(item.href)
           return (
-            <TabsTrigger
+            <Link
               key={item.value}
-              value={item.value}
-              asChild
-              className="h-full rounded-none data-[state=active]:bg-transparent data-[state=active]:shadow-none p-0"
+              href={withLocalePath(pathname, item.href)}
+              prefetch={false}
+              className={cn(
+                "relative flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
             >
-              <Link
-                href={localePath(item.href)}
-                prefetch={false}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 h-full w-full relative",
-                  "transition-all duration-200",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {isActive && (
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-12 h-0.5 bg-primary rounded-b-full" />
-                )}
-                <div className="flex flex-col items-center gap-0.5">
-                  <Icon
-                    className={cn(
-                      "h-5 w-5 transition-all duration-200",
-                      isActive && "scale-110"
-                    )}
-                  />
-                  <span className={cn(
-                    "text-[10px] transition-all duration-200",
-                    isActive ? "font-semibold" : "font-medium"
-                  )}>
-                    {item.label}
-                  </span>
-                </div>
-              </Link>
-            </TabsTrigger>
+              {active ? <span className="absolute top-0 h-0.5 w-12 rounded-b bg-primary" /> : null}
+              <Icon className="size-5" />
+              {item.label}
+            </Link>
           )
         })}
-      </TabsList>
-    </Tabs>
+      </div>
+    </nav>
   )
 }

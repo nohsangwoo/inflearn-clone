@@ -1,5 +1,6 @@
-import prisma from "@/lib/prismaClient"
 import { NextRequest, NextResponse } from "next/server"
+import { and, asc, desc, eq, isNull } from "drizzle-orm"
+import { db, reviews as reviewsTable, users } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
 export async function GET(
@@ -9,31 +10,41 @@ export async function GET(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  const reviews = await prisma.review.findMany({
-    where: { lectureId: id, isDeleted: false, parentId: null },
-    orderBy: { id: "desc" },
-    select: {
-      id: true,
-      content: true,
-      rating: true,
-      createdAt: true,
-      userId: true,
-      User: { select: { id: true, email: true, nickname: true } },
-      replies: {
-        where: { isDeleted: false },
-        orderBy: { id: "asc" },
-        select: { id: true, content: true, rating: true, createdAt: true, userId: true },
-      },
-    },
-  })
+  const reviewRows = await db
+    .select({
+      id: reviewsTable.id,
+      content: reviewsTable.content,
+      rating: reviewsTable.rating,
+      createdAt: reviewsTable.createdAt,
+      userId: reviewsTable.userId,
+      user: { id: users.id, email: users.email, nickname: users.nickname },
+    })
+    .from(reviewsTable)
+    .leftJoin(users, eq(reviewsTable.userId, users.id))
+    .where(and(eq(reviewsTable.lectureId, id), eq(reviewsTable.isDeleted, false), isNull(reviewsTable.parentId)))
+    .orderBy(desc(reviewsTable.id))
+  const replyRows = reviewRows.length
+    ? await db
+        .select({
+          id: reviewsTable.id,
+          content: reviewsTable.content,
+          rating: reviewsTable.rating,
+          createdAt: reviewsTable.createdAt,
+          userId: reviewsTable.userId,
+          parentId: reviewsTable.parentId,
+        })
+        .from(reviewsTable)
+        .where(and(eq(reviewsTable.lectureId, id), eq(reviewsTable.isDeleted, false)))
+        .orderBy(asc(reviewsTable.id))
+    : []
   return NextResponse.json(
-    reviews.map((r) => ({
+    reviewRows.map((r) => ({
       id: r.id,
       content: r.content,
       rating: r.rating,
       createdAt: r.createdAt,
-      user: r.User ? { id: r.User.id, email: r.User.email, nickname: r.User.nickname } : undefined,
-      replies: r.replies ?? [],
+      user: r.user?.id ? r.user : undefined,
+      replies: replyRows.filter((reply) => reply.parentId === r.id),
     })),
   )
 }
@@ -51,8 +62,7 @@ export async function POST(
   const content: string | undefined = body?.content
   const rating: number = Number(body?.rating ?? 5)
   if (!content || typeof content !== "string") return NextResponse.json({ message: "content required" }, { status: 400 })
-  await prisma.review.create({ data: { content, rating, lectureId: id, userId: user.id } })
+  await db.insert(reviewsTable).values({ content, rating, lectureId: id, userId: user.id })
   return NextResponse.json({ ok: true }, { status: 201 })
 }
-
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prismaClient'
+import { and, desc, eq } from 'drizzle-orm'
+import { db, lectures, likes, users } from '@/db'
 import { getAuthUserFromRequest } from '@/lib/auth/get-auth-user'
 
 export async function GET(request: NextRequest) {
@@ -9,41 +10,44 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const likes = await prisma.like.findMany({
-      where: {
-        userId: user.id
-      },
-      include: {
-        Lecture: {
-          include: {
-            instructor: {
-              select: {
-                id: true,
-                nickname: true,
-                email: true,
-                profileImageUrl: true
-              }
-            }
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+    const rows = await db
+      .select({
+        id: likes.id,
+        createdAt: likes.createdAt,
+        lectureId: lectures.id,
+        lectureTitle: lectures.title,
+        lectureDescription: lectures.description,
+        lecturePrice: lectures.price,
+        lectureDiscountPrice: lectures.discountPrice,
+        lectureImageUrl: lectures.imageUrl,
+        instructorId: users.id,
+        instructorNickname: users.nickname,
+        instructorEmail: users.email,
+        instructorProfileImageUrl: users.profileImageUrl,
+      })
+      .from(likes)
+      .leftJoin(lectures, eq(likes.lectureId, lectures.id))
+      .leftJoin(users, eq(lectures.instructorId, users.id))
+      .where(eq(likes.userId, user.id))
+      .orderBy(desc(likes.createdAt))
 
     return NextResponse.json({
-      likes: likes.map(like => ({
+      likes: rows.map(like => ({
         id: like.id,
         createdAt: like.createdAt,
-        lecture: like.Lecture ? {
-          id: like.Lecture.id,
-          title: like.Lecture.title,
-          description: like.Lecture.description,
-          price: like.Lecture.price,
-          discountPrice: like.Lecture.discountPrice,
-          imageUrl: like.Lecture.imageUrl,
-          instructor: like.Lecture.instructor
+        lecture: like.lectureId ? {
+          id: like.lectureId,
+          title: like.lectureTitle,
+          description: like.lectureDescription,
+          price: like.lecturePrice,
+          discountPrice: like.lectureDiscountPrice,
+          imageUrl: like.lectureImageUrl,
+          instructor: like.instructorId ? {
+            id: like.instructorId,
+            nickname: like.instructorNickname,
+            email: like.instructorEmail,
+            profileImageUrl: like.instructorProfileImageUrl,
+          } : null,
         } : null
       }))
     })
@@ -66,19 +70,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if the lecture exists
-    const lecture = await prisma.lecture.findUnique({
-      where: { id: lectureId }
-    })
+    const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, lectureId) })
     if (!lecture) {
       return NextResponse.json({ error: 'Lecture not found' }, { status: 404 })
     }
 
     // Check if already liked
-    const existingLike = await prisma.like.findFirst({
-      where: {
-        userId: user.id,
-        lectureId: lectureId
-      }
+    const existingLike = await db.query.likes.findFirst({
+      where: and(eq(likes.userId, user.id), eq(likes.lectureId, lectureId)),
     })
 
     if (existingLike) {
@@ -86,12 +85,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Create like
-    const like = await prisma.like.create({
-      data: {
+    const [like] = await db.insert(likes).values({
         userId: user.id,
         lectureId: lectureId
-      }
-    })
+      }).returning()
 
     return NextResponse.json({ like })
   } catch (error) {
@@ -115,14 +112,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Find and delete the like
-    const like = await prisma.like.deleteMany({
-      where: {
-        userId: user.id,
-        lectureId: parseInt(lectureId)
-      }
-    })
+    const deleted = await db
+      .delete(likes)
+      .where(and(eq(likes.userId, user.id), eq(likes.lectureId, parseInt(lectureId))))
+      .returning({ id: likes.id })
 
-    if (like.count === 0) {
+    if (deleted.length === 0) {
       return NextResponse.json({ error: 'Like not found' }, { status: 404 })
     }
 

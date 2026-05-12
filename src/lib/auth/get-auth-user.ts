@@ -1,16 +1,18 @@
 import { NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
-import prisma from "@/lib/prismaClient"
+import { eq } from "drizzle-orm"
+import { db, users } from "@/db"
 import { cookies as nextCookies } from "next/headers"
 
 export type DbUser = {
   id: number
   email: string
   supabaseId: string
+  role: "ADMIN" | "STUDENT" | "TEACHER"
 }
 
 /**
- * 현재 로그인한 유저의 Prisma User 레코드를 반환합니다.
+ * 현재 로그인한 유저의 DB User 레코드를 반환합니다.
  * - API Route에서는 NextRequest를 전달하세요.
  * - 서버 컴포넌트/라우트 핸들러 컨텍스트에서는 인자 없이 사용 가능합니다.
  * 로그인하지 않은 경우 null을 반환합니다.
@@ -51,33 +53,28 @@ export async function getAuthUserFromRequest(request?: NextRequest): Promise<DbU
   const supaUser = data.user
   const email = supaUser.email ?? ""
 
-  const selectFields = { id: true, email: true, supabaseId: true } as const
-
-  let dbUser = await prisma.user.findUnique({ where: { supabaseId: supaUser.id }, select: selectFields })
+  let dbUser = await db.query.users.findFirst({
+    where: eq(users.supabaseId, supaUser.id),
+    columns: { id: true, email: true, supabaseId: true, role: true },
+  })
   if (!dbUser) {
-    dbUser = await prisma.user.create({
-      data: {
+    const [created] = await db
+      .insert(users)
+      .values({
         supabaseId: supaUser.id,
         email,
         isVerified: true,
-      },
-      select: selectFields,
-    })
+      })
+      .returning({ id: users.id, email: users.email, supabaseId: users.supabaseId, role: users.role })
+    dbUser = created ?? null
   } else if (email && dbUser.email !== email) {
-    dbUser = await prisma.user.update({
-      where: { supabaseId: supaUser.id },
-      data: { email },
-      select: selectFields,
-    })
-  } else {
-    // ensure selected fields
-    dbUser = await prisma.user.findUniqueOrThrow({
-      where: { supabaseId: supaUser.id },
-      select: selectFields,
-    })
+    const [updated] = await db
+      .update(users)
+      .set({ email })
+      .where(eq(users.supabaseId, supaUser.id))
+      .returning({ id: users.id, email: users.email, supabaseId: users.supabaseId, role: users.role })
+    dbUser = updated ?? dbUser
   }
 
   return dbUser as DbUser
 }
-
-

@@ -1,6 +1,18 @@
-import prisma from "@/lib/prismaClient"
 import { NextRequest, NextResponse } from "next/server"
+import { and, eq } from "drizzle-orm"
+import { db, curriculumSections, curriculums, lectures } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
+
+async function canEditSection(userId: number, sectionId: number) {
+  return db
+    .select({ id: curriculumSections.id })
+    .from(curriculumSections)
+    .innerJoin(curriculums, eq(curriculumSections.curriculumId, curriculums.id))
+    .innerJoin(lectures, eq(curriculums.lectureId, lectures.id))
+    .where(and(eq(curriculumSections.id, sectionId), eq(lectures.instructorId, userId)))
+    .limit(1)
+    .then((rows) => rows[0])
+}
 
 // PATCH: 섹션 수정(제목/설명/isActive 토글)
 export async function PATCH(
@@ -14,22 +26,16 @@ export async function PATCH(
   if (Number.isNaN(psectionId)) {
     return NextResponse.json({ message: "invalid sectionId" }, { status: 400 })
   }
-  const can = await prisma.curriculumSection.findFirst({
-    where: { id: psectionId, Curriculum: { Lecture: { instructorId: user.id } } },
-    select: { id: true },
-  })
+  const can = await canEditSection(user.id, psectionId)
   if (!can) return NextResponse.json({ message: "forbidden" }, { status: 403 })
   const body = await req.json().catch(() => ({}))
   const { title, description, isActive } = body ?? {}
 
-  const updated = await prisma.curriculumSection.update({
-    where: { id: psectionId },
-    data: {
+  const [updated] = await db.update(curriculumSections).set({
       title: typeof title === "string" ? title : undefined,
       description: typeof description === "string" ? description : undefined,
       isActive: typeof isActive === "boolean" ? isActive : undefined,
-    },
-  })
+    }).where(eq(curriculumSections.id, psectionId)).returning()
   return NextResponse.json(updated)
 }
 
@@ -45,13 +51,9 @@ export async function DELETE(
   if (Number.isNaN(psectionId)) {
     return NextResponse.json({ message: "invalid sectionId" }, { status: 400 })
   }
-  const can = await prisma.curriculumSection.findFirst({
-    where: { id: psectionId, Curriculum: { Lecture: { instructorId: user.id } } },
-    select: { id: true },
-  })
+  const can = await canEditSection(user.id, psectionId)
   if (!can) return NextResponse.json({ message: "forbidden" }, { status: 403 })
-  await prisma.curriculumSection.delete({ where: { id: psectionId } })
+  await db.delete(curriculumSections).where(eq(curriculumSections.id, psectionId))
   return NextResponse.json({ ok: true })
 }
-
 

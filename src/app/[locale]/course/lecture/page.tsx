@@ -24,6 +24,14 @@ type CourseData = {
       title?: string | null
       videoUrl: string
       masterKey?: string | null
+      captions?: Array<{
+        id: string
+        lang: string
+        label: string
+        url: string
+        format: string
+        isDefault: boolean
+      }>
     }>
     files: Array<{
       id: number
@@ -79,6 +87,13 @@ const langNameMap: Record<string, string> = {
   tr: "터키어",
   uk: "우크라이나어",
   fil: "필리핀어",
+}
+
+function toAbsoluteMediaUrl(url?: string | null) {
+  if (!url) return ""
+  if (/^(https?:)?\/\//.test(url) || url.startsWith("/")) return url
+  const cdn = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
+  return `${cdn.replace(/\/$/, "")}/${url.replace(/^\//, "")}`
 }
 
 export default function LecturePage() {
@@ -928,7 +943,19 @@ export default function LecturePage() {
                   console.error('[Lecture] Video error message:', video.error.message)
                 }
               }}
-            />
+            >
+              {(currentVideo.captions ?? [])
+                .filter((track) => track.format === "vtt")
+                .map((track) => (
+                  <track
+                    key={track.id}
+                    kind="subtitles"
+                    src={toAbsoluteMediaUrl(track.url)}
+                    srcLang={track.lang}
+                    label={track.label}
+                  />
+                ))}
+            </video>
             )
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white">

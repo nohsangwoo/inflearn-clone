@@ -7,13 +7,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
+import { Badge } from '@/components/ui/badge'
 import {
   Heart,
   ShoppingCart,
   Star,
   Users,
   BookOpen,
+  Lock,
+  CheckCircle2,
+  Tags,
 } from 'lucide-react'
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
 import { getTranslation, useLocale } from '@/lib/translations'
@@ -22,7 +25,15 @@ import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk'
 type Detail = {
   id: number
   title: string
+  slug?: string | null
+  shortDescription?: string | null
   description: string | null
+  category?: string | null
+  level?: string | null
+  tags?: string[]
+  targetAudience?: string | null
+  requirements?: string | null
+  learningOutcomes?: string[]
   price: number
   discountPrice?: number | null
   imageUrl?: string | null
@@ -39,7 +50,7 @@ type Detail = {
   likeCount: number
   previewSectionId: number | null
   previewSectionTitle: string | null
-  sections: { id: number; title: string; active: boolean; hasVideo: boolean }[]
+  sections: { id: number; title: string; description?: string | null; active: boolean; hasVideo: boolean; hlsStatus?: string | null }[]
 }
 
 type ReviewItem = {
@@ -91,7 +102,6 @@ export default function CourseDetailPageWrapper() {
     },
   })
 
-  console.log("purchasedRes: ",purchasedRes)
   const purchased = Boolean(purchasedRes?.purchased)
 
   // 초기 좋아요/장바구니 상태
@@ -185,8 +195,13 @@ export default function CourseDetailPageWrapper() {
       // 1) 서버에서 주문 생성
       const { data: order } = await axios.post(`/api/payments/orders`, {
         lectureId: detail.id,
-        force: true,
       })
+
+      if (order.free) {
+        await queryClient.invalidateQueries({ queryKey: ['course-purchased', lectureId] })
+        alert('무료 강의 수강권이 등록되었습니다.')
+        return
+      }
 
       // 2) 결제 위젯 호출 (Redirect 방식)
       const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
@@ -321,14 +336,29 @@ export default function CourseDetailPageWrapper() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
       {/* 헤더 섹션 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="space-y-3">
-            <h1 className="text-2xl font-semibold leading-tight">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
+        <div className="space-y-6">
+          <div className="space-y-4 rounded-lg border bg-card p-5 md:p-7">
+            <div className="flex flex-wrap gap-2">
+              {detail.category ? <Badge variant="secondary">{detail.category}</Badge> : null}
+              {detail.level ? <Badge variant="outline">{detail.level}</Badge> : null}
+              {(detail.tags ?? []).slice(0, 4).map((tag) => (
+                <Badge key={tag} variant="outline" className="bg-background">
+                  <Tags className="size-3" />
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+            <h1 className="text-3xl font-black leading-tight md:text-5xl">
               {detail.title}
             </h1>
+            {detail.shortDescription ? (
+              <p className="max-w-3xl text-lg leading-8 text-muted-foreground">
+                {detail.shortDescription}
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               <div className="inline-flex items-center gap-1">
                 <Star className="h-4 w-4 text-yellow-500" />
@@ -356,20 +386,49 @@ export default function CourseDetailPageWrapper() {
               </div>
             </div>
             {detail.description && (
-              <p className="text-sm text-foreground/90 whitespace-pre-line">
+              <p className="max-w-4xl text-sm leading-7 text-foreground/90 whitespace-pre-line">
                 {detail.description}
               </p>
             )}
           </div>
 
-          <Separator />
+          {(detail.learningOutcomes?.length || detail.targetAudience || detail.requirements) ? (
+            <section className="grid gap-4 md:grid-cols-3">
+              {detail.learningOutcomes?.length ? (
+                <div className="rounded-lg border bg-card p-5">
+                  <h2 className="font-bold">배우게 되는 것</h2>
+                  <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
+                    {detail.learningOutcomes.slice(0, 5).map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-700" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {detail.targetAudience ? (
+                <div className="rounded-lg border bg-card p-5">
+                  <h2 className="font-bold">추천 대상</h2>
+                  <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.targetAudience}</p>
+                </div>
+              ) : null}
+              {detail.requirements ? (
+                <div className="rounded-lg border bg-card p-5">
+                  <h2 className="font-bold">준비물</h2>
+                  <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.requirements}</p>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           {/* 커리큘럼 요약 */}
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-lg border bg-card p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">{t.curriculum}</h2> {/* "커리큘럼" */}
+              <h2 className="text-xl font-black">{t.curriculum}</h2> {/* "커리큘럼" */}
+              <span className="text-sm text-muted-foreground">{detail.sections.length}개 수업</span>
             </div>
-            <div className="divide-y rounded-md border">
+            <div className="divide-y rounded-md border bg-background">
               {detail.sections.length === 0 ? (
                 <div className="p-3 text-sm text-muted-foreground">
                   {t.noCurriculum} {/* "커리큘럼이 아직 없습니다." */}
@@ -382,6 +441,7 @@ export default function CourseDetailPageWrapper() {
                   >
                     <div className="min-w-0">
                       <div className="font-medium truncate">{s.title}</div>
+                      {s.description ? <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{s.description}</div> : null}
                       {!s.active && (
                         <div className="text-xs text-muted-foreground">
                           {t.private} {/* "비공개" */}
@@ -390,7 +450,14 @@ export default function CourseDetailPageWrapper() {
                     </div>
                     {s.hasVideo && (
                       <div className="flex items-center gap-2">
-                        <HlsPlayerModal sectionId={s.id} title={s.title} />
+                        {purchased ? (
+                          <HlsPlayerModal sectionId={s.id} title={s.title} />
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-xs text-muted-foreground">
+                            <Lock className="size-3" />
+                            결제 후 공개
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -398,8 +465,6 @@ export default function CourseDetailPageWrapper() {
               )}
             </div>
           </div>
-
-          <Separator />
 
           {/* 리뷰 영역 (목록 + 작성) */}
           <Reviews lectureId={detail.id} />

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
-import prisma from "@/lib/prismaClient"
+import { db, users } from "@/db"
 
 export const dynamic = "force-dynamic"
 
@@ -68,14 +68,13 @@ export async function GET(request: NextRequest) {
 
   try {
     // Ensure user exists in our DB (idempotent)
-    await prisma.user.upsert({
-      where: { supabaseId },
-      create: {
+    await db.insert(users).values({
         supabaseId,
         email,
         isVerified: true,
-      },
-      update: {
+      }).onConflictDoUpdate({
+      target: users.supabaseId,
+      set: {
         email,
         isVerified: true,
       },
@@ -92,5 +91,4 @@ export async function GET(request: NextRequest) {
   // Optional redirect target passthrough
   return response
 }
-
 

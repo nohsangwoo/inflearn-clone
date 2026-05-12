@@ -60,5 +60,4 @@ Allow: /
 User-agent: *
 Disallow: /cdn-cgi/
 
-Sitemap: https://www.lingoost.com/sitemap.xml
-Sitemap: https://www.lingoost.com/sitemap-0.xml
+Sitemap: https://www.baksalclass.com/sitemap.xml

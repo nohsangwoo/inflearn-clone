@@ -1,0 +1,1 @@
+ALTER TABLE "Review" ADD CONSTRAINT "Review_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "public"."Review"("id") ON DELETE set null ON UPDATE cascade;

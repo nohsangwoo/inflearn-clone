@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-
-const prisma = new PrismaClient()
+import { eq } from "drizzle-orm"
+import { db, videos } from "@/db"
 
 export async function GET(
   request: NextRequest,
@@ -16,24 +15,20 @@ export async function GET(
     }
 
     // Find video associated with this curriculum section
-    const video = await prisma.video.findFirst({
-      where: {
-        curriculumSectionId: sectionId
+    const video = await db.query.videos.findFirst({
+      where: eq(videos.curriculumSectionId, sectionId),
+      with: {
+        dubTracks: {
+          orderBy: (tracks, { asc }) => [asc(tracks.lang)],
+        },
       },
-      include: {
-        DubTrack: {
-          orderBy: {
-            lang: 'asc'
-          }
-        }
-      }
     })
 
     if (!video) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 })
     }
 
-    return NextResponse.json(video)
+    return NextResponse.json({ ...video, DubTrack: video.dubTracks })
   } catch (error) {
     console.error("[API] Error fetching video with dub tracks:", error)
     return NextResponse.json(

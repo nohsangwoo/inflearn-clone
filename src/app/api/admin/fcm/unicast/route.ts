@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prismaClient'
+import { and, desc, eq } from 'drizzle-orm'
+import { db, fcmTokens, pushNotifications, users } from '@/db'
 import { createClient } from '@/lib/supabase/server'
 import { getMessaging } from '@/lib/firebase-admin'
 
@@ -36,7 +37,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 2) Admin check
-    const me = await prisma.user.findUnique({ where: { supabaseId: user.id }, select: { role: true, id: true } })
+    const me = await db.query.users.findFirst({
+      where: eq(users.supabaseId, user.id),
+      columns: { role: true, id: true },
+    })
     if (!me || me.role !== 'ADMIN') {
       console.warn(LOG, 'forbidden user', { supabaseId: user.id, role: me?.role })
       return NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
@@ -68,7 +72,10 @@ export async function POST(request: NextRequest) {
     let target: string | null = token ?? null
     let targetUserId: number | null = null
     if (!target && userId) {
-      const row = await prisma.fcmToken.findFirst({ where: { userId: Number(userId), isActive: true }, orderBy: [{ lastUsedAt: 'desc' }, { updatedAt: 'desc' }] })
+      const row = await db.query.fcmTokens.findFirst({
+        where: and(eq(fcmTokens.userId, Number(userId)), eq(fcmTokens.isActive, true)),
+        orderBy: (tokens, { desc }) => [desc(tokens.lastUsedAt), desc(tokens.updatedAt)],
+      })
       if (!row) {
         console.warn(LOG, 'no token for user', { userId })
         return NextResponse.json({ success: false, error: 'no_token' }, { status: 404 })
@@ -110,7 +117,7 @@ export async function POST(request: NextRequest) {
       const res = await m.send(message)
       console.log(LOG, 'sent', { res })
       try {
-        await prisma.pushNotification.create({ data: { userId: targetUserId ?? (userId ? Number(userId) : null), fcmTokenId: null, title, body: msgBody, data: data || {}, type: 'unicast', status: 'sent', messageId: res, sentAt: new Date() } })
+        await db.insert(pushNotifications).values({ userId: targetUserId ?? (userId ? Number(userId) : null), fcmTokenId: null, title, body: msgBody, data: data || {}, type: 'unicast', status: 'sent', messageId: res, sentAt: new Date() })
       } catch (dbErr: any) {
         console.error(LOG, 'db log (sent) failed', dbErr?.message || dbErr)
       }
@@ -119,7 +126,7 @@ export async function POST(request: NextRequest) {
       const err = e as { message?: string; code?: string }
       console.error(LOG, 'send failed', { message: err?.message, code: err?.code })
       try {
-        await prisma.pushNotification.create({ data: { userId: targetUserId ?? (userId ? Number(userId) : null), title, body: msgBody, data: data || {}, type: 'unicast', status: 'failed', error: err?.message || 'unknown', attemptCount: 1 } })
+        await db.insert(pushNotifications).values({ userId: targetUserId ?? (userId ? Number(userId) : null), title, body: msgBody, data: data || {}, type: 'unicast', status: 'failed', error: err?.message || 'unknown', attemptCount: 1 })
       } catch (dbErr: any) {
         console.error(LOG, 'db log (failed) failed', dbErr?.message || dbErr)
       }
@@ -130,5 +137,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 })
   }
 }
-
 

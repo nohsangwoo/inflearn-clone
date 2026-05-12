@@ -20,6 +20,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { withLocalePath } from "@/lib/brand"
 
 type NavItem = {
   href: string
@@ -42,6 +43,7 @@ interface MeMobileSidebarProps {
 export function MeMobileSidebar({ className }: MeMobileSidebarProps) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const cleanPath = pathname.replace(/^\/(ko|en|ja|vi|ru|zh|zh-CN|zh-TW|fr|de|es|pt|it|id|th|hi|ar|tr|pl|uk)/, "") || "/"
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -62,16 +64,15 @@ export function MeMobileSidebar({ className }: MeMobileSidebarProps) {
         <nav className="flex flex-col gap-1 p-4">
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href
 
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={withLocalePath(pathname, item.href)}
                 onClick={() => setOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                  isActive
+                  cleanPath === item.href
                     ? "bg-secondary text-secondary-foreground"
                     : "text-muted-foreground hover:bg-secondary/50 hover:text-secondary-foreground"
                 )}

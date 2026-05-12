@@ -1,21 +1,22 @@
 import { Metadata } from 'next';
+import { brand } from '@/lib/brand';
 
 export const siteConfig = {
-  name: '링구스트',
-  nameEn: 'Lingoost',
-  description: '스타트업부터 대기업까지, 각 비즈니스 단계에 맞는 최적의 온라인 교육 솔루션을 제공합니다',
-  descriptionEn: 'Providing optimal online education solutions for each business stage, from startups to large enterprises',
-  keywords: '온라인 강의, 인프런, 교육 플랫폼, 링구스트, Lingoost, 프로그래밍 교육, IT 교육',
-  keywordsEn: 'online courses, education platform, Lingoost, programming education, IT education',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lingoost.com',
+  name: brand.name,
+  nameEn: brand.nameEn,
+  description: brand.description,
+  descriptionEn: 'A web-first course marketplace for paid HLS learning, seller dashboards, SEO, and manual payouts.',
+  keywords: '박살강의, 온라인 강의, 강의 판매, 강의 플랫폼, HLS 강의, 토스페이먼츠, 코딩 강의, 지식 공유',
+  keywordsEn: 'Baksal Class, online courses, course marketplace, HLS learning, paid courses, creator education',
+  url: brand.url,
   ogImage: '/og-image.png',
   links: {
-    youtube: 'https://www.youtube.com/@lingoost',
-    twitter: 'https://x.com/lingoost_official',
+    youtube: 'https://www.youtube.com/@baksalclass',
+    twitter: 'https://x.com/baksalclass',
   },
-  creator: '주식회사 럿지',
+  creator: brand.creator,
   creatorEn: 'Ludgi Inc.',
-  email: 'contact@lingoost.com',
+  email: brand.supportEmail,
   phone: '+82-2-931-9310',
   address: {
     street: '인천광역시 연수구 인천타워대로 323',
@@ -113,8 +114,8 @@ export function generateSeoMetadata({
       card: 'summary_large_image',
       title: pageTitle,
       description: pageDescription,
-      site: '@lingoost_official',
-      creator: '@lingoost_official',
+      site: '@baksalclass',
+      creator: '@baksalclass',
       images: [pageOgImage],
     },
     robots: {
