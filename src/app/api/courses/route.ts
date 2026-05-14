@@ -45,10 +45,10 @@ export async function GET(req: NextRequest) {
   )`
   const effectivePrice = sql<number>`coalesce(${lectures.discountPrice}, ${lectures.price})`
   const orderBy = (() => {
-    if (sort === "best") return [desc(purchaseCount), desc(lectures.createdAt)]
-    if (sort === "priceasc") return [asc(effectivePrice), asc(lectures.price)]
-    if (sort === "pricedesc") return [desc(effectivePrice), desc(lectures.price)]
-    return [desc(lectures.createdAt)]
+    if (sort === "best") return [desc(purchaseCount), desc(lectures.createdAt), desc(lectures.id)]
+    if (sort === "priceasc") return [asc(effectivePrice), asc(lectures.price), desc(lectures.id)]
+    if (sort === "pricedesc") return [desc(effectivePrice), desc(lectures.price), desc(lectures.id)]
+    return [desc(lectures.createdAt), desc(lectures.id)]
   })()
 
   try {
@@ -122,10 +122,10 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => {
         const aPrice = a.discountPrice ?? a.price
         const bPrice = b.discountPrice ?? b.price
-        if (sort === "best") return b.purchaseCount - a.purchaseCount || b.createdAt.localeCompare(a.createdAt)
-        if (sort === "priceasc") return aPrice - bPrice || a.price - b.price
-        if (sort === "pricedesc") return bPrice - aPrice || b.price - a.price
-        return b.createdAt.localeCompare(a.createdAt)
+        if (sort === "best") return b.purchaseCount - a.purchaseCount || b.createdAt.localeCompare(a.createdAt) || b.id - a.id
+        if (sort === "priceasc") return aPrice - bPrice || a.price - b.price || b.id - a.id
+        if (sort === "pricedesc") return bPrice - aPrice || b.price - a.price || b.id - a.id
+        return b.createdAt.localeCompare(a.createdAt) || b.id - a.id
       })
     const pagedItems = fallbackItems
       .slice((page - 1) * pageSize, page * pageSize)

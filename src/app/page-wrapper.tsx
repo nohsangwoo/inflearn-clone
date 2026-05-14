@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { brand, withLocalePath } from "@/lib/brand"
 import { getCoursePreviewImage } from "@/lib/course-images"
 import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
-import { getMockCoursesWithEnrollmentStatus } from "@/lib/mock-courses"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils"
 
@@ -40,8 +39,6 @@ type ApiCourse = {
   remainingSeats?: number | null
   instructor?: { nickname?: string | null; email?: string }
 }
-
-const fallbackCourses: ApiCourse[] = getMockCoursesWithEnrollmentStatus()
 
 const categories = ["전체", "웹 개발", "AI", "미디어", "크리에이터", "비즈니스", "디자인"]
 
@@ -79,14 +76,13 @@ export default function HomePageWrapper() {
           category: category === "전체" ? undefined : category,
         },
       })
-      return data as { total: number; items: ApiCourse[] }
+      return data as { total: number; items: ApiCourse[]; degraded?: boolean }
     },
-    placeholderData: { total: fallbackCourses.length, items: fallbackCourses },
     retry: false,
   })
 
   const courses = useMemo(() => {
-    const items = data?.items?.length ? data.items : fallbackCourses
+    const items = data?.items ?? []
     if (!keyword && category === "전체") return items
     return items.filter((course) => {
       const text = [
@@ -268,8 +264,12 @@ export default function HomePageWrapper() {
           </Button>
         </div>
 
-        {isLoading && !data ? (
+        {isLoading ? (
           <div className="rounded-[14px] border border-border bg-card p-8 text-sm text-muted-foreground">강의 목록을 불러오는 중입니다.</div>
+        ) : courses.length === 0 ? (
+          <div className="rounded-[14px] border border-border bg-card p-8 text-sm text-muted-foreground">
+            조건에 맞는 강의가 아직 없습니다.
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
             {courses.map((course, index) => (
