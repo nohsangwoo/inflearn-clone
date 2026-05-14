@@ -234,7 +234,7 @@ function CourseTile({
   return (
     <Link href={courseHref} className="group block min-w-0">
       <article className="min-w-0">
-        <div className="relative aspect-square overflow-hidden rounded-[14px] bg-secondary">
+        <div className="relative aspect-[1200/781] overflow-hidden rounded-[14px] bg-secondary">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={image}
@@ -246,6 +246,11 @@ function CourseTile({
               ? getEnrollmentStatusLabel(course.enrollmentStatus)
               : index < 3 ? "인기 강의" : course.category || "강의"}
           </div>
+          {discount ? (
+            <div className="absolute bottom-3 right-3 rounded-full bg-primary px-3 py-1 text-[11px] font-bold text-primary-foreground shadow-sm">
+              {discount}% OFF
+            </div>
+          ) : null}
           <button
             type="button"
             aria-label="관심 강의"
@@ -294,7 +299,7 @@ function CourseTile({
             </div>
             <div className="text-right text-[14px]">
               <div className="font-semibold text-foreground">{formatPrice(course)}</div>
-              {discount ? <div className="text-[13px] text-muted-foreground">{discount}% off</div> : null}
+              {discount ? <div className="text-[13px] font-semibold text-primary">얼리버드 {discount}%</div> : null}
             </div>
           </div>
         </div>

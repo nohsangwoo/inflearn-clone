@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
   const curriculumSectionId = Number(body?.curriculumSectionId)
   const videoUrl: string | undefined = body?.videoUrl // 업로드된 객체의 key
   const title: string | undefined = body?.title
+  const isFreePreview = typeof body?.isFreePreview === "boolean" ? body.isFreePreview : false
 
   if (!Number.isFinite(curriculumSectionId)) {
     return NextResponse.json({ message: "curriculumSectionId required" }, { status: 400 })
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
         title: title || "제목 없음",
         masterKey,
         hlsStatus: "PENDING",
+        isFreePreview,
       })
       .returning()
 

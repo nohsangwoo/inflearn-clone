@@ -98,7 +98,7 @@ export async function GET(
       .from(curriculumSections)
       .innerJoin(curriculums, eq(curriculumSections.curriculumId, curriculums.id))
       .innerJoin(videos, eq(videos.curriculumSectionId, curriculumSections.id))
-      .where(eq(curriculums.lectureId, id))
+      .where(and(eq(curriculums.lectureId, id), eq(videos.isFreePreview, true)))
       .orderBy(asc(curriculumSections.id))
       .limit(1)
       .then((rows) => rows[0]),
@@ -112,7 +112,12 @@ export async function GET(
       description: curriculumSections.description,
       isActive: curriculumSections.isActive,
       videoId: videos.id,
+      videoTitle: videos.title,
+      videoUrl: videos.videoUrl,
+      masterKey: videos.masterKey,
       hlsStatus: videos.hlsStatus,
+      duration: videos.duration,
+      isFreePreview: videos.isFreePreview,
     })
     .from(curriculumSections)
     .innerJoin(curriculums, eq(curriculumSections.curriculumId, curriculums.id))
@@ -127,6 +132,11 @@ export async function GET(
       ? lecture.imageUrl
       : `${cdnBase.replace(/\/$/, "")}/${lecture.imageUrl}`
     : null
+  const toPublicMediaUrl = (value?: string | null) => {
+    if (!value) return null
+    if (/^(https?:)?\/\//.test(value) || value.startsWith("/")) return value
+    return `${cdnBase.replace(/\/$/, "")}/${value.replace(/^\//, "")}`
+  }
   const availability = getEnrollmentAvailability({
     enrollmentOpen: lecture.enrollmentOpen,
     enrollmentStartAt: lecture.enrollmentStartAt,
@@ -172,13 +182,29 @@ export async function GET(
     likeCount: countRow?.likeCount ?? 0,
     previewSectionId: previewSection?.id ?? null,
     previewSectionTitle: previewSection?.title ?? null,
+    includedFeatures: [
+      `${Math.max(1, Math.round(sectionRows.reduce((sum, section) => sum + Number(section.duration ?? 0), 0) / 3600))}시간 주문형 영상`,
+      "계좌입금 승인 후 수강",
+      "모바일/데스크톱 수강",
+      "자막 및 참고 자료 지원",
+    ],
+    relatedTopics: lecture.tags,
+    lastUpdatedAt: lecture.createdAt,
     sections: sectionRows.map((s) => ({
       id: s.id,
+      moduleTitle: "Curriculum",
       title: s.title,
       description: s.description,
       active: s.isActive,
       hasVideo: Boolean(s.videoId),
       hlsStatus: s.hlsStatus ?? null,
+      durationSeconds: s.duration ?? 0,
+      isFreePreview: Boolean(s.isFreePreview),
+      previewVideoUrl: s.isFreePreview
+        ? s.hlsStatus === "READY"
+          ? toPublicMediaUrl(s.masterKey)
+          : toPublicMediaUrl(s.videoUrl)
+        : null,
     })),
   })
 }

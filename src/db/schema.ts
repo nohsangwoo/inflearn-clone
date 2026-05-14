@@ -189,6 +189,7 @@ export const videos = pgTable("Video", {
   masterKey: text("masterKey").notNull(),
   hlsStatus: hlsStatusEnum("hlsStatus").notNull().default("PENDING"),
   hlsError: text("hlsError"),
+  isFreePreview: boolean("isFreePreview").notNull().default(false),
 });
 
 export const captionTracks = pgTable(

@@ -41,6 +41,7 @@ type Video = {
   duration?: number | null
   hlsStatus?: string
   hlsError?: string | null
+  isFreePreview?: boolean
   CaptionTracks?: CaptionTrack[]
 }
 
@@ -199,7 +200,7 @@ export default function EditCoursePage() {
   
 
   const updateVideo = useMutation({
-    mutationFn: async (payload: { id: number; title?: string; description?: string; thumbnailUrl?: string; language?: string; videoUrl?: string; duration?: number }) => {
+    mutationFn: async (payload: { id: number; title?: string; description?: string; thumbnailUrl?: string; language?: string; videoUrl?: string; duration?: number; isFreePreview?: boolean }) => {
       const { id, ...rest } = payload
       const { data } = await axios.patch(`/api/admin/videos/${id}`, rest)
       return data as Video
@@ -692,6 +693,21 @@ export default function EditCoursePage() {
                                               }
                                             />
                                             <OriginalPlayer videoUrl={v.videoUrl} title={v.title ?? undefined} />
+                                            <label className="flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs text-muted-foreground">
+                                              <Switch
+                                                checked={Boolean(v.isFreePreview)}
+                                                onCheckedChange={(checked: boolean) =>
+                                                  updateVideo.mutate(
+                                                    { id: v.id, isFreePreview: checked },
+                                                    {
+                                                      onSuccess: () => toast.success("무료공개 설정이 저장되었습니다"),
+                                                      onError: () => toast.error("무료공개 설정 저장 실패"),
+                                                    },
+                                                  )
+                                                }
+                                              />
+                                              무료공개
+                                            </label>
                                             <Button
                                               variant="ghost"
                                               className="text-destructive"

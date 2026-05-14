@@ -33,7 +33,7 @@ export async function PATCH(
   if (!owned) return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
   const body = await req.json().catch(() => ({}))
-  const { title, description, thumbnailUrl, language, videoUrl, duration } = body ?? {}
+  const { title, description, thumbnailUrl, language, videoUrl, duration, isFreePreview } = body ?? {}
   const languageValue = typeof language === "string" && languageValues.includes(language)
     ? (language as Language)
     : undefined
@@ -45,6 +45,7 @@ export async function PATCH(
       language: languageValue,
       videoUrl: typeof videoUrl === "string" ? videoUrl : undefined,
       duration: typeof duration === "number" && !Number.isNaN(duration) ? duration : undefined,
+      isFreePreview: typeof isFreePreview === "boolean" ? isFreePreview : undefined,
     }).where(eq(videos.id, id)).returning()
   return NextResponse.json(updated)
 }
@@ -66,4 +67,3 @@ export async function DELETE(
   await db.delete(videos).where(eq(videos.id, id))
   return NextResponse.json({ ok: true })
 }
-

@@ -16,8 +16,12 @@ import {
   Lock,
   CheckCircle2,
   Tags,
+  Clock3,
+  FileText,
+  MonitorPlay,
 } from 'lucide-react'
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
+import FreePreviewPlayerModal from '@/components/video/free-preview-player-modal'
 import { toCdnUrl } from '@/lib/brand'
 import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from '@/lib/enrollment-window'
 import { getTranslation, useLocale } from '@/lib/translations'
@@ -59,7 +63,22 @@ type Detail = {
   isMock?: boolean
   previewSectionId: number | null
   previewSectionTitle: string | null
-  sections: { id: number; title: string; description?: string | null; active: boolean; hasVideo: boolean; hlsStatus?: string | null }[]
+  lastUpdatedAt?: string | null
+  includedFeatures?: string[]
+  relatedTopics?: string[]
+  sections: {
+    id: number
+    moduleTitle?: string
+    title: string
+    description?: string | null
+    active: boolean
+    hasVideo: boolean
+    hlsStatus?: string | null
+    durationSeconds?: number | null
+    isFreePreview?: boolean
+    previewVideoUrl?: string | null
+    resources?: string[]
+  }[]
 }
 
 type ReviewItem = {
@@ -103,6 +122,15 @@ function formatDateTime(value?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
+}
+
+function formatDuration(totalSeconds?: number | null) {
+  const seconds = Math.max(0, Number(totalSeconds ?? 0))
+  if (!seconds) return '미정'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.max(1, Math.round((seconds % 3600) / 60))
+  if (!hours) return `${minutes}분`
+  return `${hours}시간 ${minutes}분`
 }
 
 const detailHeroImages = [
@@ -172,6 +200,20 @@ export default function CourseDetailPageWrapper() {
     if (!detail) return ''
     return toCdnUrl(detail.imageUrl) || detailHeroImages[detail.id % detailHeroImages.length]
   }, [detail])
+  const freePreviewSection = useMemo(
+    () => detail?.sections.find((section) => section.isFreePreview && section.previewVideoUrl) ?? null,
+    [detail?.sections],
+  )
+  const activeSections = detail?.sections.filter((section) => section.active) ?? []
+  const totalDurationSeconds = activeSections.reduce((sum, section) => sum + Number(section.durationSeconds ?? 0), 0)
+  const includedFeatures = detail?.includedFeatures?.length
+    ? detail.includedFeatures
+    : [
+        `${formatDuration(totalDurationSeconds)} 주문형 영상`,
+        `${activeSections.length}개 수업`,
+        '계좌입금 승인 후 수강',
+        '모바일/데스크톱 수강',
+      ]
 
   // 액션
   const likeToggle = useMutation({
@@ -297,7 +339,7 @@ export default function CourseDetailPageWrapper() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
         <div className="space-y-8">
           <section className="space-y-5">
-            <div className="relative aspect-[16/9] overflow-hidden rounded-[14px] bg-secondary">
+            <div className="relative aspect-[1200/781] overflow-hidden rounded-[14px] bg-secondary">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={heroImage}
@@ -316,6 +358,15 @@ export default function CourseDetailPageWrapper() {
               >
                 <Heart className={like ? 'size-5 fill-primary text-primary' : 'size-5'} />
               </button>
+              {freePreviewSection?.previewVideoUrl ? (
+                <div className="absolute bottom-4 left-4 w-[210px] max-w-[calc(100%-2rem)]">
+                  <FreePreviewPlayerModal
+                    src={freePreviewSection.previewVideoUrl}
+                    title={freePreviewSection.title}
+                    label="무료 공개 보기"
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div className="space-y-4">
@@ -401,10 +452,47 @@ export default function CourseDetailPageWrapper() {
             </section>
           ) : null}
 
+          <section className="space-y-5 rounded-[14px] border bg-card p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-[21px] font-bold leading-[1.43]">이 강의는 다음을 포함합니다</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {activeSections.length}개 수업 · 총 {formatDuration(totalDurationSeconds)} · 무료 공개 {activeSections.filter((section) => section.isFreePreview).length}개
+                </p>
+              </div>
+              {detail.lastUpdatedAt ? (
+                <span className="text-xs text-muted-foreground">최근 업데이트 {formatDateTime(detail.lastUpdatedAt)}</span>
+              ) : null}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {includedFeatures.slice(0, 6).map((feature, index) => {
+                const Icon = index % 3 === 0 ? MonitorPlay : index % 3 === 1 ? FileText : Clock3
+                return (
+                  <div key={feature} className="flex items-center gap-3 rounded-[14px] border bg-background p-3 text-sm">
+                    <Icon className="size-4 shrink-0 text-primary" />
+                    <span>{feature}</span>
+                  </div>
+                )
+              })}
+            </div>
+            {(detail.relatedTopics ?? detail.tags ?? []).length ? (
+              <div>
+                <h3 className="text-[16px] font-semibold leading-[1.25]">관련 주제</h3>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(detail.relatedTopics ?? detail.tags ?? []).slice(0, 8).map((topic) => (
+                    <Badge key={topic} variant="outline" className="rounded-full bg-background px-3 py-1">
+                      {topic}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+
           <div className="space-y-3 rounded-[14px] border bg-card p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-[21px] font-bold leading-[1.43]">{t.curriculum}</h2> {/* "커리큘럼" */}
-              <span className="text-sm text-muted-foreground">{detail.sections.length}개 수업</span>
+              <span className="text-sm text-muted-foreground">{detail.sections.length}개 수업 · {formatDuration(totalDurationSeconds)}</span>
             </div>
             <div className="divide-y rounded-[14px] border bg-background">
               {detail.sections.length === 0 ? (
@@ -415,29 +503,42 @@ export default function CourseDetailPageWrapper() {
                 detail.sections.map(s => (
                   <div
                     key={s.id}
-                    className="p-3 flex items-center justify-between gap-3"
+                    className="flex gap-3 p-3"
                   >
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{s.title}</div>
+                    <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                      {s.hasVideo ? <MonitorPlay className="size-4" /> : <FileText className="size-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {s.moduleTitle ? <span className="text-xs font-medium text-muted-foreground">{s.moduleTitle}</span> : null}
+                        {s.isFreePreview ? <Badge variant="secondary" className="rounded-full">무료공개</Badge> : null}
+                      </div>
+                      <div className="mt-1 font-medium">{s.title}</div>
                       {s.description ? <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{s.description}</div> : null}
+                      {s.resources?.length ? (
+                        <div className="mt-2 text-xs text-muted-foreground">자료 {s.resources.length}개 포함</div>
+                      ) : null}
                       {!s.active && (
                         <div className="text-xs text-muted-foreground">
                           {t.private} {/* "비공개" */}
                         </div>
                       )}
                     </div>
-                    {s.hasVideo && (
-                      <div className="flex items-center gap-2">
-                        {purchased ? (
+                    <div className="flex shrink-0 flex-col items-end justify-center gap-2 text-xs text-muted-foreground">
+                      <span>{formatDuration(s.durationSeconds)}</span>
+                      {s.hasVideo ? (
+                        purchased ? (
                           <HlsPlayerModal sectionId={s.id} title={s.title} />
+                        ) : s.isFreePreview && s.previewVideoUrl ? (
+                          <FreePreviewPlayerModal src={s.previewVideoUrl} title={s.title} label="미리 보기" variant="link" />
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
                             <Lock className="size-3" />
                             승인 후 공개
                           </span>
-                        )}
-                      </div>
-                    )}
+                        )
+                      ) : null}
+                    </div>
                   </div>
                 ))
               )}
@@ -482,6 +583,13 @@ export default function CourseDetailPageWrapper() {
                 </div>
 
                 <div className="grid gap-2">
+                  {freePreviewSection?.previewVideoUrl ? (
+                    <FreePreviewPlayerModal
+                      src={freePreviewSection.previewVideoUrl}
+                      title={freePreviewSection.title}
+                      label="무료 공개 수업 보기"
+                    />
+                  ) : null}
                   {!purchased ? (
                     <>
                       <Button

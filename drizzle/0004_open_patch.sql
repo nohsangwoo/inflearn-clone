@@ -1,0 +1,1 @@
+ALTER TABLE "Video" ADD COLUMN "isFreePreview" boolean DEFAULT false NOT NULL;
