@@ -16,11 +16,12 @@ export async function GET(
 
   const mockCourse = findMockCourse(id)
   if (mockCourse) {
+    const previewSection = mockCourse.sections.find((section) => section.isFreePreview && section.previewVideoUrl)
     return NextResponse.json({
       ...mockCourse,
       isMock: true,
-      previewSectionId: mockCourse.sections[0]?.id ?? null,
-      previewSectionTitle: mockCourse.sections[0]?.title ?? null,
+      previewSectionId: previewSection?.id ?? null,
+      previewSectionTitle: previewSection?.title ?? null,
     })
   }
 

@@ -206,10 +206,23 @@ export default function CourseDetailPageWrapper() {
   )
   const activeSections = detail?.sections.filter((section) => section.active) ?? []
   const totalDurationSeconds = activeSections.reduce((sum, section) => sum + Number(section.durationSeconds ?? 0), 0)
+  const freePreviewCount = activeSections.filter((section) => section.isFreePreview && section.previewVideoUrl).length
+  const curriculumSummary = `${activeSections.length}개 수업 · 총 ${formatDuration(totalDurationSeconds)}${freePreviewCount > 0 ? ` · 무료 공개 ${freePreviewCount}개` : ''}`
+  const curriculumGroups = useMemo(() => {
+    const groups = new Map<string, { title: string; sections: Detail["sections"]; durationSeconds: number }>()
+    for (const section of detail?.sections ?? []) {
+      const title = section.moduleTitle || '커리큘럼'
+      const current = groups.get(title) ?? { title, sections: [], durationSeconds: 0 }
+      current.sections.push(section)
+      current.durationSeconds += Number(section.durationSeconds ?? 0)
+      groups.set(title, current)
+    }
+    return Array.from(groups.values())
+  }, [detail?.sections])
   const includedFeatures = detail?.includedFeatures?.length
     ? detail.includedFeatures
     : [
-        `${formatDuration(totalDurationSeconds)} 주문형 영상`,
+        `${formatDuration(totalDurationSeconds)} 분량 커리큘럼`,
         `${activeSections.length}개 수업`,
         '계좌입금 승인 후 수강',
         '모바일/데스크톱 수강',
@@ -457,7 +470,7 @@ export default function CourseDetailPageWrapper() {
               <div>
                 <h2 className="text-[21px] font-bold leading-[1.43]">이 강의는 다음을 포함합니다</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {activeSections.length}개 수업 · 총 {formatDuration(totalDurationSeconds)} · 무료 공개 {activeSections.filter((section) => section.isFreePreview).length}개
+                  {curriculumSummary}
                 </p>
               </div>
               {detail.lastUpdatedAt ? (
@@ -492,52 +505,68 @@ export default function CourseDetailPageWrapper() {
           <div className="space-y-3 rounded-[14px] border bg-card p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-[21px] font-bold leading-[1.43]">{t.curriculum}</h2> {/* "커리큘럼" */}
-              <span className="text-sm text-muted-foreground">{detail.sections.length}개 수업 · {formatDuration(totalDurationSeconds)}</span>
+              <span className="text-sm text-muted-foreground">{curriculumSummary}</span>
             </div>
-            <div className="divide-y rounded-[14px] border bg-background">
+            <div className="space-y-3">
               {detail.sections.length === 0 ? (
-                <div className="p-3 text-sm text-muted-foreground">
+                <div className="rounded-[14px] border bg-background p-3 text-sm text-muted-foreground">
                   {t.noCurriculum} {/* "커리큘럼이 아직 없습니다." */}
                 </div>
               ) : (
-                detail.sections.map(s => (
-                  <div
-                    key={s.id}
-                    className="flex gap-3 p-3"
-                  >
-                    <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                      {s.hasVideo ? <MonitorPlay className="size-4" /> : <FileText className="size-4" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {s.moduleTitle ? <span className="text-xs font-medium text-muted-foreground">{s.moduleTitle}</span> : null}
-                        {s.isFreePreview ? <Badge variant="secondary" className="rounded-full">무료공개</Badge> : null}
+                curriculumGroups.map((group, groupIndex) => (
+                  <div key={group.title} className="overflow-hidden rounded-[14px] border bg-background">
+                    <div className="flex flex-col gap-2 border-b bg-muted/35 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-sm font-bold text-primary">섹션 {groupIndex + 1}</div>
+                        <h3 className="mt-1 text-[20px] font-semibold leading-[1.2]">{group.title}</h3>
                       </div>
-                      <div className="mt-1 font-medium">{s.title}</div>
-                      {s.description ? <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{s.description}</div> : null}
-                      {s.resources?.length ? (
-                        <div className="mt-2 text-xs text-muted-foreground">자료 {s.resources.length}개 포함</div>
-                      ) : null}
-                      {!s.active && (
-                        <div className="text-xs text-muted-foreground">
-                          {t.private} {/* "비공개" */}
-                        </div>
-                      )}
+                      <div className="text-sm text-muted-foreground">
+                        {group.sections.length}개 수업 · {formatDuration(group.durationSeconds)}
+                      </div>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end justify-center gap-2 text-xs text-muted-foreground">
-                      <span>{formatDuration(s.durationSeconds)}</span>
-                      {s.hasVideo ? (
-                        purchased ? (
-                          <HlsPlayerModal sectionId={s.id} title={s.title} />
-                        ) : s.isFreePreview && s.previewVideoUrl ? (
-                          <FreePreviewPlayerModal src={s.previewVideoUrl} title={s.title} label="미리 보기" variant="link" />
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                            <Lock className="size-3" />
-                            승인 후 공개
-                          </span>
-                        )
-                      ) : null}
+                    <div className="divide-y">
+                      {group.sections.map((s, lessonIndex) => (
+                        <div key={s.id} className="flex gap-3 p-3">
+                          <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                            {s.hasVideo ? <MonitorPlay className="size-4" /> : <FileText className="size-4" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-xs font-medium text-muted-foreground">수업 {lessonIndex + 1}</span>
+                              {s.isFreePreview ? <Badge variant="secondary" className="rounded-full">무료공개</Badge> : null}
+                            </div>
+                            <div className="mt-1 font-medium">{s.title}</div>
+                            {s.description ? <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{s.description}</div> : null}
+                            {s.resources?.length ? (
+                              <div className="mt-2 text-xs text-muted-foreground">자료 {s.resources.length}개 포함</div>
+                            ) : null}
+                            {!s.active && (
+                              <div className="text-xs text-muted-foreground">
+                                {t.private} {/* "비공개" */}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end justify-center gap-2 text-xs text-muted-foreground">
+                            <span>{formatDuration(s.durationSeconds)}</span>
+                            {s.hasVideo ? (
+                              purchased ? (
+                                <HlsPlayerModal sectionId={s.id} title={s.title} />
+                              ) : s.isFreePreview && s.previewVideoUrl ? (
+                                <FreePreviewPlayerModal src={s.previewVideoUrl} title={s.title} label="미리 보기" variant="link" />
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                                  <Lock className="size-3" />
+                                  승인 후 공개
+                                </span>
+                              )
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                                영상 등록 전
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))
