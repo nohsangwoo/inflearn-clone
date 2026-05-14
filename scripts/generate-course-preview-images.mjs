@@ -103,6 +103,16 @@ const courses = [
     mood:
       "creator launch desk, checklist, camera, course landing page mockups, optimistic sunrise lighting, premium consumer education feel, no readable text",
   },
+  {
+    id: 201,
+    title: "Unreal Engine 5 Game Dev",
+    subtitle: "Blueprint, C++ and action RPG prototype",
+    label: "GAME DEVELOPMENT",
+    discount: "COHORT 23% OFF",
+    palette: ["#10131f", "#ff385c", "#f7f7f7", "#2dd4bf"],
+    mood:
+      "high-end real-time 3D game environment inspired by modern Unreal Engine 5 visuals, cinematic action RPG scene, glowing sci-fi portal, third-person hero silhouette, modular level design, dramatic Lumen-style lighting, Niagara-like energy particles, polished game development course thumbnail, no readable text, no official logos",
+  },
 ]
 
 function escapeXml(value) {

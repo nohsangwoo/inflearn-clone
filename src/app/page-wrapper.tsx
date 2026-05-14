@@ -40,7 +40,7 @@ type ApiCourse = {
   instructor?: { nickname?: string | null; email?: string }
 }
 
-const categories = ["전체", "웹 개발", "AI", "미디어", "크리에이터", "비즈니스", "디자인"]
+const categories = ["전체", "웹 개발", "게임 개발", "AI", "미디어", "크리에이터", "비즈니스", "디자인"]
 
 function formatPrice(course: ApiCourse) {
   const effective =
