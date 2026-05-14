@@ -134,16 +134,12 @@ export async function GET(
     .limit(240)
 
   const cdnBase = process.env.CDN_URL || process.env.NEXT_PUBLIC_CDN_URL || "https://storage.lingoost.com"
-  const imageUrl = lecture.imageUrl
-    ? /^(https?:)?\/\//.test(lecture.imageUrl)
-      ? lecture.imageUrl
-      : `${cdnBase.replace(/\/$/, "")}/${lecture.imageUrl}`
-    : null
   const toPublicMediaUrl = (value?: string | null) => {
     if (!value) return null
     if (/^(https?:)?\/\//.test(value) || value.startsWith("/")) return value
     return `${cdnBase.replace(/\/$/, "")}/${value.replace(/^\//, "")}`
   }
+  const imageUrl = toPublicMediaUrl(lecture.imageUrl)
   const availability = getEnrollmentAvailability({
     enrollmentOpen: lecture.enrollmentOpen,
     enrollmentStartAt: lecture.enrollmentStartAt,

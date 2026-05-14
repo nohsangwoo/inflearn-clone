@@ -10,6 +10,7 @@ import axios from "axios"
 import { useParams } from "next/navigation"
 import { uploadImageWebp } from "@/lib/upload/uploadImageWebp"
 import { uploadBinary } from "@/lib/upload/uploadBinary"
+import { toCdnUrl } from "@/lib/brand"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useDropzone } from "react-dropzone"
@@ -537,8 +538,7 @@ export default function EditCoursePage() {
                 }
               }} />
               {(() => {
-                const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? 'https://storage.lingoost.com'
-                const src = localPreviewUrl ?? (lecture?.imageUrl ? `${cdnBase}/${lecture.imageUrl}` : null)
+                const src = localPreviewUrl ?? toCdnUrl(lecture?.imageUrl)
                 return src ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={src} alt="thumbnail" className="h-16 w-16 rounded-[14px] border object-cover" />
@@ -772,8 +772,7 @@ export default function EditCoursePage() {
                                     <div className="text-sm text-muted-foreground">등록된 자료가 없습니다.</div>
                                   ) : (
                                     (sec.Files ?? []).map((f) => {
-                                      const cdnBase = process.env.NEXT_PUBLIC_CDN_URL ?? "https://storage.lingoost.com"
-                                      const href = `${cdnBase}/${f.url}`
+                                      const href = toCdnUrl(f.url) ?? ""
                                       return (
                                         <div key={f.id} className="flex items-center gap-2">
                                           <a href={href} target="_blank" rel="noreferrer" className="text-sm underline truncate max-w-xs">
