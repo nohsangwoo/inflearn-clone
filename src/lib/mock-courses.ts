@@ -1,3 +1,5 @@
+import { getEnrollmentAvailability, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
+
 export type MockCourse = {
   id: number
   title: string
@@ -16,6 +18,14 @@ export type MockCourse = {
   metaDescription: string
   ogImageUrl: string
   canonicalUrl: string | null
+  enrollmentOpen: boolean
+  enrollmentStartAt: string | null
+  enrollmentEndAt: string | null
+  enrollmentCapacity: number | null
+  enrollmentAppliedCount: number
+  enrollmentStatus?: EnrollmentAvailabilityStatus
+  enrollmentAvailable?: boolean
+  remainingSeats?: number | null
   price: number
   discountPrice: number | null
   imageUrl: string
@@ -44,8 +54,8 @@ export const mockCourses: MockCourse[] = [
     id: 101,
     title: "Next.js로 강의 거래소 만들기",
     slug: "nextjs-course-marketplace",
-    shortDescription: "상품, 수강신청, 결제 확장, SEO까지 웹 플랫폼의 뼈대를 완성합니다.",
-    description: "웹 우선 강의 플랫폼을 직접 만들며 서비스 구조를 익힙니다. 목업 강의라 실제 영상 구매는 아직 연결하지 않았습니다.",
+    shortDescription: "상품, 수강신청, 계좌입금 승인, SEO까지 웹 플랫폼의 뼈대를 완성합니다.",
+    description: "웹 우선 강의 플랫폼을 직접 만들며 서비스 구조를 익힙니다. 판매 페이지, 모집 기간, 입금 확인 기반 수강 승인까지 실제 운영 흐름으로 배웁니다.",
     category: "웹 개발",
     level: "중급",
     languageCode: "ko",
@@ -55,9 +65,14 @@ export const mockCourses: MockCourse[] = [
     requirements: "React와 TypeScript 기초 지식",
     learningOutcomes: ["강의 목록과 상세 페이지 설계", "SEO 메타데이터 구성", "수강신청 흐름 이해"],
     metaTitle: "Next.js로 강의 거래소 만들기 | 박살강의",
-    metaDescription: "Next.js, Drizzle, SEO 기반으로 강의 거래소의 핵심 구조를 만드는 프리뷰 강의입니다.",
+    metaDescription: "Next.js, Drizzle, SEO 기반으로 강의 거래소의 핵심 구조를 만드는 강의입니다.",
     ogImageUrl: previewImages[0],
     canonicalUrl: null,
+    enrollmentOpen: true,
+    enrollmentStartAt: "2026-05-10T00:00:00.000Z",
+    enrollmentEndAt: "2026-06-05T14:59:59.000Z",
+    enrollmentCapacity: 40,
+    enrollmentAppliedCount: 27,
     price: 99000,
     discountPrice: 69000,
     imageUrl: previewImages[0],
@@ -70,7 +85,7 @@ export const mockCourses: MockCourse[] = [
     sections: [
       { id: 10101, title: "마켓플레이스 구조 잡기", description: "수강생, 판매자, 최고 관리자 역할을 나눕니다.", active: true, hasVideo: false, hlsStatus: null },
       { id: 10102, title: "SEO와 강의 상세", description: "검색되는 강의 페이지의 필드를 설계합니다.", active: true, hasVideo: false, hlsStatus: null },
-      { id: 10103, title: "수강신청 흐름", description: "결제 전후 권한 부여 흐름을 만듭니다.", active: true, hasVideo: false, hlsStatus: null },
+      { id: 10103, title: "수강신청 흐름", description: "입금 확인 전후 권한 부여 흐름을 만듭니다.", active: true, hasVideo: false, hlsStatus: null },
     ],
   },
   {
@@ -88,9 +103,14 @@ export const mockCourses: MockCourse[] = [
     requirements: "기본적인 파일 업로드와 웹 비디오 개념",
     learningOutcomes: ["HLS 변환 흐름 이해", "자막 트랙 운영", "로컬 인코딩 승인 방식 설계"],
     metaTitle: "HLS 스트리밍과 영상 운영 | 박살강의",
-    metaDescription: "강의 플랫폼에서 HLS, 자막, 더빙 트랙을 운영하는 방법을 다루는 프리뷰 강의입니다.",
+    metaDescription: "강의 플랫폼에서 HLS, 자막, 더빙 트랙을 운영하는 방법을 다루는 강의입니다.",
     ogImageUrl: previewImages[1],
     canonicalUrl: null,
+    enrollmentOpen: true,
+    enrollmentStartAt: "2026-05-01T00:00:00.000Z",
+    enrollmentEndAt: "2026-05-28T14:59:59.000Z",
+    enrollmentCapacity: 24,
+    enrollmentAppliedCount: 24,
     price: 129000,
     discountPrice: null,
     imageUrl: previewImages[1],
@@ -110,7 +130,7 @@ export const mockCourses: MockCourse[] = [
     title: "AI 시대 판매되는 강의 기획법",
     slug: "ai-course-planning",
     shortDescription: "검색되는 커리큘럼, 전환되는 상세 페이지, 완주율 높은 수업 설계.",
-    description: "강의 판매자가 콘텐츠를 시장에 맞게 설계하는 법을 배웁니다. 검색 의도와 프리뷰 구성, 판매 페이지 카피까지 한 번에 정리합니다.",
+    description: "강의 판매자가 콘텐츠를 시장에 맞게 설계하는 법을 배웁니다. 검색 의도와 공개 영상 구성, 판매 페이지 카피까지 한 번에 정리합니다.",
     category: "크리에이터",
     level: "입문",
     languageCode: "ko",
@@ -120,9 +140,14 @@ export const mockCourses: MockCourse[] = [
     requirements: "팔고 싶은 주제와 간단한 촬영 도구",
     learningOutcomes: ["판매되는 강의 주제 선정", "검색 의도 기반 목차 구성", "상세 페이지 전환 포인트 설계"],
     metaTitle: "AI 시대 판매되는 강의 기획법 | 박살강의",
-    metaDescription: "검색되는 커리큘럼과 전환되는 상세 페이지를 설계하는 강의 기획 프리뷰입니다.",
+    metaDescription: "검색되는 커리큘럼과 전환되는 상세 페이지를 설계하는 강의 기획 강의입니다.",
     ogImageUrl: previewImages[2],
     canonicalUrl: null,
+    enrollmentOpen: true,
+    enrollmentStartAt: "2026-05-08T00:00:00.000Z",
+    enrollmentEndAt: "2026-06-12T14:59:59.000Z",
+    enrollmentCapacity: 60,
+    enrollmentAppliedCount: 41,
     price: 59000,
     discountPrice: 39000,
     imageUrl: previewImages[2],
@@ -135,14 +160,14 @@ export const mockCourses: MockCourse[] = [
     sections: [
       { id: 10301, title: "팔리는 주제의 조건", description: "전문성, 수요, 검색 가능성을 같이 봅니다.", active: true, hasVideo: false, hlsStatus: null },
       { id: 10302, title: "커리큘럼을 상품으로 바꾸기", description: "수업 목록을 구매 이유로 연결합니다.", active: true, hasVideo: false, hlsStatus: null },
-      { id: 10303, title: "프리뷰와 상세 카피", description: "첫 화면에서 신뢰를 만드는 문장을 설계합니다.", active: true, hasVideo: false, hlsStatus: null },
+      { id: 10303, title: "상세 페이지 카피", description: "첫 화면에서 신뢰를 만드는 문장을 설계합니다.", active: true, hasVideo: false, hlsStatus: null },
     ],
   },
   {
     id: 104,
     title: "수강생이 끝까지 보는 강의 편집",
     slug: "course-editing-retention",
-    shortDescription: "긴 영상보다 오래 남는 리듬, 챕터, 프리뷰 이미지를 설계합니다.",
+    shortDescription: "긴 영상보다 오래 남는 리듬, 챕터, 대표 이미지를 설계합니다.",
     description: "촬영 이후 실제 판매 페이지에 올라가는 결과물을 다듬습니다.",
     category: "디자인",
     level: "입문",
@@ -151,11 +176,16 @@ export const mockCourses: MockCourse[] = [
     seoKeywords: ["강의 편집", "온라인 강의 썸네일", "완주율"],
     targetAudience: "강의 영상을 더 보기 좋게 만들고 싶은 판매자",
     requirements: "기본적인 영상 편집 툴",
-    learningOutcomes: ["챕터 구조화", "프리뷰 이미지 구성", "완주율을 높이는 편집 리듬"],
+    learningOutcomes: ["챕터 구조화", "대표 이미지 구성", "완주율을 높이는 편집 리듬"],
     metaTitle: "수강생이 끝까지 보는 강의 편집 | 박살강의",
-    metaDescription: "강의 영상의 리듬, 챕터, 프리뷰 이미지를 설계하는 프리뷰 강의입니다.",
+    metaDescription: "강의 영상의 리듬, 챕터, 대표 이미지를 설계하는 강의입니다.",
     ogImageUrl: previewImages[3],
     canonicalUrl: null,
+    enrollmentOpen: true,
+    enrollmentStartAt: "2026-04-15T00:00:00.000Z",
+    enrollmentEndAt: "2026-05-12T14:59:59.000Z",
+    enrollmentCapacity: 30,
+    enrollmentAppliedCount: 22,
     price: 79000,
     discountPrice: 59000,
     imageUrl: previewImages[3],
@@ -182,9 +212,14 @@ export const mockCourses: MockCourse[] = [
     requirements: "등록할 강의 주제와 키워드 후보",
     learningOutcomes: ["SEO 필드 작성", "검색 의도 매칭", "강의 상세 구조화"],
     metaTitle: "강의 판매자를 위한 SEO 실전 | 박살강의",
-    metaDescription: "강의 등록 시 필요한 SEO 필드를 실전적으로 작성하는 프리뷰 강의입니다.",
+    metaDescription: "강의 등록 시 필요한 SEO 필드를 실전적으로 작성하는 강의입니다.",
     ogImageUrl: previewImages[4],
     canonicalUrl: null,
+    enrollmentOpen: false,
+    enrollmentStartAt: "2026-06-20T00:00:00.000Z",
+    enrollmentEndAt: "2026-07-05T14:59:59.000Z",
+    enrollmentCapacity: 35,
+    enrollmentAppliedCount: 0,
     price: 89000,
     discountPrice: null,
     imageUrl: previewImages[4],
@@ -211,9 +246,14 @@ export const mockCourses: MockCourse[] = [
     requirements: "원본 강의 영상과 대본",
     learningOutcomes: ["더빙 승인 흐름", "언어 트랙 관리", "자막과 음성의 역할 분리"],
     metaTitle: "자동 더빙과 다국어 강의 운영 | 박살강의",
-    metaDescription: "ElevenLabs 기반 자동 더빙과 다국어 강의 운영 흐름을 보는 프리뷰 강의입니다.",
+    metaDescription: "ElevenLabs 기반 자동 더빙과 다국어 강의 운영 흐름을 보는 강의입니다.",
     ogImageUrl: previewImages[5],
     canonicalUrl: null,
+    enrollmentOpen: true,
+    enrollmentStartAt: "2026-05-18T00:00:00.000Z",
+    enrollmentEndAt: "2026-06-30T14:59:59.000Z",
+    enrollmentCapacity: 18,
+    enrollmentAppliedCount: 6,
     price: 119000,
     discountPrice: 99000,
     imageUrl: previewImages[5],
@@ -229,7 +269,7 @@ export const mockCourses: MockCourse[] = [
     id: 107,
     title: "1인 강사의 정산과 운영 장부",
     slug: "solo-instructor-ledger",
-    shortDescription: "수강신청, 입금 확인, 수수료율 스냅샷, 수동 승인까지 설계합니다.",
+    shortDescription: "수강신청, 입금 확인, 정산 기준, 수동 승인까지 설계합니다.",
     description: "초기 마켓플레이스 운영에 필요한 장부 흐름을 만듭니다.",
     category: "비즈니스",
     level: "입문",
@@ -238,11 +278,16 @@ export const mockCourses: MockCourse[] = [
     seoKeywords: ["강의 정산", "수동 입금 확인", "마켓플레이스 운영"],
     targetAudience: "초기 수동 정산으로 강의 플랫폼을 운영하려는 창업자",
     requirements: "기본적인 매출/정산 개념",
-    learningOutcomes: ["수수료율 스냅샷", "수동 입금 승인", "정산 큐 설계"],
+    learningOutcomes: ["정산 기준 기록", "수동 입금 승인", "정산 큐 설계"],
     metaTitle: "1인 강사의 정산과 운영 장부 | 박살강의",
-    metaDescription: "초기 강의 플랫폼의 입금 확인, 수수료, 수동 정산 흐름을 다루는 프리뷰 강의입니다.",
+    metaDescription: "초기 강의 플랫폼의 입금 확인, 운영 정산, 수동 승인 흐름을 다루는 강의입니다.",
     ogImageUrl: previewImages[6],
     canonicalUrl: null,
+    enrollmentOpen: true,
+    enrollmentStartAt: "2026-05-01T00:00:00.000Z",
+    enrollmentEndAt: "2026-05-30T14:59:59.000Z",
+    enrollmentCapacity: 50,
+    enrollmentAppliedCount: 11,
     price: 49000,
     discountPrice: 0,
     imageUrl: previewImages[6],
@@ -258,20 +303,25 @@ export const mockCourses: MockCourse[] = [
     id: 108,
     title: "초보 판매자용 첫 강의 출시",
     slug: "first-course-launch",
-    shortDescription: "한 편의 프리뷰에서 첫 유료 커리큘럼까지 필요한 최소 단계를 정리합니다.",
+    shortDescription: "한 편의 공개 영상에서 첫 유료 커리큘럼까지 필요한 최소 단계를 정리합니다.",
     description: "강의를 처음 파는 사람에게 필요한 등록과 출시 체크리스트입니다.",
     category: "크리에이터",
     level: "입문",
     languageCode: "ko",
-    tags: ["출시", "프리뷰", "판매"],
-    seoKeywords: ["첫 강의 출시", "강의 판매", "프리뷰 강의"],
+    tags: ["출시", "공개영상", "판매"],
+    seoKeywords: ["첫 강의 출시", "강의 판매", "공개 강의"],
     targetAudience: "첫 유료 강의를 출시하려는 초보 판매자",
-    requirements: "판매할 주제와 1개 이상의 프리뷰 영상",
-    learningOutcomes: ["출시 체크리스트", "프리뷰 구성", "판매 페이지 기본 필드"],
+    requirements: "판매할 주제와 1개 이상의 공개 영상",
+    learningOutcomes: ["출시 체크리스트", "공개 영상 구성", "판매 페이지 기본 필드"],
     metaTitle: "초보 판매자용 첫 강의 출시 | 박살강의",
-    metaDescription: "첫 강의 출시를 위한 등록, 프리뷰, 판매 페이지 체크리스트 프리뷰입니다.",
+    metaDescription: "첫 강의 출시를 위한 등록, 공개 영상, 판매 페이지 체크리스트 강의입니다.",
     ogImageUrl: previewImages[7],
     canonicalUrl: null,
+    enrollmentOpen: true,
+    enrollmentStartAt: "2026-06-01T00:00:00.000Z",
+    enrollmentEndAt: "2026-06-21T14:59:59.000Z",
+    enrollmentCapacity: 45,
+    enrollmentAppliedCount: 0,
     price: 69000,
     discountPrice: 49000,
     imageUrl: previewImages[7],
@@ -286,5 +336,17 @@ export const mockCourses: MockCourse[] = [
 ]
 
 export function findMockCourse(id: number) {
-  return mockCourses.find((course) => course.id === id) ?? null
+  const course = mockCourses.find((item) => item.id === id)
+  if (!course) return null
+  const availability = getEnrollmentAvailability(course)
+  return {
+    ...course,
+    enrollmentStatus: availability.status,
+    enrollmentAvailable: availability.isAvailable,
+    remainingSeats: availability.remainingSeats,
+  }
+}
+
+export function getMockCoursesWithEnrollmentStatus() {
+  return mockCourses.map((course) => findMockCourse(course.id)!)
 }

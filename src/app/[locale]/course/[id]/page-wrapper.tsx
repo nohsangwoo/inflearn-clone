@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
   Heart,
-  ShoppingCart,
   Star,
   Users,
   BookOpen,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react'
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
 import { toCdnUrl } from '@/lib/brand'
+import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from '@/lib/enrollment-window'
 import { getTranslation, useLocale } from '@/lib/translations'
 
 type Detail = {
@@ -36,6 +36,14 @@ type Detail = {
   learningOutcomes?: string[]
   price: number
   discountPrice?: number | null
+  enrollmentOpen?: boolean
+  enrollmentStartAt?: string | null
+  enrollmentEndAt?: string | null
+  enrollmentCapacity?: number | null
+  enrollmentAppliedCount?: number | null
+  enrollmentStatus?: EnrollmentAvailabilityStatus
+  enrollmentAvailable?: boolean
+  remainingSeats?: number | null
   imageUrl?: string | null
   createdAt: string
   instructor: {
@@ -85,6 +93,18 @@ function enrollmentLabel(status: EnrollmentRequest['status']) {
   return '취소'
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return '미정'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '미정'
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}
+
 const detailHeroImages = [
   'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80',
   'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1600&q=80',
@@ -101,7 +121,6 @@ export default function CourseDetailPageWrapper() {
   const t = getTranslation(locale).course
   const queryClient = useQueryClient()
   const [like, setLike] = useState(false)
-  const [inCart, setInCart] = useState(false)
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['course-detail', lectureId],
@@ -125,9 +144,10 @@ export default function CourseDetailPageWrapper() {
   const purchased = Boolean(purchasedRes?.purchased)
   const enrollmentRequest = purchasedRes?.enrollmentRequest ?? null
   const isEnrollmentPending = enrollmentRequest?.status === 'AWAITING_PLATFORM_FEE'
-  const isMockCourse = Boolean(detail?.isMock)
+  const enrollmentStatus = detail?.enrollmentStatus ?? 'OPEN'
+  const enrollmentAvailable = detail?.enrollmentAvailable ?? true
 
-  // 초기 좋아요/장바구니 상태
+  // 초기 좋아요 상태
   useQuery({
     queryKey: ['course-like', lectureId],
     enabled: Number.isFinite(lectureId),
@@ -135,15 +155,6 @@ export default function CourseDetailPageWrapper() {
       const { data } = await axios.get(`/api/courses/${lectureId}/like`)
       setLike(Boolean(data?.liked))
       return data as { liked: boolean }
-    },
-  })
-  useQuery({
-    queryKey: ['course-cart', lectureId],
-    enabled: Number.isFinite(lectureId),
-    queryFn: async () => {
-      const { data } = await axios.get(`/api/courses/${lectureId}/cart`)
-      setInCart(Boolean(data?.inCart))
-      return data as { inCart: boolean }
     },
   })
 
@@ -163,13 +174,6 @@ export default function CourseDetailPageWrapper() {
   }, [detail])
 
   // 액션
-  const addToCart = useMutation({
-    mutationFn: async () => {
-      const { data } = await axios.post(`/api/courses/${lectureId}/cart`)
-      return data as { inCart: boolean }
-    },
-    onSuccess: res => setInCart(Boolean(res?.inCart)),
-  })
   const likeToggle = useMutation({
     mutationFn: async () => {
       const { data } = await axios.post(`/api/courses/${lectureId}/like`)
@@ -301,7 +305,7 @@ export default function CourseDetailPageWrapper() {
                 className="h-full w-full object-cover"
               />
               <div className="absolute left-4 top-4 rounded-full bg-background px-3 py-1 text-[11px] font-semibold shadow-sm">
-                {detail.category || '프리뷰 강의'}
+                {detail.category || '강의'}
               </div>
               <button
                 type="button"
@@ -429,7 +433,7 @@ export default function CourseDetailPageWrapper() {
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
                             <Lock className="size-3" />
-                            결제 후 공개
+                            승인 후 공개
                           </span>
                         )}
                       </div>
@@ -455,23 +459,37 @@ export default function CourseDetailPageWrapper() {
                       {t.originalPrice} ₩{detail.price.toLocaleString()} {/* "정가" */}
                     </div>
                   )}
+                <div className="rounded-[14px] border bg-muted/40 p-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold text-foreground">{getEnrollmentStatusLabel(enrollmentStatus)}</span>
+                    {typeof detail.remainingSeats === 'number' ? (
+                      <span className="text-muted-foreground">잔여 {detail.remainingSeats}석</span>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 text-xs leading-5 text-muted-foreground">
+                    {detail.enrollmentStartAt || detail.enrollmentEndAt ? (
+                      <div>
+                        신청 기간 {formatDateTime(detail.enrollmentStartAt)} - {formatDateTime(detail.enrollmentEndAt)}
+                      </div>
+                    ) : (
+                      <div>상시 신청 가능</div>
+                    )}
+                    {typeof detail.enrollmentCapacity === 'number' ? (
+                      <div>이번 시즌 {detail.enrollmentAppliedCount ?? 0}/{detail.enrollmentCapacity}명 신청</div>
+                    ) : null}
+                    <div>신청 방식: 계좌입금 확인 후 수강권한 부여</div>
+                  </div>
+                </div>
+
                 <div className="grid gap-2">
                   {!purchased ? (
                     <>
                       <Button
                         className="w-full"
                         onClick={() => enroll.mutate()}
-                        disabled={isMockCourse || enroll.isPending || isEnrollmentPending}
+                        disabled={!enrollmentAvailable || enroll.isPending || isEnrollmentPending}
                       >
-                        {isMockCourse ? '프리뷰 강의입니다' : isEnrollmentPending ? '승인 대기 중' : t.enroll}
-                      </Button>
-                      <Button
-                        variant={inCart ? 'secondary' : 'outline'}
-                        className="w-full"
-                        onClick={() => addToCart.mutate()}
-                        disabled={isMockCourse || addToCart.isPending}
-                      >
-                        <ShoppingCart className="h-4 w-4 mr-2" /> {inCart ? t.inCart : t.addToCart}
+                        {isEnrollmentPending ? '입금 확인 대기 중' : enrollmentAvailable ? '수강 신청' : getEnrollmentStatusLabel(enrollmentStatus)}
                       </Button>
                     </>
                   ) : (
@@ -488,16 +506,10 @@ export default function CourseDetailPageWrapper() {
                       <Badge variant={purchased ? 'secondary' : 'outline'}>{enrollmentLabel(enrollmentRequest.status)}</Badge>
                     </div>
                     <div>신청 금액 ₩{enrollmentRequest.amount.toLocaleString()}</div>
-                    {enrollmentRequest.platformFeeRateBps > 0 ? (
-                      <div>
-                        플랫폼 수수료 {(enrollmentRequest.platformFeeRateBps / 100).toFixed(2)}% · 판매자 입금 확인 대기
-                      </div>
-                    ) : (
-                      <div>플랫폼 수수료 0% 이벤트 적용으로 즉시 승인됩니다.</div>
-                    )}
+                    <div>계좌입금 확인 후 판매자가 수강권한을 열어줍니다.</div>
                     {!purchased && enrollmentRequest.sellerAccountNumber ? (
                       <div className="rounded-[14px] border bg-background p-2">
-                        판매자 입금 계좌: {enrollmentRequest.sellerBankName} {enrollmentRequest.sellerAccountNumber}
+                        입금 계좌: {enrollmentRequest.sellerBankName} {enrollmentRequest.sellerAccountNumber}
                         {enrollmentRequest.sellerAccountHolder ? ` (${enrollmentRequest.sellerAccountHolder})` : ''}
                       </div>
                     ) : null}
@@ -511,7 +523,7 @@ export default function CourseDetailPageWrapper() {
                   disabled={!purchased}
                 >
                   <BookOpen className="h-4 w-4 mr-2" />
-                  {isMockCourse ? '목업 상세를 둘러보는 중입니다' : purchased ? t.startLearning : '구매 후 이용 가능합니다'}
+                  {purchased ? t.startLearning : '승인 후 이용 가능합니다'}
                 </Button>
 
                 <Button

@@ -9,7 +9,8 @@ import { BookOpen, Heart, Search, Star, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { brand, toCdnUrl, withLocalePath } from "@/lib/brand"
-import { mockCourses, previewImages } from "@/lib/mock-courses"
+import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
+import { getMockCoursesWithEnrollmentStatus, previewImages } from "@/lib/mock-courses"
 import { cn } from "@/lib/utils"
 
 type ApiCourse = {
@@ -28,10 +29,14 @@ type ApiCourse = {
   purchaseCount?: number
   reviewCount?: number
   avgRating?: number
+  enrollmentStatus?: EnrollmentAvailabilityStatus | null
+  enrollmentCapacity?: number | null
+  enrollmentAppliedCount?: number | null
+  remainingSeats?: number | null
   instructor?: { nickname?: string | null; email?: string }
 }
 
-const fallbackCourses: ApiCourse[] = mockCourses
+const fallbackCourses: ApiCourse[] = getMockCoursesWithEnrollmentStatus()
 
 const categories = ["전체", "웹 개발", "AI", "미디어", "크리에이터", "비즈니스", "디자인"]
 
@@ -167,9 +172,9 @@ export default function HomePageWrapper() {
       <section className="mx-auto max-w-7xl px-4 pb-16 md:px-6">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-[22px] font-medium leading-[1.18]">프리뷰 강의</h2>
+            <h2 className="text-[22px] font-medium leading-[1.18]">시즌제 강의 둘러보기</h2>
             <p className="mt-2 text-[14px] leading-[1.43] text-muted-foreground">
-              아직 DB가 비어 있어도 시장에 보일 강의 카탈로그를 먼저 확인할 수 있습니다.
+              계좌 입금 확인 후 판매자가 수강권한을 열어주는 시즌제 강의입니다.
             </p>
           </div>
           <Button asChild variant="ghost" className="hidden rounded-full px-4 md:inline-flex">
@@ -196,7 +201,7 @@ export default function HomePageWrapper() {
           {[
             ["Support", "수강 신청, 계좌입금, 수강권한을 단계별로 확인합니다."],
             ["Hosting", "판매자는 계좌, 커리큘럼, HLS, 자막, 더빙 상태를 관리합니다."],
-            ["Baksal", "지금은 0% 수수료 이벤트, 이후 수수료율 스냅샷으로 운영됩니다."],
+            ["Baksal", "시즌별 모집 기간과 정원을 기준으로 신청 상태를 투명하게 안내합니다."],
           ].map(([title, body]) => (
             <div key={title}>
               <h3 className="text-[16px] font-medium">{title}</h3>
@@ -237,7 +242,9 @@ function CourseTile({
             className="photo-zoom h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           />
           <div className="absolute left-3 top-3 rounded-full bg-background px-3 py-1 text-[11px] font-semibold shadow-sm">
-            {index < 3 ? "인기 프리뷰" : course.category || "강의"}
+            {course.enrollmentStatus
+              ? getEnrollmentStatusLabel(course.enrollmentStatus)
+              : index < 3 ? "인기 강의" : course.category || "강의"}
           </div>
           <button
             type="button"
@@ -264,6 +271,12 @@ function CourseTile({
           <p className="mt-1 line-clamp-2 min-h-10 text-[14px] leading-[1.43] text-muted-foreground">
             {course.shortDescription || course.description || "강의 소개가 곧 업데이트됩니다."}
           </p>
+          {typeof course.enrollmentCapacity === "number" ? (
+            <div className="mt-2 text-[13px] text-muted-foreground">
+              이번 시즌 {course.enrollmentAppliedCount ?? 0}/{course.enrollmentCapacity}명 신청
+              {typeof course.remainingSeats === "number" ? ` · 잔여 ${course.remainingSeats}석` : ""}
+            </div>
+          ) : null}
           <div className="mt-2 flex flex-wrap gap-1.5">
             {(course.tags ?? []).slice(0, 2).map((tag) => (
               <Badge key={tag} variant="outline" className="rounded-full border-border px-2 py-0 text-[11px]">

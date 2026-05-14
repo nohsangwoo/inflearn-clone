@@ -32,7 +32,7 @@ export async function POST(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  if (findMockCourse(id)) return NextResponse.json({ message: "목업 강의는 장바구니에 담을 수 없습니다." }, { status: 400 })
+  if (findMockCourse(id)) return NextResponse.json({ message: "이 강의는 계좌입금 신청으로만 접수됩니다." }, { status: 400 })
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
 

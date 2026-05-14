@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm"
-import { db, lectures, purchases, reviews, users } from "@/db"
+import { db, enrollmentRequests, lectures, purchases, reviews, users } from "@/db"
+import { getEnrollmentAvailability } from "@/lib/enrollment-window"
+import { getMockCoursesWithEnrollmentStatus } from "@/lib/mock-courses"
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
@@ -29,6 +31,7 @@ export async function GET(req: NextRequest) {
 
   const purchaseCount = sql<number>`count(distinct ${purchases.id})`
   const reviewCount = sql<number>`count(distinct ${reviews.id})`
+  const enrollmentAppliedCount = sql<number>`count(distinct case when ${enrollmentRequests.status} in ('AWAITING_PLATFORM_FEE', 'APPROVED') then ${enrollmentRequests.id} end)`
   const effectivePrice = sql<number>`coalesce(${lectures.discountPrice}, ${lectures.price})`
   const orderBy = (() => {
     if (sort === "best") return [desc(purchaseCount), desc(lectures.createdAt)]
@@ -51,6 +54,11 @@ export async function GET(req: NextRequest) {
         tags: lectures.tags,
         price: lectures.price,
         discountPrice: lectures.discountPrice,
+        enrollmentOpen: lectures.enrollmentOpen,
+        enrollmentStartAt: lectures.enrollmentStartAt,
+        enrollmentEndAt: lectures.enrollmentEndAt,
+        enrollmentCapacity: lectures.enrollmentCapacity,
+        enrollmentAppliedCount,
         imageUrl: lectures.imageUrl,
         createdAt: lectures.createdAt,
         instructorNickname: users.nickname,
@@ -62,6 +70,7 @@ export async function GET(req: NextRequest) {
       .leftJoin(users, eq(lectures.instructorId, users.id))
       .leftJoin(purchases, eq(purchases.lectureId, lectures.id))
       .leftJoin(reviews, eq(reviews.lectureId, lectures.id))
+      .leftJoin(enrollmentRequests, eq(enrollmentRequests.lectureId, lectures.id))
       .where(where)
       .groupBy(lectures.id, users.id)
       .orderBy(...orderBy)
@@ -72,19 +81,49 @@ export async function GET(req: NextRequest) {
       page,
       pageSize,
       total,
-      items: items.map((item) => ({
-        ...item,
-        instructor: { nickname: item.instructorNickname, email: item.instructorEmail },
-        instructorNickname: undefined,
-        instructorEmail: undefined,
-      })),
+      items: items.map((item) => {
+        const availability = getEnrollmentAvailability(item)
+        return {
+          ...item,
+          enrollmentStatus: availability.status,
+          enrollmentAvailable: availability.isAvailable,
+          remainingSeats: availability.remainingSeats,
+          instructor: { nickname: item.instructorNickname, email: item.instructorEmail },
+          instructorNickname: undefined,
+          instructorEmail: undefined,
+        }
+      }),
     })
   } catch {
+    const fallbackItems = getMockCoursesWithEnrollmentStatus()
+      .filter((course) => {
+        const matchesCategory = category ? course.category.toLowerCase() === category : true
+        const haystack = [
+          course.title,
+          course.shortDescription,
+          course.description,
+          course.category,
+          course.level,
+          ...course.tags,
+          ...course.seoKeywords,
+        ].join(" ").toLowerCase()
+        const matchesQuery = q ? haystack.includes(q.toLowerCase()) : true
+        return matchesCategory && matchesQuery
+      })
+      .sort((a, b) => {
+        const aPrice = a.discountPrice ?? a.price
+        const bPrice = b.discountPrice ?? b.price
+        if (sort === "best") return b.purchaseCount - a.purchaseCount || b.createdAt.localeCompare(a.createdAt)
+        if (sort === "priceasc") return aPrice - bPrice || a.price - b.price
+        if (sort === "pricedesc") return bPrice - aPrice || b.price - a.price
+        return b.createdAt.localeCompare(a.createdAt)
+      })
+    const pagedItems = fallbackItems.slice((page - 1) * pageSize, page * pageSize)
     return NextResponse.json({
       page,
       pageSize,
-      total: 0,
-      items: [],
+      total: fallbackItems.length,
+      items: pagedItems,
       degraded: true,
     })
   }

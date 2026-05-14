@@ -58,7 +58,7 @@ export async function POST(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  if (findMockCourse(id)) return NextResponse.json({ message: "목업 강의에는 리뷰를 저장하지 않습니다." }, { status: 400 })
+  if (findMockCourse(id)) return NextResponse.json({ message: "리뷰는 수강 승인 후 작성할 수 있습니다." }, { status: 400 })
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   const body = await req.json().catch(() => ({}))

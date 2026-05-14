@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       .then((rows) => rows[0]),
     db.select({ value: count() }).from(videos).where(ne(videos.hlsStatus, "READY")).then((rows) => rows[0]),
     db
-      .select({ count: count(enrollmentRequests.id), platformFeeAmount: sum(enrollmentRequests.platformFeeAmount) })
+      .select({ count: count(enrollmentRequests.id), platformFeeAmount: sum(enrollmentRequests.amount) })
       .from(enrollmentRequests)
       .where(eq(enrollmentRequests.status, "AWAITING_PLATFORM_FEE"))
       .then((rows) => rows[0]),

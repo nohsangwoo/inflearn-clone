@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { and, avg, count, countDistinct, eq, asc } from "drizzle-orm"
-import { db, curriculumSections, curriculums, lectures, likes, purchases, reviews, users, videos } from "@/db"
+import { and, avg, count, countDistinct, eq, asc, inArray } from "drizzle-orm"
+import { db, curriculumSections, curriculums, enrollmentRequests, lectures, likes, purchases, reviews, users, videos } from "@/db"
+import { getEnrollmentAvailability } from "@/lib/enrollment-window"
 import { findMockCourse } from "@/lib/mock-courses"
 
 export async function GET(
@@ -44,6 +45,10 @@ export async function GET(
       canonicalUrl: lectures.canonicalUrl,
       price: lectures.price,
       discountPrice: lectures.discountPrice,
+      enrollmentOpen: lectures.enrollmentOpen,
+      enrollmentStartAt: lectures.enrollmentStartAt,
+      enrollmentEndAt: lectures.enrollmentEndAt,
+      enrollmentCapacity: lectures.enrollmentCapacity,
       imageUrl: lectures.imageUrl,
       createdAt: lectures.createdAt,
       isActive: lectures.isActive,
@@ -64,7 +69,7 @@ export async function GET(
     return NextResponse.json({ message: "not found" }, { status: 404 })
   }
 
-  const [ratingAgg, countRow, previewSection] = await Promise.all([
+  const [ratingAgg, countRow, enrollmentRow, previewSection] = await Promise.all([
     db
       .select({ avgRating: avg(reviews.rating), reviewCount: count(reviews.id) })
       .from(reviews)
@@ -79,6 +84,14 @@ export async function GET(
       .leftJoin(purchases, eq(purchases.lectureId, lectures.id))
       .leftJoin(likes, eq(likes.lectureId, lectures.id))
       .where(eq(lectures.id, id))
+      .then((rows) => rows[0]),
+    db
+      .select({ enrollmentAppliedCount: count(enrollmentRequests.id) })
+      .from(enrollmentRequests)
+      .where(and(
+        eq(enrollmentRequests.lectureId, id),
+        inArray(enrollmentRequests.status, ["AWAITING_PLATFORM_FEE", "APPROVED"]),
+      ))
       .then((rows) => rows[0]),
     db
       .select({ id: curriculumSections.id, title: curriculumSections.title })
@@ -114,6 +127,13 @@ export async function GET(
       ? lecture.imageUrl
       : `${cdnBase.replace(/\/$/, "")}/${lecture.imageUrl}`
     : null
+  const availability = getEnrollmentAvailability({
+    enrollmentOpen: lecture.enrollmentOpen,
+    enrollmentStartAt: lecture.enrollmentStartAt,
+    enrollmentEndAt: lecture.enrollmentEndAt,
+    enrollmentCapacity: lecture.enrollmentCapacity,
+    enrollmentAppliedCount: Number(enrollmentRow?.enrollmentAppliedCount ?? 0),
+  })
 
   return NextResponse.json({
     id: lecture.id,
@@ -135,6 +155,14 @@ export async function GET(
     canonicalUrl: lecture.canonicalUrl,
     price: lecture.price,
     discountPrice: lecture.discountPrice,
+    enrollmentOpen: lecture.enrollmentOpen,
+    enrollmentStartAt: availability.startsAt,
+    enrollmentEndAt: availability.endsAt,
+    enrollmentCapacity: availability.capacity,
+    enrollmentAppliedCount: availability.appliedCount,
+    enrollmentStatus: availability.status,
+    enrollmentAvailable: availability.isAvailable,
+    remainingSeats: availability.remainingSeats,
     imageUrl,
     createdAt: lecture.createdAt,
     instructor: lecture.instructor,

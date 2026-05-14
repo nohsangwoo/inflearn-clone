@@ -52,6 +52,18 @@ type FileItem = {
   url: string
 }
 
+function toDateTimeLocal(value?: string | Date | null) {
+  if (!value) return ""
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return offsetDate.toISOString().slice(0, 16)
+}
+
+function fromDateTimeLocal(value: string) {
+  return value ? new Date(value).toISOString() : null
+}
+
 export default function EditCoursePage() {
   const routeParams = useParams<{ lectureId: string }>()
   const lectureIdNum = Number(routeParams?.lectureId)
@@ -80,6 +92,10 @@ export default function EditCoursePage() {
         metaDescription?: string | null
         ogImageUrl?: string | null
         canonicalUrl?: string | null
+        enrollmentOpen: boolean
+        enrollmentStartAt?: string | null
+        enrollmentEndAt?: string | null
+        enrollmentCapacity?: number | null
         price: number
         discountPrice?: number | null
         imageUrl?: string | null
@@ -107,6 +123,10 @@ export default function EditCoursePage() {
       metaDescription: string
       ogImageUrl: string
       canonicalUrl: string
+      enrollmentOpen: boolean
+      enrollmentStartAt: string | null
+      enrollmentEndAt: string | null
+      enrollmentCapacity: number | null
       price: number
       discountPrice: number | null
       imageUrl: string | null
@@ -320,7 +340,7 @@ export default function EditCoursePage() {
               <label className="text-sm text-muted-foreground">태그</label>
               <Input
                 defaultValue={(lecture?.tags ?? []).join(", ")}
-                placeholder="Next.js, HLS, 결제"
+                placeholder="Next.js, HLS, SEO"
                 onBlur={(e) => updateLecture.mutate({ tags: e.target.value.split(",").map((v) => v.trim()).filter(Boolean) })}
               />
             </div>
@@ -403,6 +423,63 @@ export default function EditCoursePage() {
             />
             <span className="text-sm text-muted-foreground">공개</span>
           </div>
+
+          <div className="rounded-[14px] border bg-background p-4">
+            <div className="mb-3 text-sm font-medium">수강 모집 설정</div>
+            <div className="grid gap-4 md:grid-cols-[160px_1fr_1fr_140px]">
+              <label className="flex items-center gap-3">
+                <Switch
+                  checked={lecture?.enrollmentOpen ?? true}
+                  onCheckedChange={(v: boolean) =>
+                    updateLecture.mutate(
+                      { enrollmentOpen: Boolean(v) },
+                      {
+                        onSuccess: () => toast.success("모집 상태가 저장되었습니다"),
+                        onError: () => toast.error("모집 상태 저장 실패"),
+                      },
+                    )
+                  }
+                />
+                <span className="text-sm text-muted-foreground">신청 오픈</span>
+              </label>
+              <div className="grid gap-2">
+                <label className="text-xs text-muted-foreground">신청 시작</label>
+                <Input
+                  type="datetime-local"
+                  key={`start-${lecture?.enrollmentStartAt ?? "empty"}`}
+                  defaultValue={toDateTimeLocal(lecture?.enrollmentStartAt)}
+                  onBlur={(e) => updateLecture.mutate({ enrollmentStartAt: fromDateTimeLocal(e.target.value) })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs text-muted-foreground">신청 마감</label>
+                <Input
+                  type="datetime-local"
+                  key={`end-${lecture?.enrollmentEndAt ?? "empty"}`}
+                  defaultValue={toDateTimeLocal(lecture?.enrollmentEndAt)}
+                  onBlur={(e) => updateLecture.mutate({ enrollmentEndAt: fromDateTimeLocal(e.target.value) })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-xs text-muted-foreground">모집 정원</label>
+                <Input
+                  type="number"
+                  min={0}
+                  key={`capacity-${lecture?.enrollmentCapacity ?? "empty"}`}
+                  defaultValue={lecture?.enrollmentCapacity ?? ""}
+                  placeholder="무제한"
+                  onBlur={(e) => {
+                    const value = e.target.value
+                    updateLecture.mutate({ enrollmentCapacity: value === "" ? null : Number(value) })
+                  }}
+                />
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              신청 기간이 지나거나 모집 정원이 차면 수강생에게 다음 신청 시기에 다시 신청하라는 안내가 표시됩니다.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <label className="text-sm text-muted-foreground">가격(₩)</label>

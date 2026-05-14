@@ -32,12 +32,14 @@ type BankAccount = {
 }
 
 type SellerEnrollmentResponse = {
-  platformDepositAccount: { bankName: string; accountNumber: string; accountHolder: string }
   requests: Array<{
     id: string
     amount: number
     platformFeeRateBps: number
     platformFeeAmount: number
+    sellerBankName?: string | null
+    sellerAccountNumber?: string | null
+    sellerAccountHolder?: string | null
     createdAt: string
     user: { email: string; nickname?: string | null }
     lecture: { id: number; title: string }
@@ -83,6 +85,15 @@ export default function AdminDashboardPage() {
       qc.invalidateQueries({ queryKey: ["seller-bank-account"] })
     },
   })
+  const updateEnrollment = useMutation({
+    mutationFn: async (payload: { id: string; status: "APPROVED" | "REJECTED" }) => {
+      await axios.patch("/api/admin/enrollment-requests", payload)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["seller-enrollment-requests"] })
+      qc.invalidateQueries({ queryKey: ["seller-summary"] })
+    },
+  })
 
   useEffect(() => {
     if (bankAccount) setBankForm(bankAccount)
@@ -101,7 +112,6 @@ export default function AdminDashboardPage() {
     lectures: [],
   }
   const enrollmentRequests = pendingEnrollments?.requests ?? []
-  const platformDepositAccount = pendingEnrollments?.platformDepositAccount
 
   return (
     <div className="space-y-6">
@@ -123,10 +133,10 @@ export default function AdminDashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { title: "누적 결제", value: money(summary.grossRevenue), icon: CircleDollarSign, help: "승인 완료 주문 기준" },
-          { title: "정산 예상", value: money(summary.estimatedPayout), icon: BadgeCheck, help: "플랫폼 수수료 정책 기준" },
+          { title: "누적 입금 승인", value: money(summary.grossRevenue), icon: CircleDollarSign, help: "승인 완료 수강 신청 기준" },
+          { title: "정산 예상", value: money(summary.estimatedPayout), icon: BadgeCheck, help: "운영 정산 정책 기준" },
           { title: "수강생", value: `${summary.totalStudents.toLocaleString()}명`, icon: Users, help: `${summary.activeLectureCount}/${summary.lectureCount}개 공개` },
-          { title: "수강 승인 대기", value: `${summary.pendingEnrollmentCount}건`, icon: RadioTower, help: `입금할 플랫폼 수수료 ${money(summary.pendingPlatformFeeAmount)}` },
+          { title: "입금 확인 대기", value: `${summary.pendingEnrollmentCount}건`, icon: RadioTower, help: `확인할 입금 ${money(summary.pendingPlatformFeeAmount)}` },
         ].map((item) => {
           const Icon = item.icon
           return (
@@ -189,16 +199,23 @@ export default function AdminDashboardPage() {
                   <div key={request.id} className="grid gap-2 p-3 text-sm md:grid-cols-[1fr_150px] md:items-center">
                     <div className="min-w-0">
                       <div className="truncate font-bold">{request.lecture.title}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">신청자 {request.user.nickname || request.user.email}</div>
                       <div className="mt-1 text-xs text-muted-foreground">
-                        신청자 {request.user.nickname || request.user.email} · 수수료 {(request.platformFeeRateBps / 100).toFixed(2)}%
+                        입금 계좌 {request.sellerBankName || "계좌 미등록"} {request.sellerAccountNumber || ""}
+                        {request.sellerAccountHolder ? ` (${request.sellerAccountHolder})` : ""}
                       </div>
-                      {platformDepositAccount?.accountNumber ? (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          플랫폼 입금 계좌 {platformDepositAccount.bankName} {platformDepositAccount.accountNumber} {platformDepositAccount.accountHolder}
-                        </div>
-                      ) : null}
                     </div>
-                    <div className="font-semibold">{money(request.platformFeeAmount)}</div>
+                    <div className="space-y-2">
+                      <div className="font-semibold">{money(request.amount)}</div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" onClick={() => updateEnrollment.mutate({ id: request.id, status: "APPROVED" })}>
+                          입금 확인
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => updateEnrollment.mutate({ id: request.id, status: "REJECTED" })}>
+                          반려
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

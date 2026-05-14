@@ -59,6 +59,10 @@ export async function PATCH(
     metaDescription,
     ogImageUrl,
     canonicalUrl,
+    enrollmentOpen,
+    enrollmentStartAt,
+    enrollmentEndAt,
+    enrollmentCapacity,
     price,
     isActive,
     discountPrice,
@@ -89,6 +93,25 @@ export async function PATCH(
       metaDescription: typeof metaDescription === "string" ? metaDescription : undefined,
       ogImageUrl: typeof ogImageUrl === "string" ? ogImageUrl : undefined,
       canonicalUrl: typeof canonicalUrl === "string" ? canonicalUrl : undefined,
+      enrollmentOpen: typeof enrollmentOpen === "boolean" ? enrollmentOpen : undefined,
+      enrollmentStartAt:
+        typeof enrollmentStartAt === "string" && enrollmentStartAt
+          ? new Date(enrollmentStartAt)
+          : enrollmentStartAt === null
+            ? null
+            : undefined,
+      enrollmentEndAt:
+        typeof enrollmentEndAt === "string" && enrollmentEndAt
+          ? new Date(enrollmentEndAt)
+          : enrollmentEndAt === null
+            ? null
+            : undefined,
+      enrollmentCapacity:
+        typeof enrollmentCapacity === "number" && Number.isFinite(enrollmentCapacity)
+          ? Math.max(0, Math.floor(enrollmentCapacity))
+          : enrollmentCapacity === null
+            ? null
+            : undefined,
       price: typeof price === "number" && !Number.isNaN(price) ? price : undefined,
       isActive: typeof isActive === "boolean" ? isActive : undefined,
       discountPrice:

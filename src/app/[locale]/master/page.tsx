@@ -1,11 +1,14 @@
 "use client"
 
 import axios from "axios"
+import { useMemo } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Banknote, BookOpen, CircleDollarSign, RadioTower, ReceiptText, Users } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { getEnrollmentStatusLabel } from "@/lib/enrollment-window"
+import { getMockCoursesWithEnrollmentStatus } from "@/lib/mock-courses"
 
 type Overview = {
   users: number
@@ -46,6 +49,7 @@ function money(value: number) {
 
 export default function MasterDashboardPage() {
   const qc = useQueryClient()
+  const sampleCourses = useMemo(() => getMockCoursesWithEnrollmentStatus(), [])
   const { data, isError } = useQuery({
     queryKey: ["master-overview"],
     queryFn: async () => {
@@ -90,7 +94,7 @@ export default function MasterDashboardPage() {
         <Badge variant="secondary" className="mb-3">최고 관리자</Badge>
         <h1 className="text-[28px] font-bold leading-[1.43]">박살강의 컨트롤 타워</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          전체 유저, 강의, 결제, 정산, HLS 처리 상태를 운영자 관점에서 통제합니다.
+          전체 유저, 강의, 입금 승인, 정산, HLS 처리 상태를 운영자 관점에서 통제합니다.
         </p>
         {isError ? <p className="mt-2 text-sm text-destructive">관리자 권한 또는 DB 마이그레이션을 확인하세요.</p> : null}
       </div>
@@ -99,7 +103,7 @@ export default function MasterDashboardPage() {
         {[
           { title: "전체 유저", value: `${overview.users.toLocaleString()}명`, icon: Users },
           { title: "전체 강의", value: `${overview.lectures.toLocaleString()}개`, icon: BookOpen },
-          { title: "승인 결제", value: money(overview.grossRevenue), icon: CircleDollarSign },
+          { title: "승인 입금", value: money(overview.grossRevenue), icon: CircleDollarSign },
           { title: "입금 확인 대기", value: money(overview.pendingEnrollmentPlatformFeeAmount), icon: Banknote },
         ].map((item) => {
           const Icon = item.icon
@@ -134,11 +138,9 @@ export default function MasterDashboardPage() {
                       <div className="mt-1 text-xs text-muted-foreground">
                         신청자 {request.user.nickname || request.user.email} · 판매자 {request.seller?.nickname || request.seller?.email || "미지정"}
                       </div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        강의금액 {money(request.amount)} · 수수료율 {(request.platformFeeRateBps / 100).toFixed(2)}%
-                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">신청금액 {money(request.amount)} · 입금 확인 대기</div>
                     </div>
-                    <div className="font-semibold">{money(request.platformFeeAmount)}</div>
+                    <div className="font-semibold">{money(request.amount)}</div>
                     <div className="flex flex-wrap gap-2">
                       <Button size="sm" onClick={() => updateEnrollment.mutate({ id: request.id, status: "APPROVED" })}>
                         입금 확인
@@ -177,12 +179,41 @@ export default function MasterDashboardPage() {
               <Banknote className="mt-0.5 size-4 text-primary" />
               <div>
                 <div className="text-sm font-bold">수강 승인 대기 {overview.pendingEnrollmentCount}건</div>
-                <div className="text-xs text-muted-foreground">판매자의 플랫폼 수수료 입금 확인 후 수강권한을 열어주세요.</div>
+                <div className="text-xs text-muted-foreground">판매자 또는 운영자가 입금 확인 후 수강권한을 열어주세요.</div>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>관리자 전용 샘플 강의 표시</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {sampleCourses.slice(0, 4).map((course) => (
+              <div key={course.id} className="rounded-[14px] border bg-background p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline">목업</Badge>
+                  <Badge variant="secondary">
+                    {course.enrollmentStatus ? getEnrollmentStatusLabel(course.enrollmentStatus) : "모집 상태 없음"}
+                  </Badge>
+                </div>
+                <div className="mt-3 line-clamp-2 text-sm font-bold">{course.title}</div>
+                <div className="mt-2 text-xs leading-5 text-muted-foreground">
+                  공개 화면에서는 샘플 표시를 노출하지 않습니다.
+                  {typeof course.enrollmentCapacity === "number" ? (
+                    <span className="block">
+                      이번 시즌 {course.enrollmentAppliedCount}/{course.enrollmentCapacity}명 신청
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

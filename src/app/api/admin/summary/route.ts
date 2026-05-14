@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
         db
           .select({
             count: count(enrollmentRequests.id),
-            platformFeeAmount: sum(enrollmentRequests.platformFeeAmount),
+            platformFeeAmount: sum(enrollmentRequests.amount),
           })
           .from(enrollmentRequests)
           .where(

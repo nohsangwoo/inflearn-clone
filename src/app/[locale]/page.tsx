@@ -11,8 +11,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // TODO: Translate metadata based on locale
   return generateSeoMetadata({
     title: "박살강의",
-    description: "결제, HLS 수강, 더빙, 자막, SEO와 판매자 정산까지 갖춘 웹 우선 강의 교환 플랫폼입니다.",
-    keywords: "박살강의, 온라인 강의, 강의 판매, HLS 강의, 토스페이먼츠, 지식 공유, 강의 플랫폼",
+    description: "계좌입금 수강 신청, HLS 수강, 더빙, 자막, SEO와 판매자 정산까지 갖춘 웹 우선 강의 교환 플랫폼입니다.",
+    keywords: "박살강의, 온라인 강의, 강의 판매, HLS 강의, 계좌입금 수강신청, 지식 공유, 강의 플랫폼",
     path: `/${locale}`,
   });
 }

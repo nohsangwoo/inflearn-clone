@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       lecture?.metaDescription ||
       lecture?.shortDescription ||
       lecture?.description ||
-      "박살강의에서 결제 후 HLS 기반으로 수강할 수 있는 강의입니다.",
+      "박살강의에서 계좌입금 승인 후 HLS 기반으로 수강할 수 있는 강의입니다.",
     keywords: lecture?.seoKeywords?.join(", "),
     ogImage: lecture?.ogImageUrl || lecture?.imageUrl || undefined,
     path: `/${locale}/course/${id}`,
