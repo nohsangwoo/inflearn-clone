@@ -3,17 +3,19 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { BookOpen, Compass, GraduationCap } from "lucide-react"
-import { getLocaleFromPath, withLocalePath } from "@/lib/brand"
+import { getLocaleFromPath, withLocalePath, withLoginRedirectPath } from "@/lib/brand"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/", icon: Compass, label: "탐색", value: "home" },
-  { href: "/me", icon: BookOpen, label: "내 학습", value: "me" },
-  { href: "/admin", icon: GraduationCap, label: "판매자", value: "admin" },
+  { href: "/", icon: Compass, label: "탐색", value: "home", requiresAuth: false },
+  { href: "/me", icon: BookOpen, label: "내 학습", value: "me", requiresAuth: true },
+  { href: "/admin", icon: GraduationCap, label: "판매자", value: "admin", requiresAuth: true },
 ]
 
 export function BottomNavigation() {
   const pathname = usePathname()
+  const user = useAuthStore((state) => state.user)
   const locale = getLocaleFromPath(pathname)
   const cleanPath = pathname.replace(`/${locale}`, "") || "/"
 
@@ -28,10 +30,13 @@ export function BottomNavigation() {
         {navItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
+          const href = item.requiresAuth && !user
+            ? withLoginRedirectPath(pathname, item.href)
+            : withLocalePath(pathname, item.href)
           return (
             <Link
               key={item.value}
-              href={withLocalePath(pathname, item.href)}
+              href={href}
               prefetch={false}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",

@@ -9,7 +9,7 @@ import { BookOpen, Heart, Search, Star, Users } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { brand, withLocalePath } from "@/lib/brand"
+import { brand, withLocalePath, withLoginRedirectPath } from "@/lib/brand"
 import { getCoursePreviewImage } from "@/lib/course-images"
 import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
 import { useAuthStore } from "@/lib/stores/auth-store"
@@ -257,7 +257,7 @@ export default function HomePageWrapper() {
             </p>
           </div>
           <Button asChild variant="ghost" className="hidden rounded-full px-4 md:inline-flex">
-            <Link href={withLocalePath(pathname, "/admin")}>
+            <Link href={user ? withLocalePath(pathname, "/admin") : withLoginRedirectPath(pathname, "/admin")}>
               강의 올리기
               <BookOpen className="size-4" />
             </Link>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Apple } from "lucide-react"
@@ -20,6 +20,17 @@ type NativeBridgeWindow = Window & {
     idToken: string
     accessToken?: string
   }) => Promise<void>
+}
+
+function getSafeNextPath(locale: string) {
+  if (typeof window === "undefined") return `/${locale}`
+
+  const next = new URLSearchParams(window.location.search).get("next")
+  if (next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\")) {
+    return next
+  }
+
+  return `/${locale}`
 }
 
 export default function LoginPage() {
@@ -45,6 +56,9 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login")
   const [confirmPassword, setConfirmPassword] = useState("")
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  const redirectAfterLogin = useCallback(() => {
+    router.replace(getSafeNextPath(locale))
+  }, [locale, router])
 
   useEffect(() => {
     initialize()
@@ -59,7 +73,7 @@ export default function LoginPage() {
       try {
         if (payload.idToken) {
           await loginWithNativeToken("google", payload.idToken, payload.accessToken)
-          router.replace('/')
+          redirectAfterLogin()
         }
       } catch (error) {
         console.error('handleGoogleSignInToken failed', error)
@@ -70,7 +84,7 @@ export default function LoginPage() {
       try {
         if (payload.idToken) {
           await loginWithNativeToken("apple", payload.idToken)
-          router.replace('/')
+          redirectAfterLogin()
         }
       } catch (error) {
         console.error('handleAppleSignInToken failed', error)
@@ -81,19 +95,19 @@ export default function LoginPage() {
       try {
         if (payload?.idToken) {
           await loginWithNativeToken(payload.provider, payload.idToken, payload.accessToken)
-          router.replace('/')
+          redirectAfterLogin()
         }
       } catch (error) {
         console.error('receiveFirebaseIdToken failed', error)
       }
     }
-  }, [loginWithNativeToken, router])
+  }, [loginWithNativeToken, redirectAfterLogin])
 
   useEffect(() => {
     if (user) {
-      router.replace("/")
+      redirectAfterLogin()
     }
-  }, [user, router])
+  }, [redirectAfterLogin, user])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

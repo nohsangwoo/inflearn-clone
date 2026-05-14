@@ -47,6 +47,22 @@ export function withLocalePath(pathname: string, target: string) {
   return `/${locale}${cleanPath}`
 }
 
+export function withLoginRedirectPath(pathname: string, target: string) {
+  const destination = withLocalePath(pathname, target)
+  return `${withLocalePath(pathname, "/login")}?next=${encodeURIComponent(destination)}`
+}
+
+export function localizedLoginRedirectPath(locale: string, target: string) {
+  const safeLocale = supportedLocales.includes(locale) ? locale : "ko"
+  const cleanTarget = target.startsWith("/") ? target : `/${target}`
+  const destination =
+    cleanTarget === `/${safeLocale}` || cleanTarget.startsWith(`/${safeLocale}/`)
+      ? cleanTarget
+      : `/${safeLocale}${cleanTarget}`
+
+  return `/${safeLocale}/login?next=${encodeURIComponent(destination)}`
+}
+
 export function toCdnUrl(value?: string | null) {
   if (!value) return null
   if (/^(https?:)?\/\//.test(value) || value.startsWith("/")) return value

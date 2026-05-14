@@ -1,9 +1,23 @@
-'use client'
-
+import { redirect } from "next/navigation"
 import { MeSidebar } from "./_components/sidebar"
 import { MeMobileSidebar } from "./_components/mobile-sidebar"
+import { localizedLoginRedirectPath } from "@/lib/brand"
+import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
-export default function MeLayout({ children }: { children: React.ReactNode }) {
+export default async function MeLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
+  const user = await getAuthUserFromRequest()
+
+  if (!user) {
+    redirect(localizedLoginRedirectPath(locale, "/me"))
+  }
+
   return (
     <div className="min-h-screen">
       <div className="md:hidden sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

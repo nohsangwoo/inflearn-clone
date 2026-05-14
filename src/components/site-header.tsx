@@ -14,21 +14,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LanguageSwitcher } from "@/components/language-switcher"
-import { brand, withLocalePath } from "@/lib/brand"
+import { brand, withLocalePath, withLoginRedirectPath } from "@/lib/brand"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 const navItems = [
-  { href: "/", label: "강의", icon: PlayCircle, isNew: false },
-  { href: "/admin", label: "스튜디오", icon: Video, isNew: true },
-  { href: "/me", label: "학습", icon: Sparkles, isNew: true },
+  { href: "/", label: "강의", icon: PlayCircle, isNew: false, requiresAuth: false },
+  { href: "/admin", label: "스튜디오", icon: Video, isNew: true, requiresAuth: true },
+  { href: "/me", label: "학습", icon: Sparkles, isNew: true, requiresAuth: true },
 ]
 
 export function SiteHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout, isLoading } = useAuthStore()
+  const protectedHref = (target: string) =>
+    user ? withLocalePath(pathname, target) : withLoginRedirectPath(pathname, target)
 
   const handleLogout = async () => {
     try {
@@ -63,11 +65,12 @@ export function SiteHeader() {
           <nav className="hidden items-center gap-8 md:flex">
             {navItems.map((item) => {
               const Icon = item.icon
-              const href = withLocalePath(pathname, item.href)
+              const localizedHref = withLocalePath(pathname, item.href)
+              const href = item.requiresAuth ? protectedHref(item.href) : localizedHref
               const active =
                 item.href === "/"
-                  ? pathname === href || pathname === "/ko"
-                  : pathname.startsWith(href)
+                  ? pathname === localizedHref || pathname === "/ko"
+                  : pathname.startsWith(localizedHref)
               return (
                 <Link
                   key={item.href}
@@ -95,7 +98,7 @@ export function SiteHeader() {
 
           <div className="flex items-center justify-end gap-2">
             <Button asChild variant="ghost" size="sm" className="hidden rounded-full px-4 font-semibold lg:inline-flex">
-              <Link href={withLocalePath(pathname, "/admin")} prefetch={false}>
+              <Link href={protectedHref("/admin")} prefetch={false}>
                 강의 판매하기
               </Link>
             </Button>
@@ -134,25 +137,25 @@ export function SiteHeader() {
                   </>
                 ) : null}
                 <DropdownMenuItem asChild>
-                  <Link href={withLocalePath(pathname, "/me")} prefetch={false}>
+                  <Link href={protectedHref("/me")} prefetch={false}>
                     <BarChart3 className="size-4" />
                     내 대시보드
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={withLocalePath(pathname, "/me/profile")} prefetch={false}>
+                  <Link href={protectedHref("/me/profile")} prefetch={false}>
                     <User className="size-4" />
                     프로필
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={withLocalePath(pathname, "/admin")} prefetch={false}>
+                  <Link href={protectedHref("/admin")} prefetch={false}>
                     <GraduationCap className="size-4" />
                     판매자 스튜디오
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={withLocalePath(pathname, "/master")} prefetch={false}>
+                  <Link href={protectedHref("/master")} prefetch={false}>
                     <ShieldCheck className="size-4" />
                     최고 관리자
                   </Link>
