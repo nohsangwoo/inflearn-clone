@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { countDistinct, desc, eq } from "drizzle-orm"
 import { db, lectures, purchases, reviews } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
+import { validateCoursePrice } from "@/lib/course-pricing"
 import { slugifyCourseTitle } from "@/lib/course-utils"
 
 // GET: 강의 목록 조회
@@ -47,6 +48,8 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const title: string = body?.title ?? "새 강의"
   const price: number = Number(body?.price ?? 0)
+  const priceError = validateCoursePrice(price)
+  if (priceError) return NextResponse.json({ message: priceError }, { status: 400 })
   const slugBase = slugifyCourseTitle(title)
   const [created] = await db
     .insert(lectures)

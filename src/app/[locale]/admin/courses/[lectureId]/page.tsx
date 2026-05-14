@@ -12,6 +12,7 @@ import { uploadImageWebp } from "@/lib/upload/uploadImageWebp"
 import { uploadBinary } from "@/lib/upload/uploadBinary"
 import { toCdnUrl } from "@/lib/brand"
 import { getCoursePreviewImage } from "@/lib/course-images"
+import { formatWon, getDiscountPriceRangeText, getMinimumDiscountPrice } from "@/lib/course-pricing"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useDropzone } from "react-dropzone"
@@ -67,6 +68,19 @@ function toDateTimeLocal(value?: string | Date | null) {
 
 function fromDateTimeLocal(value: string) {
   return value ? new Date(value).toISOString() : null
+}
+
+function parseWonInput(value: string, emptyValue: number | null) {
+  const trimmed = value.trim()
+  if (trimmed === "") return emptyValue
+  if (!/^\d+$/.test(trimmed)) return undefined
+  const amount = Number(trimmed)
+  return Number.isSafeInteger(amount) ? amount : undefined
+}
+
+function mutationErrorMessage(err: unknown, fallback: string) {
+  const anyErr = err as { response?: { data?: { message?: string } }; message?: string }
+  return anyErr?.response?.data?.message || anyErr?.message || fallback
 }
 
 export default function EditCoursePage() {
@@ -266,6 +280,10 @@ export default function EditCoursePage() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["curriculums", lectureIdNum] }),
   })
+
+  const currentPrice = lecture?.price ?? 0
+  const minimumDiscountPrice = getMinimumDiscountPrice(currentPrice)
+  const discountRangeText = getDiscountPriceRangeText(currentPrice)
 
   return (
     <div className="space-y-6">
@@ -523,35 +541,68 @@ export default function EditCoursePage() {
               <label className="text-sm text-muted-foreground">가격(₩)</label>
               <Input
                 type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
                 defaultValue={lecture?.price ?? 0}
-                onBlur={(e) =>
+                onBlur={(e) => {
+                  const parsed = parseWonInput(e.target.value, 0)
+                  if (typeof parsed !== "number") {
+                    e.target.value = String(lecture?.price ?? 0)
+                    toast.error("가격은 0원 이상의 정수로 입력해주세요")
+                    return
+                  }
                   updateLecture.mutate(
-                    { price: Number(e.target.value || 0) },
+                    { price: parsed },
                     {
                       onSuccess: () => toast.success("가격이 저장되었습니다"),
-                      onError: () => toast.error("가격 저장 실패"),
+                      onError: (err) => {
+                        e.target.value = String(lecture?.price ?? 0)
+                        toast.error(mutationErrorMessage(err, "가격 저장 실패"))
+                      },
                     },
                   )
-                }
+                }}
               />
+              <p className="text-xs leading-5 text-muted-foreground">
+                가격은 0원 이상의 정수만 입력할 수 있습니다.
+              </p>
             </div>
             <div className="grid gap-2">
               <label className="text-sm text-muted-foreground">할인 가격(₩)</label>
               <Input
                 type="number"
+                min={minimumDiscountPrice}
+                max={currentPrice}
+                step={1}
+                inputMode="numeric"
                 defaultValue={lecture?.discountPrice ?? ''}
-                placeholder="미설정 시 비워두세요"
+                placeholder={currentPrice ? `${minimumDiscountPrice} ~ ${currentPrice}` : "미설정 시 비워두세요"}
                 onBlur={(e) => {
-                  const v = e.target.value
+                  const parsed = parseWonInput(e.target.value, null)
+                  if (parsed === undefined) {
+                    e.target.value = lecture?.discountPrice == null ? "" : String(lecture.discountPrice)
+                    toast.error("할인 가격은 0원 이상의 정수로 입력해주세요")
+                    return
+                  }
                   updateLecture.mutate(
-                    { discountPrice: v === '' ? null : Number(v) },
+                    { discountPrice: parsed },
                     {
                       onSuccess: () => toast.success("할인 가격이 저장되었습니다"),
-                      onError: () => toast.error("할인 가격 저장 실패"),
+                      onError: (err) => {
+                        e.target.value = lecture?.discountPrice == null ? "" : String(lecture.discountPrice)
+                        toast.error(mutationErrorMessage(err, "할인 가격 저장 실패"))
+                      },
                     },
                   )
                 }}
               />
+              <p className="text-xs leading-5 text-muted-foreground">
+                할인은 최대 30%까지 가능합니다.{" "}
+                {currentPrice
+                  ? `현재 정가 ${formatWon(currentPrice)} 기준 할인 가격은 ${discountRangeText} 범위입니다.`
+                  : `예를 들어 정가가 ${formatWon(50000)}이면 할인 가격은 ${formatWon(35000)} ~ ${formatWon(50000)} 범위입니다.`}
+              </p>
             </div>
           </div>
           <div className="grid gap-2">

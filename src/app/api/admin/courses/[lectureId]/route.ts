@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { and, eq } from "drizzle-orm"
 import { db, lectures } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
+import { validateCourseDiscountPrice, validateCoursePrice } from "@/lib/course-pricing"
 import { parseListInput, slugifyCourseTitle } from "@/lib/course-utils"
 
 // GET: 강의 상세 조회
@@ -38,7 +39,7 @@ export async function PATCH(
   }
   const owned = await db.query.lectures.findFirst({
     where: and(eq(lectures.id, id), eq(lectures.instructorId, user.id)),
-    columns: { id: true },
+    columns: { id: true, price: true, discountPrice: true },
   })
   if (!owned) return NextResponse.json({ message: "forbidden" }, { status: 403 })
   const body = await req.json().catch(() => ({}))
@@ -71,6 +72,20 @@ export async function PATCH(
   const parsedTags = parseListInput(tags)
   const parsedSeoKeywords = parseListInput(seoKeywords)
   const parsedOutcomes = parseListInput(learningOutcomes)
+  const nextPrice = typeof price === "number" ? price : owned.price
+  const nextDiscountPrice =
+    discountPrice === null
+      ? null
+      : typeof discountPrice === "number"
+        ? discountPrice
+        : owned.discountPrice
+  const priceError = typeof price === "number" ? validateCoursePrice(price) : null
+  if (priceError) return NextResponse.json({ message: priceError }, { status: 400 })
+  const discountPriceError =
+    typeof discountPrice === "number" || discountPrice === null || typeof price === "number"
+      ? validateCourseDiscountPrice(nextDiscountPrice, nextPrice)
+      : null
+  if (discountPriceError) return NextResponse.json({ message: discountPriceError }, { status: 400 })
   const updateValues = {
       title: typeof title === "string" ? title : undefined,
       slug:
@@ -112,10 +127,10 @@ export async function PATCH(
           : enrollmentCapacity === null
             ? null
             : undefined,
-      price: typeof price === "number" && !Number.isNaN(price) ? price : undefined,
+      price: typeof price === "number" ? price : undefined,
       isActive: typeof isActive === "boolean" ? isActive : undefined,
       discountPrice:
-        typeof discountPrice === "number" && !Number.isNaN(discountPrice)
+        typeof discountPrice === "number"
           ? discountPrice
           : discountPrice === null
             ? null
