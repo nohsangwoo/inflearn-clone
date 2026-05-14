@@ -1,12 +1,20 @@
 "use client"
 
 import axios from "axios"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Banknote, BookOpen, CircleDollarSign, RadioTower, ReceiptText, Users } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { getEnrollmentStatusLabel } from "@/lib/enrollment-window"
 import { getMockCoursesWithEnrollmentStatus } from "@/lib/mock-courses"
 
@@ -43,13 +51,30 @@ type EnrollmentRequest = {
   lecture: { id: number; title: string }
 }
 
+type EnrollmentStatus = EnrollmentRequest["status"]
+type EnrollmentAction = Extract<EnrollmentStatus, "AWAITING_PLATFORM_FEE" | "APPROVED" | "CANCELED">
+
 function money(value: number) {
   return `₩${value.toLocaleString()}`
+}
+
+function requestStatusMeta(status: EnrollmentStatus) {
+  if (status === "APPROVED") return { label: "입금 확인 완료", variant: "secondary" as const }
+  if (status === "REJECTED") return { label: "반려", variant: "destructive" as const }
+  if (status === "CANCELED") return { label: "취소", variant: "outline" as const }
+  return { label: "입금 확인 대기", variant: "outline" as const }
 }
 
 export default function MasterDashboardPage() {
   const qc = useQueryClient()
   const sampleCourses = useMemo(() => getMockCoursesWithEnrollmentStatus(), [])
+  const [confirmAction, setConfirmAction] = useState<{
+    request: EnrollmentRequest
+    status: EnrollmentAction
+    title: string
+    description: string
+    confirmLabel: string
+  } | null>(null)
   const { data, isError } = useQuery({
     queryKey: ["master-overview"],
     queryFn: async () => {
@@ -60,15 +85,16 @@ export default function MasterDashboardPage() {
   const { data: enrollmentData } = useQuery({
     queryKey: ["master-enrollment-requests"],
     queryFn: async () => {
-      const { data } = await axios.get("/api/master/enrollment-requests?status=AWAITING_PLATFORM_FEE&limit=200")
+      const { data } = await axios.get("/api/master/enrollment-requests?limit=200")
       return data as { requests: EnrollmentRequest[] }
     },
   })
   const updateEnrollment = useMutation({
-    mutationFn: async (payload: { id: string; status: "APPROVED" | "REJECTED" }) => {
+    mutationFn: async (payload: { id: string; status: EnrollmentAction }) => {
       await axios.patch("/api/master/enrollment-requests", payload)
     },
     onSuccess: () => {
+      setConfirmAction(null)
       qc.invalidateQueries({ queryKey: ["master-enrollment-requests"] })
       qc.invalidateQueries({ queryKey: ["master-overview"] })
     },
@@ -86,7 +112,38 @@ export default function MasterDashboardPage() {
     pendingEnrollmentPlatformFeeAmount: 0,
     recentOrders: [],
   }
-  const pendingEnrollmentRequests = enrollmentData?.requests ?? []
+  const enrollmentRequests = enrollmentData?.requests ?? []
+
+  const openConfirmDialog = (request: EnrollmentRequest, status: EnrollmentAction) => {
+    const student = request.user.nickname || request.user.email
+    if (status === "APPROVED") {
+      setConfirmAction({
+        request,
+        status,
+        title: "입금을 확인할까요?",
+        description: `${student}님의 "${request.lecture.title}" 신청을 입금 확인 처리하고 즉시 수강권한을 부여합니다.`,
+        confirmLabel: "입금 확인",
+      })
+      return
+    }
+    if (status === "AWAITING_PLATFORM_FEE") {
+      setConfirmAction({
+        request,
+        status,
+        title: "입금확인을 취소할까요?",
+        description: `${student}님의 수강권한을 회수하고 신청 상태를 다시 입금 확인 대기로 돌립니다.`,
+        confirmLabel: "입금확인 취소",
+      })
+      return
+    }
+    setConfirmAction({
+      request,
+      status,
+      title: "수강 신청을 취소할까요?",
+      description: `${student}님의 신청을 취소 처리하고 이미 열린 수강권한이 있다면 회수합니다.`,
+      confirmLabel: "신청 취소",
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -124,37 +181,99 @@ export default function MasterDashboardPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <Card>
           <CardHeader>
-            <CardTitle>수강 승인 대기</CardTitle>
+            <CardTitle>수강 신청 관리</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              최근 신청 200건을 기준으로 입금확인, 입금확인 취소, 신청 취소를 언제든 처리합니다.
+            </p>
           </CardHeader>
           <CardContent>
             <div className="divide-y rounded-[14px] border">
-              {pendingEnrollmentRequests.length === 0 ? (
+              {enrollmentRequests.length === 0 ? (
                 <div className="p-5 text-sm text-muted-foreground">확인할 수강 신청이 없습니다.</div>
               ) : (
-                pendingEnrollmentRequests.map((request) => (
-                  <div key={request.id} className="grid gap-3 p-4 md:grid-cols-[1fr_130px_180px] md:items-center">
-                    <div className="min-w-0">
-                      <div className="truncate font-bold">{request.lecture.title}</div>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        신청자 {request.user.nickname || request.user.email} · 판매자 {request.seller?.nickname || request.seller?.email || "미지정"}
+                enrollmentRequests.map((request) => {
+                  const status = requestStatusMeta(request.status)
+                  return (
+                    <div key={request.id} className="grid gap-3 p-4 md:grid-cols-[1fr_130px_220px] md:items-center">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="truncate font-bold">{request.lecture.title}</div>
+                          <Badge variant={status.variant}>{status.label}</Badge>
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          신청자 {request.user.nickname || request.user.email} · 판매자 {request.seller?.nickname || request.seller?.email || "미지정"}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">신청금액 {money(request.amount)} · 강의 ID {request.lecture.id}</div>
                       </div>
-                      <div className="mt-1 text-xs text-muted-foreground">신청금액 {money(request.amount)} · 입금 확인 대기</div>
+                      <div className="font-semibold">{money(request.amount)}</div>
+                      <div className="flex flex-wrap justify-start gap-2 md:justify-end">
+                        {request.status === "APPROVED" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={updateEnrollment.isPending}
+                            onClick={() => openConfirmDialog(request, "AWAITING_PLATFORM_FEE")}
+                          >
+                            입금확인 취소
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            disabled={updateEnrollment.isPending}
+                            onClick={() => openConfirmDialog(request, "APPROVED")}
+                          >
+                            입금 확인
+                          </Button>
+                        )}
+                        {request.status !== "CANCELED" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={updateEnrollment.isPending}
+                            onClick={() => openConfirmDialog(request, "CANCELED")}
+                          >
+                            신청 취소
+                          </Button>
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="font-semibold">{money(request.amount)}</div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" onClick={() => updateEnrollment.mutate({ id: request.id, status: "APPROVED" })}>
-                        입금 확인
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => updateEnrollment.mutate({ id: request.id, status: "REJECTED" })}>
-                        반려
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={confirmAction !== null} onOpenChange={(open) => !open && setConfirmAction(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{confirmAction?.title}</DialogTitle>
+              <DialogDescription>{confirmAction?.description}</DialogDescription>
+            </DialogHeader>
+            {confirmAction ? (
+              <div className="rounded-[14px] border bg-muted/30 p-4 text-sm">
+                <div className="font-semibold">{confirmAction.request.lecture.title}</div>
+                <div className="mt-1 text-muted-foreground">
+                  {confirmAction.request.user.nickname || confirmAction.request.user.email} · {money(confirmAction.request.amount)}
+                </div>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmAction(null)} disabled={updateEnrollment.isPending}>
+                취소
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!confirmAction) return
+                  updateEnrollment.mutate({ id: confirmAction.request.id, status: confirmAction.status })
+                }}
+                disabled={updateEnrollment.isPending}
+              >
+                {confirmAction?.confirmLabel ?? "확인"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Card>
           <CardHeader>

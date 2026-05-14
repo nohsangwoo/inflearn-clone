@@ -3,8 +3,8 @@ import { and, desc, eq, sql } from "drizzle-orm"
 import { db, enrollmentRequests, purchases, type EnrollmentStatus } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
-const mutableStatuses = ["APPROVED", "REJECTED", "CANCELED"] as const satisfies readonly EnrollmentStatus[]
-const readableStatuses = ["AWAITING_PLATFORM_FEE", ...mutableStatuses] as const satisfies readonly EnrollmentStatus[]
+const mutableStatuses = ["AWAITING_PLATFORM_FEE", "APPROVED", "REJECTED", "CANCELED"] as const satisfies readonly EnrollmentStatus[]
+const readableStatuses = mutableStatuses
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUserFromRequest(req)
@@ -76,6 +76,10 @@ export async function PATCH(req: NextRequest) {
         .insert(purchases)
         .values({ userId: request.userId, lectureId: request.lectureId, updatedAt: now })
         .onConflictDoNothing({ target: [purchases.userId, purchases.lectureId] })
+    } else {
+      await tx
+        .delete(purchases)
+        .where(and(eq(purchases.userId, request.userId), eq(purchases.lectureId, request.lectureId)))
     }
 
     return row
