@@ -1,5 +1,5 @@
-import { and, count, eq, isNull, ne, sum } from "drizzle-orm"
-import { db, enrollmentRequests, lectures as lectureTable, paymentOrders, payouts, users as userTable, videos } from "@/db"
+import { and, count, eq, isNull, ne, sql, sum } from "drizzle-orm"
+import { db, enrollmentRequests, lectures as lectureTable, paymentOrders, users as userTable, videos } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -17,9 +17,11 @@ export async function GET(req: NextRequest) {
       .where(eq(paymentOrders.status, "SUCCESS"))
       .then((rows) => rows[0]),
     db
-      .select({ amount: sum(payouts.payoutAmount), total: count(payouts.id) })
-      .from(payouts)
-      .where(eq(payouts.status, "PENDING"))
+      .select({
+        amount: sql<number>`coalesce(sum(${enrollmentRequests.sellerReceivableAmount}) filter (where ${enrollmentRequests.status} = 'APPROVED'), 0)`,
+        total: sql<number>`count(distinct ${enrollmentRequests.sellerId}) filter (where ${enrollmentRequests.status} = 'APPROVED' and ${enrollmentRequests.sellerReceivableAmount} > 0)`,
+      })
+      .from(enrollmentRequests)
       .then((rows) => rows[0]),
     db.select({ value: count() }).from(videos).where(ne(videos.hlsStatus, "READY")).then((rows) => rows[0]),
     db

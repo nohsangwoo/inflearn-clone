@@ -9,6 +9,7 @@ import {
   Heart,
   User,
   Library,
+  ClipboardList,
   Menu,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { href: "/me", label: "대시보드", icon: LayoutDashboard },
   { href: "/me/profile", label: "프로필", icon: User },
   { href: "/me/courses", label: "내 강의", icon: Library },
+  { href: "/me/enrollments", label: "수강 신청", icon: ClipboardList },
   { href: "/me/notifications", label: "알림", icon: Bell },
   { href: "/me/likes", label: "좋아요", icon: Heart },
 ]

@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import axios from "axios"
 import { useQuery } from "@tanstack/react-query"
-import { Bell, BookOpen, Heart, PlayCircle, TrendingUp } from "lucide-react"
+import { Bell, BookOpen, ClipboardList, Heart, PlayCircle, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,6 +28,21 @@ type Summary = {
   }>
 }
 
+type EnrollmentRequest = {
+  id: string
+  status: "AWAITING_PLATFORM_FEE" | "APPROVED" | "REJECTED" | "CANCELED"
+  amount: number
+  createdAt: string
+  lecture?: { id: number; title: string } | null
+}
+
+const enrollmentStatusLabel: Record<EnrollmentRequest["status"], string> = {
+  AWAITING_PLATFORM_FEE: "입금 확인 대기",
+  APPROVED: "수강 승인 완료",
+  REJECTED: "반려",
+  CANCELED: "취소",
+}
+
 export default function MeDashboardPage() {
   const pathname = usePathname()
   const { data } = useQuery({
@@ -37,8 +52,16 @@ export default function MeDashboardPage() {
       return data as Summary
     },
   })
+  const { data: enrollmentData } = useQuery({
+    queryKey: ["me-enrollment-requests"],
+    queryFn: async () => {
+      const { data } = await axios.get("/api/me/enrollment-requests")
+      return data as { requests: EnrollmentRequest[] }
+    },
+  })
 
   const summary = data ?? { courseCount: 0, averageProgress: 0, likes: 0, unreadNotifications: 0, purchases: [] }
+  const enrollmentRequests = enrollmentData?.requests ?? []
 
   return (
     <div className="space-y-6">
@@ -51,6 +74,7 @@ export default function MeDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { title: "보유 강의", value: `${summary.courseCount}개`, icon: BookOpen },
+          { title: "수강 신청", value: `${enrollmentRequests.length}건`, icon: ClipboardList },
           { title: "평균 진도", value: `${summary.averageProgress}%`, icon: TrendingUp },
           { title: "좋아요", value: `${summary.likes}개`, icon: Heart },
           { title: "읽지 않은 알림", value: `${summary.unreadNotifications}개`, icon: Bell },
@@ -109,6 +133,43 @@ export default function MeDashboardPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle>최근 수강 신청</CardTitle>
+          <Button asChild variant="outline" size="sm">
+            <Link href={withLocalePath(pathname, "/me/enrollments")}>전체 보기</Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {enrollmentRequests.length === 0 ? (
+            <div className="rounded-[14px] border bg-background p-8 text-center text-sm text-muted-foreground">
+              수강 신청 내역이 없습니다.
+            </div>
+          ) : (
+            <div className="divide-y rounded-[14px] border">
+              {enrollmentRequests.slice(0, 4).map((request) => (
+                <div key={request.id} className="grid gap-2 p-4 md:grid-cols-[1fr_140px_120px] md:items-center">
+                  <div className="min-w-0">
+                    <div className="truncate font-bold">{request.lecture?.title ?? "삭제된 강의"}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{new Date(request.createdAt).toLocaleString("ko-KR")}</div>
+                  </div>
+                  <Badge variant={request.status === "APPROVED" ? "secondary" : "outline"}>
+                    {enrollmentStatusLabel[request.status]}
+                  </Badge>
+                  {request.status === "APPROVED" && request.lecture ? (
+                    <Button asChild size="sm">
+                      <Link href={withLocalePath(pathname, `/course/${request.lecture.id}`)}>수강하기</Link>
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled>대기중</Button>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

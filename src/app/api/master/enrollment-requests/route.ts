@@ -4,15 +4,24 @@ import { db, enrollmentRequests, purchases, type EnrollmentStatus } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
 const mutableStatuses = ["APPROVED", "REJECTED", "CANCELED"] as const satisfies readonly EnrollmentStatus[]
+const readableStatuses = ["AWAITING_PLATFORM_FEE", ...mutableStatuses] as const satisfies readonly EnrollmentStatus[]
 
 export async function GET(req: NextRequest) {
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   if (user.role !== "ADMIN") return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
+  const { searchParams } = new URL(req.url)
+  const requestedStatus = searchParams.get("status")
+  const status = requestedStatus && (readableStatuses as readonly string[]).includes(requestedStatus)
+    ? (requestedStatus as EnrollmentStatus)
+    : null
+  const limit = Math.min(200, Math.max(1, Number(searchParams.get("limit") ?? 100) || 100))
+
   const requests = await db.query.enrollmentRequests.findMany({
+    where: status ? eq(enrollmentRequests.status, status) : undefined,
     orderBy: [desc(enrollmentRequests.createdAt)],
-    limit: 50,
+    limit,
     with: {
       user: { columns: { email: true, nickname: true } },
       seller: { columns: { email: true, nickname: true } },

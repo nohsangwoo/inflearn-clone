@@ -60,7 +60,7 @@ export default function MasterDashboardPage() {
   const { data: enrollmentData } = useQuery({
     queryKey: ["master-enrollment-requests"],
     queryFn: async () => {
-      const { data } = await axios.get("/api/master/enrollment-requests")
+      const { data } = await axios.get("/api/master/enrollment-requests?status=AWAITING_PLATFORM_FEE&limit=200")
       return data as { requests: EnrollmentRequest[] }
     },
   })
@@ -86,7 +86,7 @@ export default function MasterDashboardPage() {
     pendingEnrollmentPlatformFeeAmount: 0,
     recentOrders: [],
   }
-  const pendingEnrollmentRequests = (enrollmentData?.requests ?? []).filter((request) => request.status === "AWAITING_PLATFORM_FEE")
+  const pendingEnrollmentRequests = enrollmentData?.requests ?? []
 
   return (
     <div className="space-y-6">
@@ -172,7 +172,7 @@ export default function MasterDashboardPage() {
               <ReceiptText className="mt-0.5 size-4 text-primary" />
               <div>
                 <div className="text-sm font-bold">정산 대기 {overview.pendingPayoutCount}건</div>
-                <div className="text-xs text-muted-foreground">수동 지급 후 PAID 상태로 변경하세요.</div>
+                <div className="text-xs text-muted-foreground">승인된 수강신청 기준 판매자별 정산 현황을 확인하세요.</div>
               </div>
             </div>
             <div className="flex gap-3 rounded-[14px] border bg-background p-3">

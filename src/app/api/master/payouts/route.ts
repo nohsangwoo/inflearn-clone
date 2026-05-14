@@ -1,5 +1,5 @@
-import { desc, eq } from "drizzle-orm"
-import { db, payouts, users, type PayoutStatus } from "@/db"
+import { desc, eq, isNotNull, sql } from "drizzle-orm"
+import { db, enrollmentRequests, payouts, users, type PayoutStatus } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -10,28 +10,47 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   if (user.role !== "ADMIN") return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
-  const rows = await db
-    .select({
-      id: payouts.id,
-      sellerId: payouts.sellerId,
-      status: payouts.status,
-      grossAmount: payouts.grossAmount,
-      platformFee: payouts.platformFee,
-      payoutAmount: payouts.payoutAmount,
-      periodStart: payouts.periodStart,
-      periodEnd: payouts.periodEnd,
-      memo: payouts.memo,
-      paidAt: payouts.paidAt,
-      createdAt: payouts.createdAt,
-      updatedAt: payouts.updatedAt,
-      seller: { id: users.id, email: users.email, nickname: users.nickname },
-    })
-    .from(payouts)
-    .innerJoin(users, eq(payouts.sellerId, users.id))
-    .orderBy(desc(payouts.createdAt))
-    .limit(100)
+  const [rows, sellerSummaries] = await Promise.all([
+    db
+      .select({
+        id: payouts.id,
+        sellerId: payouts.sellerId,
+        status: payouts.status,
+        grossAmount: payouts.grossAmount,
+        platformFee: payouts.platformFee,
+        payoutAmount: payouts.payoutAmount,
+        periodStart: payouts.periodStart,
+        periodEnd: payouts.periodEnd,
+        memo: payouts.memo,
+        paidAt: payouts.paidAt,
+        createdAt: payouts.createdAt,
+        updatedAt: payouts.updatedAt,
+        seller: { id: users.id, email: users.email, nickname: users.nickname },
+      })
+      .from(payouts)
+      .innerJoin(users, eq(payouts.sellerId, users.id))
+      .orderBy(desc(payouts.createdAt))
+      .limit(100),
+    db
+      .select({
+        sellerId: enrollmentRequests.sellerId,
+        seller: { id: users.id, email: users.email, nickname: users.nickname },
+        approvedCount: sql<number>`count(${enrollmentRequests.id}) filter (where ${enrollmentRequests.status} = 'APPROVED')`,
+        awaitingCount: sql<number>`count(${enrollmentRequests.id}) filter (where ${enrollmentRequests.status} = 'AWAITING_PLATFORM_FEE')`,
+        grossApprovedAmount: sql<number>`coalesce(sum(${enrollmentRequests.amount}) filter (where ${enrollmentRequests.status} = 'APPROVED'), 0)`,
+        platformFeeAmount: sql<number>`coalesce(sum(${enrollmentRequests.platformFeeAmount}) filter (where ${enrollmentRequests.status} = 'APPROVED'), 0)`,
+        sellerReceivableAmount: sql<number>`coalesce(sum(${enrollmentRequests.sellerReceivableAmount}) filter (where ${enrollmentRequests.status} = 'APPROVED'), 0)`,
+        pendingGrossAmount: sql<number>`coalesce(sum(${enrollmentRequests.amount}) filter (where ${enrollmentRequests.status} = 'AWAITING_PLATFORM_FEE'), 0)`,
+      })
+      .from(enrollmentRequests)
+      .innerJoin(users, eq(enrollmentRequests.sellerId, users.id))
+      .where(isNotNull(enrollmentRequests.sellerId))
+      .groupBy(enrollmentRequests.sellerId, users.id, users.email, users.nickname)
+      .orderBy(sql`coalesce(sum(${enrollmentRequests.sellerReceivableAmount}) filter (where ${enrollmentRequests.status} = 'APPROVED'), 0) desc`)
+      .limit(100),
+  ])
 
-  return NextResponse.json(rows)
+  return NextResponse.json({ payouts: rows, sellerSummaries })
 }
 
 export async function POST(req: NextRequest) {

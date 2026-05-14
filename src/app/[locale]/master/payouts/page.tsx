@@ -19,6 +19,17 @@ type Payout = {
   seller: { id: number; email: string; nickname?: string | null }
 }
 
+type SellerSettlement = {
+  sellerId: number
+  approvedCount: number
+  awaitingCount: number
+  grossApprovedAmount: number
+  platformFeeAmount: number
+  sellerReceivableAmount: number
+  pendingGrossAmount: number
+  seller: { id: number; email: string; nickname?: string | null }
+}
+
 function money(value: number) {
   return `₩${value.toLocaleString()}`
 }
@@ -29,7 +40,7 @@ export default function MasterPayoutsPage() {
     queryKey: ["master-payouts"],
     queryFn: async () => {
       const { data } = await axios.get("/api/master/payouts")
-      return data as Payout[]
+      return data as { payouts: Payout[]; sellerSummaries: SellerSettlement[] }
     },
   })
 
@@ -40,7 +51,8 @@ export default function MasterPayoutsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["master-payouts"] }),
   })
 
-  const payouts = data ?? []
+  const payouts = data?.payouts ?? []
+  const sellerSummaries = data?.sellerSummaries ?? []
 
   return (
     <div className="space-y-6">
@@ -54,12 +66,53 @@ export default function MasterPayoutsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>정산 큐</CardTitle>
+          <CardTitle>판매자별 정산 현황</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sellerSummaries.length === 0 ? (
+            <div className="rounded-[14px] border bg-background p-8 text-center text-sm text-muted-foreground">
+              승인된 수강신청 정산 데이터가 없습니다.
+            </div>
+          ) : (
+            <div className="divide-y rounded-[14px] border">
+              {sellerSummaries.map((summary) => (
+                <div key={summary.sellerId} className="grid gap-4 p-4 xl:grid-cols-[1fr_150px_150px_150px_130px] xl:items-center">
+                  <div className="min-w-0">
+                    <div className="font-bold">{summary.seller.nickname || summary.seller.email}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      승인 {summary.approvedCount.toLocaleString()}건 · 입금 확인 대기 {summary.awaitingCount.toLocaleString()}건
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">승인 매출</div>
+                    <div className="font-semibold">{money(Number(summary.grossApprovedAmount))}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">판매자 귀속</div>
+                    <div className="font-semibold">{money(Number(summary.sellerReceivableAmount))}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">플랫폼 수수료</div>
+                    <div className="font-semibold">{money(Number(summary.platformFeeAmount))}</div>
+                  </div>
+                  <Badge variant={summary.awaitingCount > 0 ? "outline" : "secondary"}>
+                    대기 {money(Number(summary.pendingGrossAmount))}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>수동 지급 기록</CardTitle>
         </CardHeader>
         <CardContent>
           {payouts.length === 0 ? (
             <div className="rounded-[14px] border bg-background p-8 text-center text-sm text-muted-foreground">
-              정산 요청이 없습니다. 추후 결제 집계에서 자동 생성하도록 확장할 수 있습니다.
+              아직 별도로 생성된 지급 기록이 없습니다. 위 정산 현황을 기준으로 수동 지급 후 기록을 추가하면 됩니다.
             </div>
           ) : (
             <div className="divide-y rounded-[14px] border">

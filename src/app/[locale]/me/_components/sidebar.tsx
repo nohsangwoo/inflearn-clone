@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Bell, Heart, User, Library } from "lucide-react"
+import { LayoutDashboard, Bell, Heart, User, Library, ClipboardList } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { withLocalePath } from "@/lib/brand"
 
@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
   { href: "/me", label: "대시보드", icon: LayoutDashboard },
   { href: "/me/profile", label: "프로필", icon: User },
   { href: "/me/courses", label: "내 강의", icon: Library },
+  { href: "/me/enrollments", label: "수강 신청", icon: ClipboardList },
   { href: "/me/notifications", label: "알림", icon: Bell },
   { href: "/me/likes", label: "좋아요", icon: Heart },
 ]
