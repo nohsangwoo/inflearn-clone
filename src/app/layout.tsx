@@ -47,6 +47,7 @@ export default async function RootLayout({
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <Providers>
           <JsonLd type="website" locale={locale as 'ko' | 'en' | 'ja' | 'zh'} />
