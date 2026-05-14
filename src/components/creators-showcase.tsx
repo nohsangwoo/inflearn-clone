@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 type Creator = { id: string; name: string; avatar: string }
 
 export function CreatorsShowcase({
-  title = "인프런 지식공유자",
+  title = "링구스트 크리에이터",
   creators,
 }: {
   title?: string
@@ -40,5 +40,4 @@ export function CreatorsShowcase({
 }
 
 export default CreatorsShowcase
-
 

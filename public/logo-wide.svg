@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="960" height="240" viewBox="0 0 960 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="240" fill="white"/>
+  <g transform="translate(36 36) scale(0.328125)">
+    
+  <rect width="512" height="512" rx="124" fill="#ff385c"/>
+  <path d="M155 141C155 126.641 166.641 115 181 115H337C351.359 115 363 126.641 363 141V371C363 385.359 351.359 397 337 397H181C166.641 397 155 385.359 155 371V141Z" fill="white"/>
+  <path d="M198 175H302" stroke="#ff385c" stroke-width="22" stroke-linecap="round"/>
+  <path d="M198 225H280" stroke="#ff385c" stroke-width="22" stroke-linecap="round" opacity="0.9"/>
+  <path d="M198 275H250" stroke="#ff385c" stroke-width="22" stroke-linecap="round" opacity="0.75"/>
+  <circle cx="323" cy="316" r="55" fill="#ff385c"/>
+  <path d="M307 289L348 316L307 343V289Z" fill="white"/>
+  <path d="M137 187C118 197 106 218 106 256C106 294 118 315 137 325" stroke="white" stroke-width="28" stroke-linecap="round" opacity="0.92"/>
+  <path d="M375 187C394 197 406 218 406 256C406 294 394 315 375 325" stroke="white" stroke-width="28" stroke-linecap="round" opacity="0.92"/>
+
+  </g>
+  <text x="232" y="113" fill="#222222" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="62" font-weight="800" letter-spacing="0">Lingoost</text>
+  <text x="235" y="158" fill="#3f3f3f" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="28" font-weight="600" letter-spacing="0">Course marketplace by Ludgi Inc.</text>
+  <text x="235" y="195" fill="#6a6a6a" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="23" font-weight="500" letter-spacing="0">강의를 만들고, 판매하고, 수강하는 링구스트</text>
+</svg>

@@ -32,7 +32,7 @@ export const siteConfig = {
   ].join(', '),
   keywordsEn: 'Lingoost, Ludgi Inc., online courses, course marketplace, sell online courses, course creator marketplace, HLS learning, paid courses, creator education, cohort courses',
   url: brand.url,
-  ogImage: '/opengraph-image',
+  ogImage: '/og-image.png',
   links: {
     youtube: 'https://www.youtube.com/@lingoost',
     twitter: 'https://x.com/lingoost',

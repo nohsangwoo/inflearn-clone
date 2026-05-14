@@ -9,9 +9,9 @@ export async function GET(req: NextRequest) {
   if (user.role !== "ADMIN") return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
   const realUserFilter = sql`
-    ${userTable.email} not like '%@seed.lingoost.local'
-    and ${userTable.email} not like '%@seed.baksalclass.local'
-    and ${userTable.email} not like '%@baksalclass.com'
+    ${userTable.email} not like '%@seed.%'
+    and ${userTable.email} not like '%@mock.%'
+    and ${userTable.email} not like '%@example.%'
   `
   const realEnrollmentFilter = sql`${enrollmentRequests.id} not like 'seed-enrollment-%'`
 

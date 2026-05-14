@@ -5,13 +5,19 @@
   "start_url": "/ko",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#123c69",
+  "theme_color": "#ff385c",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "ko",
   "dir": "ltr",
   "categories": ["education", "business", "productivity"],
   "icons": [
+    {
+      "src": "/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/apple-touch-icon.png",
       "sizes": "180x180",

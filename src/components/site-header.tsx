@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { BarChart3, GraduationCap, LogOut, Menu, PlayCircle, ShieldCheck, Sparkles, User, Video } from "lucide-react"
@@ -45,9 +46,15 @@ export function SiteHeader() {
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="grid h-20 grid-cols-[1fr_auto_1fr] items-center gap-4">
           <Link href={withLocalePath(pathname, "/")} className="flex min-w-0 items-center gap-2" prefetch={false}>
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-              박
-            </span>
+            <Image
+              src="/logo.png?v=lingoost-20260515"
+              alt={`${brand.name} logo`}
+              width={36}
+              height={36}
+              className="size-9 shrink-0 rounded-[8px]"
+              priority
+              unoptimized
+            />
             <span className="truncate text-[18px] font-semibold text-primary">
               {brand.name}
             </span>

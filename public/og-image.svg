@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <circle cx="1056" cy="108" r="172" fill="#ff385c" opacity="0.08"/>
+  <circle cx="104" cy="560" r="148" fill="#ff385c" opacity="0.07"/>
+  <rect x="64" y="64" width="1072" height="502" rx="42" fill="#ffffff" stroke="#dddddd" stroke-width="2"/>
+  <g transform="translate(104 102) scale(0.15625)">
+    
+  <rect width="512" height="512" rx="124" fill="#ff385c"/>
+  <path d="M155 141C155 126.641 166.641 115 181 115H337C351.359 115 363 126.641 363 141V371C363 385.359 351.359 397 337 397H181C166.641 397 155 385.359 155 371V141Z" fill="white"/>
+  <path d="M198 175H302" stroke="#ff385c" stroke-width="22" stroke-linecap="round"/>
+  <path d="M198 225H280" stroke="#ff385c" stroke-width="22" stroke-linecap="round" opacity="0.9"/>
+  <path d="M198 275H250" stroke="#ff385c" stroke-width="22" stroke-linecap="round" opacity="0.75"/>
+  <circle cx="323" cy="316" r="55" fill="#ff385c"/>
+  <path d="M307 289L348 316L307 343V289Z" fill="white"/>
+  <path d="M137 187C118 197 106 218 106 256C106 294 118 315 137 325" stroke="white" stroke-width="28" stroke-linecap="round" opacity="0.92"/>
+  <path d="M375 187C394 197 406 218 406 256C406 294 394 315 375 325" stroke="white" stroke-width="28" stroke-linecap="round" opacity="0.92"/>
+
+  </g>
+  <text x="208" y="150" fill="#ff385c" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="42" font-weight="800" letter-spacing="0">Lingoost</text>
+  <text x="104" y="260" fill="#222222" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="60" font-weight="800" letter-spacing="0">Build, sell, and learn</text>
+  <text x="104" y="332" fill="#222222" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="60" font-weight="800" letter-spacing="0">with Lingoost</text>
+  <text x="108" y="397" fill="#3f3f3f" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="25" font-weight="600" letter-spacing="0">Seasonal launches, HLS learning, creator dashboards.</text>
+  <text x="108" y="432" fill="#3f3f3f" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="25" font-weight="600" letter-spacing="0">SEO, captions, and manual enrollment approval.</text>
+  <g font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="24" font-weight="700" letter-spacing="0">
+    <rect x="104" y="462" width="154" height="52" rx="26" fill="#ff385c"/>
+    <text x="132" y="497" fill="white">Courses</text>
+    <rect x="276" y="462" width="146" height="52" rx="26" fill="#f7f7f7" stroke="#dddddd"/>
+    <text x="304" y="497" fill="#222222">Creators</text>
+    <rect x="440" y="462" width="152" height="52" rx="26" fill="#f7f7f7" stroke="#dddddd"/>
+    <text x="468" y="497" fill="#222222">Students</text>
+    <rect x="610" y="462" width="116" height="52" rx="26" fill="#f7f7f7" stroke="#dddddd"/>
+    <text x="640" y="497" fill="#222222">SEO</text>
+  </g>
+  <rect x="810" y="154" width="226" height="296" rx="30" fill="#f7f7f7" stroke="#dddddd"/>
+  <rect x="840" y="188" width="166" height="96" rx="18" fill="#ff385c"/>
+  <path d="M906 219L951 236L906 253V219Z" fill="white"/>
+  <rect x="840" y="314" width="158" height="18" rx="9" fill="#222222" opacity="0.9"/>
+  <rect x="840" y="352" width="116" height="16" rx="8" fill="#6a6a6a" opacity="0.45"/>
+  <rect x="840" y="386" width="126" height="34" rx="17" fill="#ff385c" opacity="0.14"/>
+  <text x="866" y="410" fill="#ff385c" font-family="Inter, Arial, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif" font-size="20" font-weight="800" letter-spacing="0">HLS READY</text>
+</svg>

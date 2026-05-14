@@ -34,7 +34,9 @@ Crawl-delay: 0
 User-agent: Googlebot-Image
 Allow: /images/
 Allow: /opengraph-image
+Allow: /og-image.png
 Allow: /logo.png
+Allow: /logo-wide.png
 Allow: /favicon.ico
 
 User-agent: bingbot

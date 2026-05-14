@@ -6,8 +6,6 @@ import { db, users } from "@/db";
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import { FIREBASE_AUTH_COOKIE } from "@/lib/firebase/session";
 
-const LEGACY_FIREBASE_AUTH_COOKIE = "baksal_firebase_token";
-
 export type DbUser = {
   id: number;
   email: string;
@@ -39,11 +37,11 @@ async function readFirebaseToken(request?: NextRequest) {
   }
 
   if (request) {
-    return request.cookies.get(FIREBASE_AUTH_COOKIE)?.value ?? request.cookies.get(LEGACY_FIREBASE_AUTH_COOKIE)?.value ?? null;
+    return request.cookies.get(FIREBASE_AUTH_COOKIE)?.value ?? null;
   }
 
   const cookieStore = await nextCookies();
-  return cookieStore.get(FIREBASE_AUTH_COOKIE)?.value ?? cookieStore.get(LEGACY_FIREBASE_AUTH_COOKIE)?.value ?? null;
+  return cookieStore.get(FIREBASE_AUTH_COOKIE)?.value ?? null;
 }
 
 /**
