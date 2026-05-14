@@ -55,7 +55,7 @@ export function SiteHeader() {
               priority
               unoptimized
             />
-            <span className="truncate text-[18px] font-semibold text-primary">
+            <span className="font-brand truncate text-[19px] font-extrabold text-primary">
               {brand.name}
             </span>
           </Link>
