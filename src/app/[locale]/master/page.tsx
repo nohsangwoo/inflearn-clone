@@ -94,14 +94,14 @@ export default function MasterDashboardPage() {
         <Badge variant="secondary" className="mb-3">최고 관리자</Badge>
         <h1 className="text-[28px] font-bold leading-[1.43]">박살강의 컨트롤 타워</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          전체 유저, 강의, 입금 승인, 정산, HLS 처리 상태를 운영자 관점에서 통제합니다.
+          시딩/목업 계정을 제외한 실제 운영 유저, 입금 승인, 정산, HLS 처리 상태를 통제합니다.
         </p>
         {isError ? <p className="mt-2 text-sm text-destructive">관리자 권한 또는 DB 마이그레이션을 확인하세요.</p> : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { title: "전체 유저", value: `${overview.users.toLocaleString()}명`, icon: Users },
+          { title: "실제 유저", value: `${overview.users.toLocaleString()}명`, icon: Users },
           { title: "전체 강의", value: `${overview.lectures.toLocaleString()}개`, icon: BookOpen },
           { title: "승인 입금", value: money(overview.grossRevenue), icon: CircleDollarSign },
           { title: "입금 확인 대기", value: money(overview.pendingEnrollmentPlatformFeeAmount), icon: Banknote },

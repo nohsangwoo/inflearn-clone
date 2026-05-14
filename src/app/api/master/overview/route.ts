@@ -8,8 +8,11 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   if (user.role !== "ADMIN") return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
+  const realUserFilter = sql`${userTable.email} not like '%@seed.baksalclass.local' and ${userTable.email} not like '%@baksalclass.com'`
+  const realEnrollmentFilter = sql`${enrollmentRequests.id} not like 'seed-enrollment-%'`
+
   const [usersRow, lecturesRow, ordersRow, pendingPayoutsRow, hlsPendingRow, pendingEnrollmentRow, approvedEnrollmentRow] = await Promise.all([
-    db.select({ value: count() }).from(userTable).then((rows) => rows[0]),
+    db.select({ value: count() }).from(userTable).where(realUserFilter).then((rows) => rows[0]),
     db.select({ value: count() }).from(lectureTable).then((rows) => rows[0]),
     db
       .select({ amount: sum(paymentOrders.amount), total: count(paymentOrders.id) })
@@ -18,8 +21,8 @@ export async function GET(req: NextRequest) {
       .then((rows) => rows[0]),
     db
       .select({
-        amount: sql<number>`coalesce(sum(${enrollmentRequests.sellerReceivableAmount}) filter (where ${enrollmentRequests.status} = 'APPROVED'), 0)`,
-        total: sql<number>`count(distinct ${enrollmentRequests.sellerId}) filter (where ${enrollmentRequests.status} = 'APPROVED' and ${enrollmentRequests.sellerReceivableAmount} > 0)`,
+        amount: sql<number>`coalesce(sum(${enrollmentRequests.sellerReceivableAmount}) filter (where ${enrollmentRequests.status} = 'APPROVED' and ${realEnrollmentFilter}), 0)`,
+        total: sql<number>`count(distinct ${enrollmentRequests.sellerId}) filter (where ${enrollmentRequests.status} = 'APPROVED' and ${enrollmentRequests.sellerReceivableAmount} > 0 and ${realEnrollmentFilter})`,
       })
       .from(enrollmentRequests)
       .then((rows) => rows[0]),
@@ -27,12 +30,12 @@ export async function GET(req: NextRequest) {
     db
       .select({ count: count(enrollmentRequests.id), platformFeeAmount: sum(enrollmentRequests.amount) })
       .from(enrollmentRequests)
-      .where(eq(enrollmentRequests.status, "AWAITING_PLATFORM_FEE"))
+      .where(and(eq(enrollmentRequests.status, "AWAITING_PLATFORM_FEE"), realEnrollmentFilter))
       .then((rows) => rows[0]),
     db
       .select({ amount: sum(enrollmentRequests.amount), total: count(enrollmentRequests.id) })
       .from(enrollmentRequests)
-      .where(and(eq(enrollmentRequests.status, "APPROVED"), isNull(enrollmentRequests.paymentOrderId)))
+      .where(and(eq(enrollmentRequests.status, "APPROVED"), isNull(enrollmentRequests.paymentOrderId), realEnrollmentFilter))
       .then((rows) => rows[0]),
   ])
 

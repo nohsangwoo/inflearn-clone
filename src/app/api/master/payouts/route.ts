@@ -1,4 +1,4 @@
-import { desc, eq, isNotNull, sql } from "drizzle-orm"
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm"
 import { db, enrollmentRequests, payouts, users, type PayoutStatus } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { NextRequest, NextResponse } from "next/server"
@@ -9,6 +9,8 @@ export async function GET(req: NextRequest) {
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   if (user.role !== "ADMIN") return NextResponse.json({ message: "forbidden" }, { status: 403 })
+
+  const realEnrollmentFilter = sql`${enrollmentRequests.id} not like 'seed-enrollment-%'`
 
   const [rows, sellerSummaries] = await Promise.all([
     db
@@ -44,7 +46,7 @@ export async function GET(req: NextRequest) {
       })
       .from(enrollmentRequests)
       .innerJoin(users, eq(enrollmentRequests.sellerId, users.id))
-      .where(isNotNull(enrollmentRequests.sellerId))
+      .where(and(isNotNull(enrollmentRequests.sellerId), realEnrollmentFilter))
       .groupBy(enrollmentRequests.sellerId, users.id, users.email, users.nickname)
       .orderBy(sql`coalesce(sum(${enrollmentRequests.sellerReceivableAmount}) filter (where ${enrollmentRequests.status} = 'APPROVED'), 0) desc`)
       .limit(100),

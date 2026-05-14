@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq, sql } from "drizzle-orm"
 import { db, enrollmentRequests, purchases, type EnrollmentStatus } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 
@@ -17,9 +17,14 @@ export async function GET(req: NextRequest) {
     ? (requestedStatus as EnrollmentStatus)
     : null
   const limit = Math.min(200, Math.max(1, Number(searchParams.get("limit") ?? 100) || 100))
+  const includeSeed = searchParams.get("includeSeed") === "true"
+  const filters = [
+    status ? eq(enrollmentRequests.status, status) : undefined,
+    includeSeed ? undefined : sql`${enrollmentRequests.id} not like 'seed-enrollment-%'`,
+  ].filter(Boolean)
 
   const requests = await db.query.enrollmentRequests.findMany({
-    where: status ? eq(enrollmentRequests.status, status) : undefined,
+    where: filters.length > 0 ? and(...filters) : undefined,
     orderBy: [desc(enrollmentRequests.createdAt)],
     limit,
     with: {
