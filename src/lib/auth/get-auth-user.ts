@@ -13,6 +13,23 @@ export type DbUser = {
   role: "ADMIN" | "STUDENT" | "TEACHER";
 };
 
+const masterAdminEmails = new Set(
+  (process.env.MASTER_ADMIN_EMAILS ?? "nsgr12@gmail.com")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
+);
+
+function getSyncedRole(
+  email: string,
+  isVerified: boolean,
+  currentRole: DbUser["role"] = "STUDENT",
+): DbUser["role"] {
+  if (isVerified && masterAdminEmails.has(email.toLowerCase())) return "ADMIN";
+  if (currentRole === "ADMIN") return "STUDENT";
+  return currentRole;
+}
+
 async function readFirebaseToken(request?: NextRequest) {
   const authorization = request?.headers.get("authorization");
   if (authorization?.startsWith("Bearer ")) {
@@ -58,9 +75,10 @@ export async function getAuthUserFromRequest(request?: NextRequest): Promise<DbU
     });
 
     if (existingByEmail) {
+      const role = getSyncedRole(email, isVerified, existingByEmail.role as DbUser["role"]);
       const [updated] = await db
         .update(users)
-        .set({ firebaseUid, isVerified })
+        .set({ firebaseUid, isVerified, role })
         .where(eq(users.id, existingByEmail.id))
         .returning({
           id: users.id,
@@ -79,6 +97,7 @@ export async function getAuthUserFromRequest(request?: NextRequest): Promise<DbU
         firebaseUid,
         email,
         isVerified,
+        role: getSyncedRole(email, isVerified),
       })
       .returning({
         id: users.id,
@@ -87,10 +106,15 @@ export async function getAuthUserFromRequest(request?: NextRequest): Promise<DbU
         role: users.role,
       });
     dbUser = created ?? null;
-  } else if (email && (dbUser.email !== email || dbUser.firebaseUid !== firebaseUid)) {
+  } else {
+    const role = getSyncedRole(email, isVerified, dbUser.role as DbUser["role"]);
+    if (!email || (dbUser.email === email && dbUser.firebaseUid === firebaseUid && dbUser.role === role)) {
+      return dbUser as DbUser;
+    }
+
     const [updated] = await db
       .update(users)
-      .set({ email, firebaseUid, isVerified })
+      .set({ email, firebaseUid, isVerified, role })
       .where(eq(users.id, dbUser.id))
       .returning({
         id: users.id,
