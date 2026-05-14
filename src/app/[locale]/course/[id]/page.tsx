@@ -3,6 +3,7 @@ import { generateSeoMetadata } from "@/lib/seo-metadata";
 import CourseDetailPageWrapper from "./page-wrapper";
 import { eq } from "drizzle-orm";
 import { db, lectures } from "@/db";
+import { findMockCourse } from "@/lib/mock-courses";
 
 interface PageProps {
   params: Promise<{ locale: string; id: string }>;
@@ -11,22 +12,27 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, id } = await params;
   const lectureId = Number(id);
-  const lecture = Number.isFinite(lectureId)
-    ? await db.query.lectures.findFirst({
-        where: eq(lectures.id, lectureId),
-        columns: {
-          title: true,
-          shortDescription: true,
-          description: true,
-          metaTitle: true,
-          metaDescription: true,
-          seoKeywords: true,
-          imageUrl: true,
-          ogImageUrl: true,
-          canonicalUrl: true,
-        },
-      })
-    : null;
+  const mockLecture = Number.isFinite(lectureId) ? findMockCourse(lectureId) : null;
+  const lecture =
+    mockLecture ??
+    (Number.isFinite(lectureId)
+      ? await db.query.lectures
+          .findFirst({
+            where: eq(lectures.id, lectureId),
+            columns: {
+              title: true,
+              shortDescription: true,
+              description: true,
+              metaTitle: true,
+              metaDescription: true,
+              seoKeywords: true,
+              imageUrl: true,
+              ogImageUrl: true,
+              canonicalUrl: true,
+            },
+          })
+          .catch(() => null)
+      : null);
 
   return generateSeoMetadata({
     title: lecture?.metaTitle || lecture?.title || "강의 상세",

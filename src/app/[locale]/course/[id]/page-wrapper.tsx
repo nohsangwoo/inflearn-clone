@@ -48,6 +48,7 @@ type Detail = {
   reviewCount: number
   avgRating: number
   likeCount: number
+  isMock?: boolean
   previewSectionId: number | null
   previewSectionTitle: string | null
   sections: { id: number; title: string; description?: string | null; active: boolean; hasVideo: boolean; hlsStatus?: string | null }[]
@@ -124,6 +125,7 @@ export default function CourseDetailPageWrapper() {
   const purchased = Boolean(purchasedRes?.purchased)
   const enrollmentRequest = purchasedRes?.enrollmentRequest ?? null
   const isEnrollmentPending = enrollmentRequest?.status === 'AWAITING_PLATFORM_FEE'
+  const isMockCourse = Boolean(detail?.isMock)
 
   // 초기 좋아요/장바구니 상태
   useQuery({
@@ -459,15 +461,15 @@ export default function CourseDetailPageWrapper() {
                       <Button
                         className="w-full"
                         onClick={() => enroll.mutate()}
-                        disabled={enroll.isPending || isEnrollmentPending}
+                        disabled={isMockCourse || enroll.isPending || isEnrollmentPending}
                       >
-                        {isEnrollmentPending ? '승인 대기 중' : t.enroll}
+                        {isMockCourse ? '프리뷰 강의입니다' : isEnrollmentPending ? '승인 대기 중' : t.enroll}
                       </Button>
                       <Button
                         variant={inCart ? 'secondary' : 'outline'}
                         className="w-full"
                         onClick={() => addToCart.mutate()}
-                        disabled={addToCart.isPending}
+                        disabled={isMockCourse || addToCart.isPending}
                       >
                         <ShoppingCart className="h-4 w-4 mr-2" /> {inCart ? t.inCart : t.addToCart}
                       </Button>
@@ -509,7 +511,7 @@ export default function CourseDetailPageWrapper() {
                   disabled={!purchased}
                 >
                   <BookOpen className="h-4 w-4 mr-2" />
-                  {purchased ? t.startLearning : '구매 후 이용 가능합니다'}
+                  {isMockCourse ? '목업 상세를 둘러보는 중입니다' : purchased ? t.startLearning : '구매 후 이용 가능합니다'}
                 </Button>
 
                 <Button

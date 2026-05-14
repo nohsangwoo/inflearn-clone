@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { and, asc, desc, eq, isNull } from "drizzle-orm"
 import { db, reviews as reviewsTable, users } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
+import { findMockCourse } from "@/lib/mock-courses"
 
 export async function GET(
   req: NextRequest,
@@ -10,6 +11,7 @@ export async function GET(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
+  if (findMockCourse(id)) return NextResponse.json([])
   const reviewRows = await db
     .select({
       id: reviewsTable.id,
@@ -53,11 +55,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ lectureId: string }> },
 ) {
-  const user = await getAuthUserFromRequest(req)
-  if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
+  if (findMockCourse(id)) return NextResponse.json({ message: "목업 강의에는 리뷰를 저장하지 않습니다." }, { status: 400 })
+  const user = await getAuthUserFromRequest(req)
+  if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   const body = await req.json().catch(() => ({}))
   const content: string | undefined = body?.content
   const rating: number = Number(body?.rating ?? 5)
@@ -65,4 +68,3 @@ export async function POST(
   await db.insert(reviewsTable).values({ content, rating, lectureId: id, userId: user.id })
   return NextResponse.json({ ok: true }, { status: 201 })
 }
-

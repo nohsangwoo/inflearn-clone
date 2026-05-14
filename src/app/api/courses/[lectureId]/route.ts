@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { and, avg, count, countDistinct, eq, asc } from "drizzle-orm"
 import { db, curriculumSections, curriculums, lectures, likes, purchases, reviews, users, videos } from "@/db"
+import { findMockCourse } from "@/lib/mock-courses"
 
 export async function GET(
   req: NextRequest,
@@ -10,6 +11,16 @@ export async function GET(
   const id = Number(lectureId)
   if (!Number.isFinite(id)) {
     return NextResponse.json({ message: "invalid id" }, { status: 400 })
+  }
+
+  const mockCourse = findMockCourse(id)
+  if (mockCourse) {
+    return NextResponse.json({
+      ...mockCourse,
+      isMock: true,
+      previewSectionId: mockCourse.sections[0]?.id ?? null,
+      previewSectionTitle: mockCourse.sections[0]?.title ?? null,
+    })
   }
 
   const lecture = await db

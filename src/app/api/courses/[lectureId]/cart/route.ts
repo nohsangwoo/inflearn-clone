@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import { and, eq } from "drizzle-orm"
 import { db, carts, cartToLecture } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
+import { findMockCourse } from "@/lib/mock-courses"
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ lectureId: string }> },
 ) {
-  const user = await getAuthUserFromRequest(req)
-  if (!user) return NextResponse.json({ inCart: false })
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
+  if (findMockCourse(id)) return NextResponse.json({ inCart: false })
+  const user = await getAuthUserFromRequest(req)
+  if (!user) return NextResponse.json({ inCart: false })
   const cart = await db.query.carts.findFirst({ where: eq(carts.userId, user.id), columns: { id: true } })
   const inCart = cart
     ? Boolean(
@@ -27,11 +29,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ lectureId: string }> },
 ) {
-  const user = await getAuthUserFromRequest(req)
-  if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
+  if (findMockCourse(id)) return NextResponse.json({ message: "목업 강의는 장바구니에 담을 수 없습니다." }, { status: 400 })
+  const user = await getAuthUserFromRequest(req)
+  if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
 
   // 장바구니 생성 또는 조회 (userId는 unique가 아니므로 upsert 불가)
   let cart = await db.query.carts.findFirst({ where: eq(carts.userId, user.id), columns: { id: true } })
@@ -53,4 +56,3 @@ export async function POST(
   await db.insert(cartToLecture).values({ cartId: cart.id, lectureId: id }).onConflictDoNothing()
   return NextResponse.json({ inCart: true })
 }
-

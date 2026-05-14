@@ -7,19 +7,23 @@ import {
   getEffectiveLectureAmount,
   getPlatformFeeRateBps,
 } from "@/lib/enrollments"
+import { findMockCourse } from "@/lib/mock-courses"
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ lectureId: string }> },
 ) {
-  const user = await getAuthUserFromRequest(req)
-  if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
-
   const { lectureId: rawLectureId } = await params
   const lectureId = Number(rawLectureId)
   if (!Number.isFinite(lectureId)) {
     return NextResponse.json({ message: "lectureId required" }, { status: 400 })
   }
+  if (findMockCourse(lectureId)) {
+    return NextResponse.json({ message: "목업 강의는 실제 수강신청 대상이 아닙니다." }, { status: 400 })
+  }
+
+  const user = await getAuthUserFromRequest(req)
+  if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
   const studentMemo = typeof body?.studentMemo === "string" ? body.studentMemo.slice(0, 1000) : null
