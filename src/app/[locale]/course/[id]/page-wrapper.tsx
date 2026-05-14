@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
 import FreePreviewPlayerModal from '@/components/video/free-preview-player-modal'
-import { toCdnUrl } from '@/lib/brand'
+import { getCoursePreviewImage } from '@/lib/course-images'
 import type { CourseDetail as Detail } from '@/lib/course-detail-data'
 import { getEnrollmentStatusLabel } from '@/lib/enrollment-window'
 import { useAuthStore } from '@/lib/stores/auth-store'
@@ -80,13 +80,6 @@ function formatDuration(totalSeconds?: number | null) {
   if (!hours) return `${minutes}분`
   return `${hours}시간 ${minutes}분`
 }
-
-const detailHeroImages = [
-  'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80',
-  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1600&q=80',
-  'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1600&q=80',
-  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
-]
 
 export default function CourseDetailPageWrapper({ initialDetail = null }: { initialDetail?: Detail | null }) {
   const params = useParams<{ id: string }>()
@@ -148,7 +141,7 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
   }, [detail, t.free])
   const heroImage = useMemo(() => {
     if (!detail) return ''
-    return toCdnUrl(detail.imageUrl) || detailHeroImages[detail.id % detailHeroImages.length]
+    return getCoursePreviewImage(detail.imageUrl)
   }, [detail])
   const freePreviewSection = useMemo(
     () => detail?.sections.find((section) => section.isFreePreview && section.previewVideoUrl) ?? null,

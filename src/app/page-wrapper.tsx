@@ -9,9 +9,10 @@ import { BookOpen, Heart, Search, Star, Users } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { brand, toCdnUrl, withLocalePath } from "@/lib/brand"
+import { brand, withLocalePath } from "@/lib/brand"
+import { getCoursePreviewImage } from "@/lib/course-images"
 import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
-import { getMockCoursesWithEnrollmentStatus, previewImages } from "@/lib/mock-courses"
+import { getMockCoursesWithEnrollmentStatus } from "@/lib/mock-courses"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils"
 
@@ -53,8 +54,8 @@ function formatPrice(course: ApiCourse) {
   return `₩${effective.toLocaleString()}`
 }
 
-function getCourseImage(course: ApiCourse, index: number) {
-  return toCdnUrl(course.imageUrl) || previewImages[index % previewImages.length]
+function getCourseImage(course: ApiCourse) {
+  return getCoursePreviewImage(course.imageUrl)
 }
 
 export default function HomePageWrapper() {
@@ -275,7 +276,7 @@ export default function HomePageWrapper() {
               <CourseTile
                 key={`${course.id}-${course.title}`}
                 course={course}
-                image={getCourseImage(course, index)}
+                image={getCourseImage(course)}
                 pathname={pathname}
                 index={index}
                 onToggleLike={handleToggleLike}

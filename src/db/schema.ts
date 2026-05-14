@@ -103,7 +103,7 @@ export const lectures = pgTable(
     enrollmentCapacity: integer("enrollmentCapacity"),
     price: integer("price").notNull(),
     discountPrice: integer("discountPrice"),
-    isActive: boolean("isActive").notNull().default(true),
+    isActive: boolean("isActive").notNull().default(false),
     imageUrl: text("imageUrl"),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),

@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       slug: `${slugBase}-${Date.now().toString(36)}`,
       category: typeof body?.category === "string" ? body.category : "웹 개발",
       level: typeof body?.level === "string" ? body.level : "입문",
-      isActive: true,
+      isActive: false,
       instructorId: user.id,
     })
     .returning({ id: lectures.id })

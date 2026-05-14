@@ -1,0 +1,1 @@
+ALTER TABLE "Lecture" ALTER COLUMN "isActive" SET DEFAULT false;

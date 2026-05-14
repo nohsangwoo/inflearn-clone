@@ -11,9 +11,11 @@ import { useParams } from "next/navigation"
 import { uploadImageWebp } from "@/lib/upload/uploadImageWebp"
 import { uploadBinary } from "@/lib/upload/uploadBinary"
 import { toCdnUrl } from "@/lib/brand"
+import { getCoursePreviewImage } from "@/lib/course-images"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useDropzone } from "react-dropzone"
+import { CheckCircle2, ImagePlus, Sparkles } from "lucide-react"
 import DubbingUploader from "./_components/dubbing-uploader"
 import HlsPlayerModal from "@/components/video/hls-player-modal"
 import OriginalPlayer from "@/components/video/original-player"
@@ -48,6 +50,7 @@ type Video = {
 
 type DubItem = { id: string; lang: string; status: string; url?: string | null }
 type CaptionTrack = { id: string; lang: string; label: string; url: string; format: string; isDefault: boolean }
+type AiPreviewCandidate = { id: string; key: string; url: string; headline: string; label: string; style: string }
 
 type FileItem = {
   id: number
@@ -71,6 +74,9 @@ export default function EditCoursePage() {
   const lectureIdNum = Number(routeParams?.lectureId)
   const qc = useQueryClient()
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null)
+  const [aiPreviewTopic, setAiPreviewTopic] = useState("")
+  const [aiPreviewHeadline, setAiPreviewHeadline] = useState("")
+  const [aiPreviewCandidates, setAiPreviewCandidates] = useState<AiPreviewCandidate[]>([])
 
   const { data: lecture } = useQuery({
     queryKey: ["lecture", lectureIdNum],
@@ -138,6 +144,36 @@ export default function EditCoursePage() {
       return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lecture", lectureIdNum] }),
+  })
+
+  const generateAiPreviews = useMutation({
+    mutationFn: async () => {
+      const topic =
+        aiPreviewTopic.trim() ||
+        [
+          lecture?.title,
+          lecture?.shortDescription,
+          lecture?.category,
+          lecture?.level,
+          ...(lecture?.tags ?? []),
+        ]
+          .filter(Boolean)
+          .join(" / ")
+      const { data } = await axios.post(`/api/admin/courses/${lectureIdNum}/preview-images`, {
+        topic,
+        headline: aiPreviewHeadline.trim() || undefined,
+        count: 3,
+      })
+      return data as { candidates: AiPreviewCandidate[] }
+    },
+    onSuccess: (data) => {
+      setAiPreviewCandidates(data.candidates ?? [])
+      toast.success("AI 프리뷰 후보를 생성했습니다")
+    },
+    onError: (err) => {
+      const anyErr = err as { response?: { data?: { message?: string } }; message?: string }
+      toast.error(anyErr?.response?.data?.message || anyErr?.message || "AI 프리뷰 생성에 실패했습니다")
+    },
   })
 
   const { data: curriculums } = useQuery({
@@ -520,30 +556,100 @@ export default function EditCoursePage() {
           </div>
           <div className="grid gap-2">
             <label className="text-sm text-muted-foreground">대표 이미지</label>
-            <div className="flex items-center gap-3">
-              <Input type="file" accept="image/*" onChange={async (e) => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                const objectUrl = URL.createObjectURL(file)
-                setLocalPreviewUrl(objectUrl)
-                try {
-                  const { key } = await uploadImageWebp(file, { pathPrefix: 'lectures', quality: 0.8, maxWidth: 1920 })
-                  await updateLecture.mutateAsync({ imageUrl: key })
-                  toast.success('대표 이미지가 업데이트되었습니다')
-                } catch {
-                  toast.error('대표 이미지 업로드 실패')
-                } finally {
-                  URL.revokeObjectURL(objectUrl)
-                  setLocalPreviewUrl(null)
-                }
-              }} />
-              {(() => {
-                const src = localPreviewUrl ?? toCdnUrl(lecture?.imageUrl)
-                return src ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={src} alt="thumbnail" className="h-16 w-16 rounded-[14px] border object-cover" />
-                ) : null
-              })()}
+            <div className="grid gap-4 rounded-[14px] border bg-background p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <Input type="file" accept="image/*" onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const objectUrl = URL.createObjectURL(file)
+                  setLocalPreviewUrl(objectUrl)
+                  try {
+                    const { key } = await uploadImageWebp(file, { pathPrefix: 'lectures', quality: 0.8, maxWidth: 1920 })
+                    await updateLecture.mutateAsync({ imageUrl: key, ogImageUrl: key })
+                    toast.success('대표 이미지와 OG 이미지가 업데이트되었습니다')
+                  } catch {
+                    toast.error('대표 이미지 업로드 실패')
+                  } finally {
+                    URL.revokeObjectURL(objectUrl)
+                    setLocalPreviewUrl(null)
+                  }
+                }} />
+                {(() => {
+                  const src = localPreviewUrl ?? getCoursePreviewImage(lecture?.imageUrl)
+                  return (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={src} alt="thumbnail" className="h-20 w-28 rounded-[14px] border object-cover" />
+                  )
+                })()}
+              </div>
+              <div className="grid gap-3 rounded-[14px] bg-secondary/50 p-4">
+                <div className="flex flex-col gap-2 md:flex-row md:items-end">
+                  <div className="grid flex-1 gap-2">
+                    <label className="text-xs font-medium text-muted-foreground">AI 프리뷰 주제</label>
+                    <Input
+                      value={aiPreviewTopic}
+                      onChange={(e) => setAiPreviewTopic(e.target.value)}
+                      placeholder="예: 병원 홈페이지 외주 수주 실무, Next.js 강의 플랫폼 구축"
+                    />
+                  </div>
+                  <div className="grid flex-1 gap-2">
+                    <label className="text-xs font-medium text-muted-foreground">썸네일 영문 문구</label>
+                    <Input
+                      value={aiPreviewHeadline}
+                      onChange={(e) => setAiPreviewHeadline(e.target.value)}
+                      placeholder="비워두면 주제에 맞춰 자동 구성"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className="rounded-full"
+                    disabled={generateAiPreviews.isPending || !lecture}
+                    onClick={() => generateAiPreviews.mutate()}
+                  >
+                    <Sparkles className="size-4" />
+                    {generateAiPreviews.isPending ? "생성 중" : "AI 후보 생성"}
+                  </Button>
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  후보는 OpenAI Images 2.0으로 만든 배경에 링구스트 전용 영문 타이포그래피를 합성해 1200x781 PNG로 저장합니다. 선택하기 전까지 강의 대표 이미지는 바뀌지 않습니다.
+                </p>
+                {aiPreviewCandidates.length ? (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {aiPreviewCandidates.map((candidate) => (
+                      <div key={candidate.id} className="overflow-hidden rounded-[14px] border bg-background">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={candidate.url} alt={candidate.headline} className="aspect-[1200/781] w-full object-cover" />
+                        <div className="space-y-2 p-3">
+                          <div className="text-xs font-medium text-muted-foreground">{candidate.style}</div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full rounded-full"
+                            disabled={updateLecture.isPending}
+                            onClick={async () => {
+                              try {
+                                await updateLecture.mutateAsync({ imageUrl: candidate.key, ogImageUrl: candidate.key })
+                                setLocalPreviewUrl(candidate.url)
+                                toast.success("선택한 프리뷰가 대표 이미지로 설정되었습니다")
+                              } catch {
+                                toast.error("프리뷰 적용 실패")
+                              }
+                            }}
+                          >
+                            <CheckCircle2 className="size-4" />
+                            이 이미지 선택
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-[14px] border border-dashed bg-background px-4 py-3 text-sm text-muted-foreground">
+                    <ImagePlus className="size-4" />
+                    주제를 입력하고 후보를 만들면 여기에서 비교해 고를 수 있습니다.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

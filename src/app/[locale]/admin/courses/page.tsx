@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { toCdnUrl, withLocalePath } from "@/lib/brand"
+import { withLocalePath } from "@/lib/brand"
+import { getCoursePreviewImage } from "@/lib/course-images"
 
 type LectureRow = {
   id: number
@@ -87,7 +88,7 @@ export default function AdminCoursesPage() {
           ) : (
             <div className="divide-y rounded-[14px] border">
               {(data ?? []).map((lecture) => {
-                const image = toCdnUrl(lecture.imageUrl)
+                const image = getCoursePreviewImage(lecture.imageUrl)
                 const effective =
                   typeof lecture.discountPrice === "number" && lecture.discountPrice < lecture.price
                     ? lecture.discountPrice
