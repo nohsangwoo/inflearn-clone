@@ -1,8 +1,16 @@
 User-agent: *
 Allow: /
 Disallow: /admin/
+Disallow: /*/admin/
+Disallow: /master/
+Disallow: /*/master/
 Disallow: /api/
 Disallow: /me/
+Disallow: /*/me/
+Disallow: /login
+Disallow: /*/login
+Disallow: /payments/
+Disallow: /*/payments/
 Disallow: /_next/
 Disallow: /static/
 Disallow: /*.json$
@@ -11,35 +19,67 @@ Crawl-delay: 1
 User-agent: Googlebot
 Allow: /
 Disallow: /admin/
+Disallow: /*/admin/
+Disallow: /master/
+Disallow: /*/master/
 Disallow: /api/
 Disallow: /me/
+Disallow: /*/me/
+Disallow: /login
+Disallow: /*/login
+Disallow: /payments/
+Disallow: /*/payments/
 Crawl-delay: 0
 
 User-agent: Googlebot-Image
 Allow: /images/
-Allow: /og-image.png
+Allow: /opengraph-image
 Allow: /logo.png
 Allow: /favicon.ico
 
 User-agent: bingbot
 Allow: /
 Disallow: /admin/
+Disallow: /*/admin/
+Disallow: /master/
+Disallow: /*/master/
 Disallow: /api/
 Disallow: /me/
+Disallow: /*/me/
+Disallow: /login
+Disallow: /*/login
+Disallow: /payments/
+Disallow: /*/payments/
 Crawl-delay: 1
 
 User-agent: Yeti
 Allow: /
 Disallow: /admin/
+Disallow: /*/admin/
+Disallow: /master/
+Disallow: /*/master/
 Disallow: /api/
 Disallow: /me/
+Disallow: /*/me/
+Disallow: /login
+Disallow: /*/login
+Disallow: /payments/
+Disallow: /*/payments/
 Crawl-delay: 1
 
 User-agent: Yandex
 Allow: /
 Disallow: /admin/
+Disallow: /*/admin/
+Disallow: /master/
+Disallow: /*/master/
 Disallow: /api/
 Disallow: /me/
+Disallow: /*/me/
+Disallow: /login
+Disallow: /*/login
+Disallow: /payments/
+Disallow: /*/payments/
 Crawl-delay: 2
 
 User-agent: facebookexternalhit
@@ -60,4 +100,4 @@ Allow: /
 User-agent: *
 Disallow: /cdn-cgi/
 
-Sitemap: https://www.baksalclass.com/sitemap.xml
+Sitemap: https://www.lingoost.com/sitemap.xml

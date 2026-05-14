@@ -1,13 +1,16 @@
 export const brand = {
-  name: "박살강의",
-  nameEn: "Baksal Class",
-  tagline: "배우고, 팔고, 끝까지 수강되는 강의 거래소",
+  name: "링구스트",
+  nameEn: "Lingoost",
+  tagline: "배우고, 팔고, 끝까지 수강되는 온라인 강의 플랫폼",
   description:
-    "박살강의는 판매자가 강의를 만들고 수강생이 계좌입금 승인 후 HLS 기반으로 학습하는 웹 우선 강의 교환 플랫폼입니다.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.baksalclass.com",
+    "링구스트는 강의를 판매하고 싶은 사람과 배우고 싶은 수강생을 연결하는 주식회사 럿지의 웹 우선 온라인 강의 플랫폼입니다. 시즌제 강의 모집, 계좌입금 수강신청, HLS 영상 수강, 자막, 더빙, 판매자 정산 흐름을 지원합니다.",
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL && !process.env.NEXT_PUBLIC_SITE_URL.includes("localhost")
+      ? process.env.NEXT_PUBLIC_SITE_URL
+      : "https://www.lingoost.com",
   cdnUrl: process.env.NEXT_PUBLIC_CDN_URL || "https://storage.lingoost.com",
   creator: "주식회사 럿지",
-  supportEmail: "contact@baksalclass.com",
+  supportEmail: "contact@lingoost.com",
 }
 
 export const supportedLocales = [

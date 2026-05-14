@@ -24,64 +24,10 @@ import {
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
 import FreePreviewPlayerModal from '@/components/video/free-preview-player-modal'
 import { toCdnUrl } from '@/lib/brand'
-import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from '@/lib/enrollment-window'
+import type { CourseDetail as Detail } from '@/lib/course-detail-data'
+import { getEnrollmentStatusLabel } from '@/lib/enrollment-window'
 import { useAuthStore } from '@/lib/stores/auth-store'
 import { getTranslation, useLocale } from '@/lib/translations'
-
-type Detail = {
-  id: number
-  title: string
-  slug?: string | null
-  shortDescription?: string | null
-  description: string | null
-  category?: string | null
-  level?: string | null
-  tags?: string[]
-  targetAudience?: string | null
-  requirements?: string | null
-  learningOutcomes?: string[]
-  price: number
-  discountPrice?: number | null
-  enrollmentOpen?: boolean
-  enrollmentStartAt?: string | null
-  enrollmentEndAt?: string | null
-  enrollmentCapacity?: number | null
-  enrollmentAppliedCount?: number | null
-  enrollmentStatus?: EnrollmentAvailabilityStatus
-  enrollmentAvailable?: boolean
-  remainingSeats?: number | null
-  imageUrl?: string | null
-  createdAt: string
-  instructor: {
-    id: number
-    email: string
-    nickname?: string | null
-    profileImageUrl?: string | null
-  }
-  purchaseCount: number
-  reviewCount: number
-  avgRating: number
-  likeCount: number
-  isMock?: boolean
-  previewSectionId: number | null
-  previewSectionTitle: string | null
-  lastUpdatedAt?: string | null
-  includedFeatures?: string[]
-  relatedTopics?: string[]
-  sections: {
-    id: number
-    moduleTitle?: string
-    title: string
-    description?: string | null
-    active: boolean
-    hasVideo: boolean
-    hlsStatus?: string | null
-    durationSeconds?: number | null
-    isFreePreview?: boolean
-    previewVideoUrl?: string | null
-    resources?: string[]
-  }[]
-}
 
 type ReviewItem = {
   id: number
@@ -142,7 +88,7 @@ const detailHeroImages = [
   'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
 ]
 
-export default function CourseDetailPageWrapper() {
+export default function CourseDetailPageWrapper({ initialDetail = null }: { initialDetail?: Detail | null }) {
   const params = useParams<{ id: string }>()
   const lectureId = Number(params?.id)
   const router = useRouter()
@@ -160,6 +106,7 @@ export default function CourseDetailPageWrapper() {
       const { data } = await axios.get(`/api/courses/${lectureId}`)
       return data as Detail
     },
+    initialData: initialDetail && initialDetail.id === lectureId ? initialDetail : undefined,
   })
 
   // 구매 여부
@@ -229,6 +176,7 @@ export default function CourseDetailPageWrapper() {
         `${activeSections.length}개 수업`,
         '계좌입금 승인 후 수강',
         '모바일/데스크톱 수강',
+        '검색 최적화된 강의 상세',
       ]
 
   // 액션
@@ -522,12 +470,16 @@ export default function CourseDetailPageWrapper() {
               <div>
                 <h3 className="text-[16px] font-semibold leading-[1.25]">관련 주제</h3>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {(detail.relatedTopics ?? detail.tags ?? []).slice(0, 8).map((topic) => (
+                  {(detail.relatedTopics ?? detail.tags ?? []).slice(0, 12).map((topic) => (
                     <Badge key={topic} variant="outline" className="rounded-full bg-background px-3 py-1">
                       {topic}
                     </Badge>
                   ))}
                 </div>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  링구스트는 온라인 강의, 시즌제 강의, 강의 판매, 수강 신청, 계좌입금 승인, HLS 영상 수강처럼
+                  학습자와 강의 판매자가 실제로 검색하는 흐름을 기준으로 강의 상세 정보를 구성합니다.
+                </p>
               </div>
             ) : null}
           </section>

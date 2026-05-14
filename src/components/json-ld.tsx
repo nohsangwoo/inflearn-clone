@@ -18,6 +18,7 @@ interface JsonLdProps {
     currency?: string;
     duration?: string;
     level?: string;
+    keywords?: string[];
   };
 }
 

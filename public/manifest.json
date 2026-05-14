@@ -1,8 +1,8 @@
 {
-  "name": "박살강의 - 강의 교환 플랫폼",
-  "short_name": "박살강의",
-  "description": "결제, HLS 수강, 더빙, 자막, SEO와 판매자 정산을 갖춘 웹 우선 강의 교환 플랫폼",
-  "start_url": "/",
+  "name": "링구스트 - 강의 교환 플랫폼",
+  "short_name": "링구스트",
+  "description": "주식회사 럿지가 운영하는 온라인 강의 플랫폼. 강의 판매, 시즌제 수강신청, HLS 수강, 자막, 더빙, 판매자 정산을 지원합니다.",
+  "start_url": "/ko",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#123c69",
@@ -31,26 +31,12 @@
       "purpose": "maskable any"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/screenshot-1.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "label": "메인 페이지"
-    },
-    {
-      "src": "/screenshot-2.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "label": "강의 목록"
-    }
-  ],
   "shortcuts": [
     {
       "name": "내 강의",
       "short_name": "내 강의",
       "description": "수강 중인 강의 목록",
-      "url": "/me/courses",
+      "url": "/ko/me/courses",
       "icons": [
         {
           "src": "/android-chrome-192x192.png",
@@ -62,7 +48,7 @@
       "name": "강의 찾기",
       "short_name": "강의",
       "description": "전체 강의 목록",
-      "url": "/courses",
+      "url": "/ko",
       "icons": [
         {
           "src": "/android-chrome-192x192.png",

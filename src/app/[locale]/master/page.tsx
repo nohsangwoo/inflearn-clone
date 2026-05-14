@@ -149,7 +149,7 @@ export default function MasterDashboardPage() {
     <div className="space-y-6">
       <div>
         <Badge variant="secondary" className="mb-3">최고 관리자</Badge>
-        <h1 className="text-[28px] font-bold leading-[1.43]">박살강의 컨트롤 타워</h1>
+        <h1 className="text-[28px] font-bold leading-[1.43]">링구스트 컨트롤 타워</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           시딩/목업 계정을 제외한 실제 운영 유저, 입금 승인, 정산, HLS 처리 상태를 통제합니다.
         </p>

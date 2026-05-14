@@ -8,7 +8,11 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   if (user.role !== "ADMIN") return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
-  const realUserFilter = sql`${userTable.email} not like '%@seed.baksalclass.local' and ${userTable.email} not like '%@baksalclass.com'`
+  const realUserFilter = sql`
+    ${userTable.email} not like '%@seed.lingoost.local'
+    and ${userTable.email} not like '%@seed.baksalclass.local'
+    and ${userTable.email} not like '%@baksalclass.com'
+  `
   const realEnrollmentFilter = sql`${enrollmentRequests.id} not like 'seed-enrollment-%'`
 
   const [usersRow, lecturesRow, ordersRow, pendingPayoutsRow, hlsPendingRow, pendingEnrollmentRow, approvedEnrollmentRow] = await Promise.all([

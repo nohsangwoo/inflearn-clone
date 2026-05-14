@@ -30,7 +30,7 @@ export async function runLocalEncoding(params: {
   const sectionId = params.curriculumSectionId
   const basePrefix = `assets/curriculumsection/${sectionId}/`
   const masterKey = `${basePrefix}master.m3u8`
-  const tmpRoot = path.join(os.tmpdir(), `baksal-encode-${sectionId}-${Date.now()}`)
+  const tmpRoot = path.join(os.tmpdir(), `lingoost-encode-${sectionId}-${Date.now()}`)
   const outputRoot = path.join(tmpRoot, "output")
   const sourcePath = path.join(tmpRoot, "source.mp4")
 

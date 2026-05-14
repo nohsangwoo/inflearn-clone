@@ -14,50 +14,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily' as const,
       priority: 1.0,
     },
-    {
-      path: '/courses',
-      changeFrequency: 'daily' as const,
-      priority: 0.9,
-    },
-    {
-      path: '/login',
-      changeFrequency: 'monthly' as const,
-      priority: 0.5,
-    },
-    {
-      path: '/me',
-      changeFrequency: 'weekly' as const,
-      priority: 0.6,
-    },
-    {
-      path: '/me/profile',
-      changeFrequency: 'monthly' as const,
-      priority: 0.5,
-    },
-    {
-      path: '/me/courses',
-      changeFrequency: 'weekly' as const,
-      priority: 0.7,
-    },
-    {
-      path: '/me/notifications',
-      changeFrequency: 'weekly' as const,
-      priority: 0.5,
-    },
-    {
-      path: '/me/likes',
-      changeFrequency: 'weekly' as const,
-      priority: 0.5,
-    },
+    { path: '/company', changeFrequency: 'monthly' as const, priority: 0.7 },
+    { path: '/terms', changeFrequency: 'yearly' as const, priority: 0.3 },
+    { path: '/privacy', changeFrequency: 'yearly' as const, priority: 0.3 },
   ];
 
   const sitemapEntries: MetadataRoute.Sitemap = [];
 
   routes.forEach(route => {
     locales.forEach(locale => {
-      const url = locale === 'ko'
-        ? `${baseUrl}${route.path}`
-        : `${baseUrl}/${locale}${route.path}`;
+      const url = `${baseUrl}/${locale}${route.path}`;
 
       sitemapEntries.push({
         url,
@@ -66,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: route.priority,
         alternates: {
           languages: {
-            ko: `${baseUrl}${route.path}`,
+            ko: `${baseUrl}/ko${route.path}`,
             en: `${baseUrl}/en${route.path}`,
             ja: `${baseUrl}/ja${route.path}`,
             zh: `${baseUrl}/zh${route.path}`,
@@ -88,13 +54,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       locales.forEach((locale) => {
         const path = `/course/${course.id}`;
         sitemapEntries.push({
-          url: locale === 'ko' ? `${baseUrl}${path}` : `${baseUrl}/${locale}${path}`,
+          url: `${baseUrl}/${locale}${path}`,
           lastModified: course.updatedAt,
           changeFrequency: 'weekly',
           priority: 0.8,
           alternates: {
             languages: {
-              ko: `${baseUrl}${path}`,
+              ko: `${baseUrl}/ko${path}`,
               en: `${baseUrl}/en${path}`,
               ja: `${baseUrl}/ja${path}`,
               zh: `${baseUrl}/zh${path}`,

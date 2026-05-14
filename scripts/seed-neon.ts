@@ -20,8 +20,9 @@ import {
   users,
   videos,
 } from "../src/db";
-import { mockCourses } from "../src/lib/mock-courses";
+import { getMockCoursesWithEnrollmentStatus } from "../src/lib/mock-courses";
 
+const mockCourses = getMockCoursesWithEnrollmentStatus();
 const lectureIds = mockCourses.map((course) => course.id);
 const studentCount = Math.max(
   80,
@@ -164,7 +165,7 @@ async function main() {
       Array.from({ length: studentCount }, (_, index) => {
         const n = index + 1;
         return {
-          email: `student${String(n).padStart(4, "0")}@seed.baksalclass.local`,
+          email: `student${String(n).padStart(4, "0")}@seed.lingoost.local`,
           nickname: `수강생 ${String(n).padStart(3, "0")}`,
           role: "STUDENT" as const,
           firebaseUid: `seed-student-${n}`,

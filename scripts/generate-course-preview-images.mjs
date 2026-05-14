@@ -157,7 +157,7 @@ function overlaySvg(course) {
   <rect x="40" y="40" width="1120" height="701" rx="34" fill="none" stroke="rgba(255,255,255,0.42)" stroke-width="2"/>
   <g filter="url(#softShadow)">
     <rect x="72" y="74" width="190" height="42" rx="21" fill="${surface}" fill-opacity="0.92"/>
-    <text x="96" y="101" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="${ink}" letter-spacing="1.8">BAKSAL CLASS</text>
+    <text x="96" y="101" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="${ink}" letter-spacing="1.8">LINGOOST</text>
   </g>
   <rect x="72" y="142" width="${Math.max(190, course.label.length * 12 + 52)}" height="42" rx="21" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.45)"/>
   <text x="96" y="169" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#ffffff" letter-spacing="1.2">${escapeXml(course.label)}</text>

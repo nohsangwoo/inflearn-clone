@@ -3,7 +3,7 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 declare global {
-  var __baksalSql: postgres.Sql | undefined;
+  var __lingoostSql: postgres.Sql | undefined;
 }
 
 let cachedDb: ReturnType<typeof createDb> | undefined;
@@ -22,7 +22,7 @@ function createClient() {
   });
 
   if (process.env.NODE_ENV !== "production") {
-    globalThis.__baksalSql = client;
+    globalThis.__lingoostSql = client;
   }
 
   return client;
@@ -30,7 +30,7 @@ function createClient() {
 
 export function getSql() {
   if (!cachedSql) {
-    cachedSql = globalThis.__baksalSql ?? createClient();
+    cachedSql = globalThis.__lingoostSql ?? createClient();
   }
 
   return cachedSql;

@@ -1,11 +1,11 @@
 ---
-name: baksal-course-imagegen
-description: Generate Baksal Class course preview images using the project OPENAI_API_KEY and gpt-image-2, then compose exact English title/discount overlays.
+name: lingoost-course-imagegen
+description: Generate Lingoost course preview images using the project OPENAI_API_KEY and gpt-image-2, then compose exact English title/discount overlays.
 ---
 
-# Baksal Course Imagegen
+# Lingoost Course Imagegen
 
-Use this project-local skill when creating or refreshing course preview images for the Baksal Class web app.
+Use this project-local skill when creating or refreshing course preview images for the Lingoost web app.
 
 ## Source Of Truth
 
@@ -26,7 +26,7 @@ Use this project-local skill when creating or refreshing course preview images f
 - Request a `1200x784` generated background because `gpt-image-2` requires dimensions to be multiples of 16.
 - Crop the final composed result to `1200x781`.
 - Do not rely on the image model for exact typography. Ask for a background with no readable text, then use local SVG overlays for:
-  - brand label: `BAKSAL CLASS`
+  - brand label: `LINGOOST`
   - course title
   - short English subtitle
   - category chips

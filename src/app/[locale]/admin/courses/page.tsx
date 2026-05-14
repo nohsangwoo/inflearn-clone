@@ -47,7 +47,7 @@ export default function AdminCoursesPage() {
 
   async function createCourse() {
     const { data: created } = await axios.post("/api/admin/courses", {
-      title: "새 박살강의",
+      title: "새 강의",
       price: 0,
       category: "웹 개발",
       level: "입문",

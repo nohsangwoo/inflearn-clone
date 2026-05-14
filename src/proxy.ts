@@ -37,7 +37,12 @@ function getLocale(request: NextRequest): string {
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  if (pathname.startsWith("/_next") || pathname.startsWith("/api") || pathname.includes(".")) {
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname === "/opengraph-image" ||
+    pathname.includes(".")
+  ) {
     return NextResponse.next()
   }
 

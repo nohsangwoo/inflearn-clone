@@ -67,7 +67,7 @@ export default function HomePageWrapper() {
   const [sort, setSort] = useState<"latest" | "best" | "priceAsc">("latest")
 
   const { data, isLoading } = useQuery({
-    queryKey: ["baksal-courses", keyword, category, sort],
+    queryKey: ["lingoost-courses", keyword, category, sort],
     queryFn: async () => {
       const { data } = await axios.get("/api/courses", {
         params: {
@@ -116,13 +116,13 @@ export default function HomePageWrapper() {
       return data as { liked: boolean }
     },
     onMutate: async ({ courseId, nextLiked }) => {
-      await queryClient.cancelQueries({ queryKey: ["baksal-courses"] })
+      await queryClient.cancelQueries({ queryKey: ["lingoost-courses"] })
       const previousQueries = queryClient.getQueriesData<{ total: number; items: ApiCourse[] }>({
-        queryKey: ["baksal-courses"],
+        queryKey: ["lingoost-courses"],
       })
 
       queryClient.setQueriesData<{ total: number; items: ApiCourse[] }>(
-        { queryKey: ["baksal-courses"] },
+        { queryKey: ["lingoost-courses"] },
         (current) => {
           if (!current) return current
           return {
@@ -159,7 +159,7 @@ export default function HomePageWrapper() {
     },
     onSuccess: ({ liked }, { courseId }) => {
       queryClient.setQueriesData<{ total: number; items: ApiCourse[] }>(
-        { queryKey: ["baksal-courses"] },
+        { queryKey: ["lingoost-courses"] },
         (current) => {
           if (!current) return current
           return {
@@ -286,12 +286,52 @@ export default function HomePageWrapper() {
         )}
       </section>
 
+      <section className="border-t border-border bg-background">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-[0.95fr_1.05fr] md:px-6">
+          <div>
+            <p className="text-[14px] font-medium text-muted-foreground">For course creators</p>
+            <h2 className="mt-2 text-[22px] font-medium leading-[1.18]">
+              강의를 판매하고 싶은 사람을 위한 링구스트
+            </h2>
+          </div>
+          <div className="space-y-4 text-[15px] leading-7 text-muted-foreground">
+            <p>
+              링구스트는 주식회사 럿지가 운영하는 온라인 강의 플랫폼입니다. 강의 판매, 강의 등록, 강사 모집,
+              강의자 모집, 지식창업, 시즌제 강의 모집처럼 강의를 만들고 판매하려는 사람이 실제로 검색하는
+              흐름을 기준으로 강의 상세 페이지와 커리큘럼 정보를 구성합니다.
+            </p>
+            <p>
+              수강생은 계좌입금 수강신청 후 입금 확인을 거쳐 HLS 영상 강의, 자막, 더빙, 자료를 학습하고,
+              판매자는 판매자 대시보드에서 강의 소개, 태그, SEO 키워드, 모집 기간, 정산 상태를 관리합니다.
+              인프런 같은 강의 플랫폼을 찾는 사용자에게도 각 강의의 주제와 시즌 모집 상태가 명확히 노출되도록
+              설계합니다.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {[
+                "온라인 강의",
+                "강의 판매",
+                "강의 등록",
+                "강사 모집",
+                "시즌제 강의",
+                "수강 신청",
+                "HLS 강의",
+                "강의 SEO",
+              ].map((keyword) => (
+                <Badge key={keyword} variant="outline" className="rounded-full bg-background px-3 py-1">
+                  {keyword}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="border-t border-border bg-secondary">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-3 md:px-6">
           {[
             ["Support", "수강 신청, 계좌입금, 수강권한을 단계별로 확인합니다."],
             ["Hosting", "판매자는 계좌, 커리큘럼, HLS, 자막, 더빙 상태를 관리합니다."],
-            ["Baksal", "시즌별 모집 기간과 정원을 기준으로 신청 상태를 투명하게 안내합니다."],
+            ["Lingoost", "시즌별 모집 기간과 정원을 기준으로 신청 상태를 투명하게 안내합니다."],
           ].map(([title, body]) => (
             <div key={title}>
               <h3 className="text-[16px] font-medium">{title}</h3>
@@ -395,7 +435,7 @@ function CourseTile({
           </div>
           <div className="mt-3 flex items-end justify-between gap-2">
             <div className="text-[14px] text-muted-foreground">
-              <div>{course.instructor?.nickname || course.instructor?.email || "박살강의 판매자"}</div>
+              <div>{course.instructor?.nickname || course.instructor?.email || "링구스트 판매자"}</div>
               <div className="mt-1 inline-flex items-center gap-1">
                 <Users className="size-3.5" />
                 {course.purchaseCount?.toLocaleString() ?? "0"}명

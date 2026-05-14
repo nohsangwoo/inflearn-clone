@@ -6,6 +6,8 @@ import { db, users } from "@/db";
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import { FIREBASE_AUTH_COOKIE } from "@/lib/firebase/session";
 
+const LEGACY_FIREBASE_AUTH_COOKIE = "baksal_firebase_token";
+
 export type DbUser = {
   id: number;
   email: string;
@@ -37,16 +39,16 @@ async function readFirebaseToken(request?: NextRequest) {
   }
 
   if (request) {
-    return request.cookies.get(FIREBASE_AUTH_COOKIE)?.value ?? null;
+    return request.cookies.get(FIREBASE_AUTH_COOKIE)?.value ?? request.cookies.get(LEGACY_FIREBASE_AUTH_COOKIE)?.value ?? null;
   }
 
   const cookieStore = await nextCookies();
-  return cookieStore.get(FIREBASE_AUTH_COOKIE)?.value ?? null;
+  return cookieStore.get(FIREBASE_AUTH_COOKIE)?.value ?? cookieStore.get(LEGACY_FIREBASE_AUTH_COOKIE)?.value ?? null;
 }
 
 /**
  * 현재 로그인한 유저의 DB User 레코드를 반환합니다.
- * 클라이언트는 Firebase ID 토큰을 Authorization 헤더 또는 baksal_firebase_token 쿠키로 전달합니다.
+ * 클라이언트는 Firebase ID 토큰을 Authorization 헤더 또는 lingoost_firebase_token 쿠키로 전달합니다.
  */
 export async function getAuthUserFromRequest(request?: NextRequest): Promise<DbUser | null> {
   const token = await readFirebaseToken(request);
