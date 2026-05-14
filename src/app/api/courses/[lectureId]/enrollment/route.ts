@@ -19,6 +19,9 @@ export async function POST(
   if (!Number.isFinite(lectureId)) {
     return NextResponse.json({ message: "lectureId required" }, { status: 400 })
   }
+  const user = await getAuthUserFromRequest(req)
+  if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
+
   const mockCourse = findMockCourse(lectureId)
   if (mockCourse) {
     if (!mockCourse.enrollmentAvailable) {
@@ -47,9 +50,6 @@ export async function POST(
       { status: 202 },
     )
   }
-
-  const user = await getAuthUserFromRequest(req)
-  if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
   const studentMemo = typeof body?.studentMemo === "string" ? body.studentMemo.slice(0, 1000) : null

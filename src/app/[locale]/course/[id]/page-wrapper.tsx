@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useParams, useRouter, usePathname } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -24,6 +25,7 @@ import HlsPlayerModal from '@/components/video/shaka-player-modal'
 import FreePreviewPlayerModal from '@/components/video/free-preview-player-modal'
 import { toCdnUrl } from '@/lib/brand'
 import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from '@/lib/enrollment-window'
+import { useAuthStore } from '@/lib/stores/auth-store'
 import { getTranslation, useLocale } from '@/lib/translations'
 
 type Detail = {
@@ -148,6 +150,7 @@ export default function CourseDetailPageWrapper() {
   const locale = useLocale(pathname)
   const t = getTranslation(locale).course
   const queryClient = useQueryClient()
+  const user = useAuthStore((state) => state.user)
   const [like, setLike] = useState(false)
 
   const { data: detail, isLoading } = useQuery({
@@ -230,11 +233,11 @@ export default function CourseDetailPageWrapper() {
 
   // 액션
   const likeToggle = useMutation({
-    mutationFn: async () => {
-      const { data } = await axios.post(`/api/courses/${lectureId}/like`)
+    mutationFn: async (nextLiked: boolean) => {
+      const { data } = await axios.post(`/api/courses/${lectureId}/like`, { liked: nextLiked })
       return data as { liked: boolean }
     },
-    onMutate: async () => {
+    onMutate: async (nextLiked) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['course-detail', lectureId] })
 
@@ -243,14 +246,13 @@ export default function CourseDetailPageWrapper() {
       const previousDetail = queryClient.getQueryData<Detail>(['course-detail', lectureId])
 
       // Optimistic update
-      const newLikeState = !like
-      setLike(newLikeState)
+      setLike(nextLiked)
 
       // Update the cached detail with new like count
       if (previousDetail) {
         const updatedDetail = {
           ...previousDetail,
-          likeCount: newLikeState
+          likeCount: nextLiked
             ? previousDetail.likeCount + 1
             : Math.max(0, previousDetail.likeCount - 1)
         }
@@ -267,13 +269,28 @@ export default function CourseDetailPageWrapper() {
           queryClient.setQueryData(['course-detail', lectureId], context.previousDetail)
         }
       }
+      const anyErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string }
+      if (anyErr?.response?.status === 401) {
+        toast.error('로그인 후 관심 강의를 저장할 수 있습니다.')
+        router.push(`/${locale}/login`)
+        return
+      }
+      toast.error(anyErr?.response?.data?.message || anyErr?.message || '관심 강의 저장에 실패했습니다.')
     },
     onSettled: () => {
       // Refetch to ensure we have the latest data from server
-      queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] })
+      if (!detail?.isMock) queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] })
     },
     onSuccess: res => setLike(Boolean(res?.liked)),
   })
+  const handleLikeToggle = () => {
+    if (!user) {
+      toast.error('로그인 후 관심 강의를 저장할 수 있습니다.')
+      router.push(`/${locale}/login`)
+      return
+    }
+    likeToggle.mutate(!like)
+  }
   const enroll = useMutation({
     mutationFn: async () => {
       if (!detail) return
@@ -283,16 +300,29 @@ export default function CourseDetailPageWrapper() {
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ['course-purchased', lectureId] })
       await queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] })
-      if (data?.message) alert(data.message)
+      if (data?.message) toast.success(data.message)
     },
     onError: (err: unknown) => {
       const anyErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string }
       const status = anyErr?.response?.status
       const message = anyErr?.response?.data?.message || anyErr?.message || '수강 신청 중 오류가 발생했습니다.'
       console.error('[Enrollment] error', { status, message, err })
-      alert(`수강 신청에 실패했습니다.\n${message}`)
+      if (status === 401) {
+        toast.error('로그인 후 수강 신청할 수 있습니다.')
+        router.push(`/${locale}/login`)
+        return
+      }
+      toast.error(message)
     },
   })
+  const handleEnroll = () => {
+    if (!user) {
+      toast.error('로그인 후 수강 신청할 수 있습니다.')
+      router.push(`/${locale}/login`)
+      return
+    }
+    enroll.mutate()
+  }
 
   // 학습하기 버튼 핸들러
   const handleStartLearning = () => {
@@ -365,7 +395,7 @@ export default function CourseDetailPageWrapper() {
               <button
                 type="button"
                 aria-label="관심 강의"
-                onClick={() => likeToggle.mutate()}
+                onClick={handleLikeToggle}
                 disabled={likeToggle.isPending}
                 className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:text-primary disabled:opacity-60"
               >
@@ -623,7 +653,7 @@ export default function CourseDetailPageWrapper() {
                     <>
                       <Button
                         className="w-full"
-                        onClick={() => enroll.mutate()}
+                        onClick={handleEnroll}
                         disabled={!enrollmentAvailable || enroll.isPending || isEnrollmentPending}
                       >
                         {isEnrollmentPending ? '입금 확인 대기 중' : enrollmentAvailable ? '수강 신청' : getEnrollmentStatusLabel(enrollmentStatus)}
@@ -666,7 +696,7 @@ export default function CourseDetailPageWrapper() {
                 <Button
                   variant="ghost"
                   className="w-full rounded-full"
-                  onClick={() => likeToggle.mutate()}
+                  onClick={handleLikeToggle}
                   disabled={likeToggle.isPending}
                 >
                   <Heart

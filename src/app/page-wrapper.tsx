@@ -2,15 +2,17 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import axios from "axios"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { BookOpen, Heart, Search, Star, Users } from "lucide-react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { brand, toCdnUrl, withLocalePath } from "@/lib/brand"
 import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
 import { getMockCoursesWithEnrollmentStatus, previewImages } from "@/lib/mock-courses"
+import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils"
 
 type ApiCourse = {
@@ -28,6 +30,8 @@ type ApiCourse = {
   createdAt: string
   purchaseCount?: number
   reviewCount?: number
+  likeCount?: number
+  liked?: boolean
   avgRating?: number
   enrollmentStatus?: EnrollmentAvailabilityStatus | null
   enrollmentCapacity?: number | null
@@ -55,6 +59,9 @@ function getCourseImage(course: ApiCourse, index: number) {
 
 export default function HomePageWrapper() {
   const pathname = usePathname()
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const user = useAuthStore((state) => state.user)
   const [keyword, setKeyword] = useState("")
   const [category, setCategory] = useState("전체")
   const [sort, setSort] = useState<"latest" | "best" | "priceAsc">("latest")
@@ -97,6 +104,81 @@ export default function HomePageWrapper() {
       return matchesKeyword && matchesCategory
     })
   }, [category, data?.items, keyword])
+
+  const likeMutation = useMutation<
+    { liked: boolean },
+    unknown,
+    { courseId: number; nextLiked: boolean },
+    { previousQueries: Array<[readonly unknown[], { total: number; items: ApiCourse[] } | undefined]> }
+  >({
+    mutationFn: async ({ courseId, nextLiked }) => {
+      const { data } = await axios.post(`/api/courses/${courseId}/like`, { liked: nextLiked })
+      return data as { liked: boolean }
+    },
+    onMutate: async ({ courseId, nextLiked }) => {
+      await queryClient.cancelQueries({ queryKey: ["baksal-courses"] })
+      const previousQueries = queryClient.getQueriesData<{ total: number; items: ApiCourse[] }>({
+        queryKey: ["baksal-courses"],
+      })
+
+      queryClient.setQueriesData<{ total: number; items: ApiCourse[] }>(
+        { queryKey: ["baksal-courses"] },
+        (current) => {
+          if (!current) return current
+          return {
+            ...current,
+            items: current.items.map((item) => {
+              if (item.id !== courseId) return item
+              const wasLiked = Boolean(item.liked)
+              return {
+                ...item,
+                liked: nextLiked,
+                likeCount: nextLiked && !wasLiked
+                  ? (item.likeCount ?? 0) + 1
+                  : !nextLiked && wasLiked
+                    ? Math.max(0, (item.likeCount ?? 0) - 1)
+                    : item.likeCount,
+              }
+            }),
+          }
+        },
+      )
+
+      return { previousQueries }
+    },
+    onError: (error, _variables, context) => {
+      context?.previousQueries.forEach(([queryKey, previous]) => {
+        queryClient.setQueryData(queryKey, previous)
+      })
+      const anyError = error as { response?: { status?: number; data?: { message?: string } }; message?: string }
+      if (anyError?.response?.status === 401) {
+        toast.error("로그인 후 관심 강의를 저장할 수 있습니다.")
+        return
+      }
+      toast.error(anyError?.response?.data?.message || anyError?.message || "관심 강의 저장에 실패했습니다.")
+    },
+    onSuccess: ({ liked }, { courseId }) => {
+      queryClient.setQueriesData<{ total: number; items: ApiCourse[] }>(
+        { queryKey: ["baksal-courses"] },
+        (current) => {
+          if (!current) return current
+          return {
+            ...current,
+            items: current.items.map((item) => item.id === courseId ? { ...item, liked } : item),
+          }
+        },
+      )
+    },
+  })
+
+  const handleToggleLike = (course: ApiCourse) => {
+    if (!user) {
+      toast.error("로그인 후 관심 강의를 저장할 수 있습니다.")
+      router.push(withLocalePath(pathname, "/login"))
+      return
+    }
+    likeMutation.mutate({ courseId: course.id, nextLiked: !course.liked })
+  }
 
   return (
     <main className="bg-background text-foreground">
@@ -190,7 +272,15 @@ export default function HomePageWrapper() {
         ) : (
           <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
             {courses.map((course, index) => (
-              <CourseTile key={`${course.id}-${course.title}`} course={course} image={getCourseImage(course, index)} pathname={pathname} index={index} />
+              <CourseTile
+                key={`${course.id}-${course.title}`}
+                course={course}
+                image={getCourseImage(course, index)}
+                pathname={pathname}
+                index={index}
+                onToggleLike={handleToggleLike}
+                isLikePending={likeMutation.isPending}
+              />
             ))}
           </div>
         )}
@@ -219,11 +309,15 @@ function CourseTile({
   image,
   pathname,
   index,
+  onToggleLike,
+  isLikePending,
 }: {
   course: ApiCourse
   image: string
   pathname: string
   index: number
+  onToggleLike: (course: ApiCourse) => void
+  isLikePending: boolean
 }) {
   const courseHref = withLocalePath(pathname, `/course/${course.id}`)
   const discount =
@@ -254,9 +348,19 @@ function CourseTile({
           <button
             type="button"
             aria-label="관심 강의"
-            className="absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors group-hover:text-primary"
+            aria-pressed={Boolean(course.liked)}
+            disabled={isLikePending}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onToggleLike(course)
+            }}
+            className={cn(
+              "absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:text-primary disabled:cursor-wait disabled:opacity-70",
+              course.liked && "text-primary",
+            )}
           >
-            <Heart className="size-5" />
+            <Heart className={cn("size-5", course.liked && "fill-primary text-primary")} />
           </button>
           <div className="absolute bottom-3 left-3 flex gap-1">
             {[0, 1, 2].map((dot) => (

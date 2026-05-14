@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm"
-import { db, enrollmentRequests, lectures, purchases, reviews, users } from "@/db"
+import { db, enrollmentRequests, lectures, likes, purchases, reviews, users } from "@/db"
+import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { getEnrollmentAvailability } from "@/lib/enrollment-window"
 import { getMockCoursesWithEnrollmentStatus } from "@/lib/mock-courses"
 
@@ -11,6 +12,7 @@ export async function GET(req: NextRequest) {
   const sort = (sp.get("sort") || "latest").toLowerCase()
   const q = sp.get("q")?.trim()
   const category = sp.get("category")?.toLowerCase() || undefined
+  const authUser = await getAuthUserFromRequest(req).catch(() => null)
 
   const conditions = [eq(lectures.isActive, true)]
   if (q) {
@@ -31,6 +33,10 @@ export async function GET(req: NextRequest) {
 
   const purchaseCount = sql<number>`count(distinct ${purchases.id})`
   const reviewCount = sql<number>`count(distinct ${reviews.id})`
+  const likeCount = sql<number>`count(distinct ${likes.id})`
+  const liked = authUser
+    ? sql<boolean>`coalesce(bool_or(${likes.userId} = ${authUser.id}), false)`
+    : sql<boolean>`false`
   const enrollmentAppliedCount = sql<number>`count(distinct case when ${enrollmentRequests.status} in ('AWAITING_PLATFORM_FEE', 'APPROVED') then ${enrollmentRequests.id} end)`
   const effectivePrice = sql<number>`coalesce(${lectures.discountPrice}, ${lectures.price})`
   const orderBy = (() => {
@@ -65,11 +71,14 @@ export async function GET(req: NextRequest) {
         instructorEmail: users.email,
         purchaseCount,
         reviewCount,
+        likeCount,
+        liked,
       })
       .from(lectures)
       .leftJoin(users, eq(lectures.instructorId, users.id))
       .leftJoin(purchases, eq(purchases.lectureId, lectures.id))
       .leftJoin(reviews, eq(reviews.lectureId, lectures.id))
+      .leftJoin(likes, eq(likes.lectureId, lectures.id))
       .leftJoin(enrollmentRequests, eq(enrollmentRequests.lectureId, lectures.id))
       .where(where)
       .groupBy(lectures.id, users.id)
@@ -118,7 +127,9 @@ export async function GET(req: NextRequest) {
         if (sort === "pricedesc") return bPrice - aPrice || b.price - a.price
         return b.createdAt.localeCompare(a.createdAt)
       })
-    const pagedItems = fallbackItems.slice((page - 1) * pageSize, page * pageSize)
+    const pagedItems = fallbackItems
+      .slice((page - 1) * pageSize, page * pageSize)
+      .map((course) => ({ ...course, liked: false }))
     return NextResponse.json({
       page,
       pageSize,
