@@ -10,7 +10,7 @@
 - **Curriculum**: 강의 하위의 커리큘럼 묶음. 섹션(수업)의 컨테이너 역할.
 - **CurriculumSection**: 실제 수업 단위. 제목/설명/공개여부(`isActive`).
 - **Video / File**: 섹션 내 영상/파일 (현재 문서의 범위에선 CRUD 일부만 사용).
-- **User**: Supabase Auth 사용자와 1:1 매핑된 Drizzle `User` 레코드.
+- **User**: Firebase Auth 사용자와 1:1 매핑된 Drizzle `User` 레코드.
 
 관련 Drizzle 필드 요약(전체 스키마는 `src/db/schema.ts` 참고)
 
@@ -31,9 +31,9 @@ export const lectures = pgTable("Lecture", {
 
 ### 인증/보안
 
-- Supabase 세션 기반 인증을 사용하며, 모든 어드민 API는 로그인 확인 및 소유권 검사를 수행.
+- Firebase ID 토큰 기반 인증을 사용하며, 모든 어드민 API는 로그인 확인 및 소유권 검사를 수행.
 - 헬퍼: `src/lib/auth/get-auth-user.ts`
-  - `getAuthUserFromRequest(req)` → `{ id, email, supabaseId } | null`
+  - `getAuthUserFromRequest(req)` → `{ id, email, firebaseUid } | null`
   - Drizzle로 `User` 레코드를 upsert/동기화 후 최소 필드만 반환.
 
 ---
@@ -44,8 +44,10 @@ export const lectures = pgTable("Lecture", {
   - `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, `AWS_REGION`, `AWS_BUCKET_NAME`
 - CDN
   - `NEXT_PUBLIC_CDN_URL` (기본값: `https://storage.lingoost.com`)
-- Supabase
-  - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- Firebase Auth
+  - `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+  - 선택: `NEXT_PUBLIC_FIREBASE_APP_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+  - 서버 검증용 `FIREBASE_SERVICE_ACCOUNT_BASE64` 또는 `FIREBASE_SERVICE_ACCOUNT_JSON`
 - 수강신청/수수료
   - `PLATFORM_FEE_RATE_BPS`: 전역 플랫폼 수수료율. 0이면 이벤트 자동승인, 100이면 1%, 1000이면 10%
   - `PLATFORM_BANK_NAME`, `PLATFORM_BANK_ACCOUNT_NUMBER`, `PLATFORM_BANK_ACCOUNT_HOLDER`: 판매자가 플랫폼 수수료를 입금할 계좌 안내

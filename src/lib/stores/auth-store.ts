@@ -1,187 +1,244 @@
-'use client'
+"use client";
 
-import { create } from 'zustand'
-import { createClient } from '@/lib/supabase/client'
+import { create } from "zustand";
+import {
+  createUserWithEmailAndPassword,
+  onIdTokenChanged,
+  sendEmailVerification,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  type Unsubscribe,
+  type User as FirebaseUser,
+} from "firebase/auth";
+import {
+  getFirebaseClientAuth,
+  getFirebaseCredential,
+  getFirebaseOAuthProvider,
+  isFirebaseClientConfigured,
+} from "@/lib/firebase/client";
+import {
+  clearFirebaseAuthCookie,
+  setFirebaseAuthCookie,
+} from "@/lib/firebase/session";
 
 type AuthUser = {
-  id: string
-  email: string
-  name?: string
-} | null
+  id: string;
+  email: string;
+  name?: string;
+} | null;
 
 type SignInResult = {
-  success: boolean
-  error?: string
-  url?: string
-}
+  success: boolean;
+  error?: string;
+};
 
 type AuthState = {
-  user: AuthUser
-  isLoading: boolean
-  error: string | null
-  setUser: (user: AuthUser) => void
-  setLoading: (loading: boolean) => void
-  initialize: () => Promise<void>
-  loginWithEmailPassword: (email: string, password: string) => Promise<void>
+  user: AuthUser;
+  isLoading: boolean;
+  error: string | null;
+  setUser: (user: AuthUser) => void;
+  setLoading: (loading: boolean) => void;
+  initialize: () => Promise<void>;
+  loginWithEmailPassword: (email: string, password: string) => Promise<void>;
   signUpWithEmailPassword: (
     email: string,
     password: string,
-  ) => Promise<{ needsEmailVerification: boolean }>
-  loginWithOAuth: (provider: 'google' | 'apple') => Promise<SignInResult>
-  logout: () => Promise<void>
-}
+  ) => Promise<{ needsEmailVerification: boolean }>;
+  loginWithOAuth: (provider: "google" | "apple") => Promise<SignInResult>;
+  loginWithNativeToken: (
+    provider: "google" | "apple",
+    idToken: string,
+    accessToken?: string,
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+};
 
-const supabase = createClient()
+let authUnsubscribe: Unsubscribe | null = null;
+let firstAuthReady: Promise<void> | null = null;
 
-// 인증된 세션이 있을 때 서버 DB에 사용자 레코드가 존재하도록 보장
-const ensureUserOnServer = async () => {
-  try {
-    await fetch('/api/auth/ensure-user', { method: 'POST' })
-  } catch {
-    // 네트워크 오류 시 다음 기회에 재시도
+const toAuthUser = (user: FirebaseUser): NonNullable<AuthUser> => ({
+  id: user.uid,
+  email: user.email ?? "",
+  name: user.displayName ?? undefined,
+});
+
+const ensureUserOnServer = async (token: string) => {
+  await fetch("/api/auth/ensure-user", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+const syncFirebaseUser = async (
+  firebaseUser: FirebaseUser | null,
+  set: (state: Partial<AuthState>) => void,
+) => {
+  if (!firebaseUser) {
+    clearFirebaseAuthCookie();
+    set({ user: null, error: null });
+    return;
   }
+
+  const token = await firebaseUser.getIdToken();
+  setFirebaseAuthCookie(token);
+  set({ user: toAuthUser(firebaseUser), error: null });
+  await ensureUserOnServer(token);
+};
+
+function getFirebaseSetupError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("NEXT_PUBLIC_FIREBASE")) return message;
+  return message || "Firebase 인증을 초기화하지 못했습니다.";
 }
 
-export const useAuthStore = create<AuthState>(set => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: false,
   error: null,
-  setUser: user => set({ user }),
-  setLoading: isLoading => set({ isLoading }),
+  setUser: (user) => set({ user }),
+  setLoading: (isLoading) => set({ isLoading }),
 
   initialize: async () => {
-    set({ isLoading: true })
-    try {
-      const { data } = await supabase.auth.getUser()
-      const user = data.user
+    if (!isFirebaseClientConfigured()) {
+      clearFirebaseAuthCookie();
       set({
-        user: user ? { id: user.id, email: user.email ?? '' } : null,
-      })
+        user: null,
+        isLoading: false,
+        error:
+          "Firebase 웹 앱 설정이 없습니다. NEXT_PUBLIC_FIREBASE_API_KEY, AUTH_DOMAIN, PROJECT_ID를 추가해 주세요.",
+      });
+      return;
+    }
 
-      // 세션이 있다면 DB 사용자 보장 (이메일 인증된 사용자만 생성됨)
-      if (user) {
-        await ensureUserOnServer()
+    set({ isLoading: true });
+    try {
+      const auth = getFirebaseClientAuth();
+
+      if (!authUnsubscribe) {
+        firstAuthReady = new Promise<void>((resolve) => {
+          let resolved = false;
+          authUnsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+            try {
+              await syncFirebaseUser(firebaseUser, set);
+            } catch (error) {
+              set({
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Firebase 세션 동기화에 실패했습니다.",
+              });
+            } finally {
+              set({ isLoading: false });
+              if (!resolved) {
+                resolved = true;
+                resolve();
+              }
+            }
+          });
+        });
       }
 
-      supabase.auth.onAuthStateChange((_event, session) => {
-        const nextUser = session?.user
-        set({
-          user: nextUser
-            ? { id: nextUser.id, email: nextUser.email ?? '' }
-            : null,
-        })
-        if (nextUser) {
-          void ensureUserOnServer()
-        }
-      })
+      await firstAuthReady;
+    } catch (error) {
+      clearFirebaseAuthCookie();
+      set({ user: null, error: getFirebaseSetupError(error) });
     } finally {
-      set({ isLoading: false })
+      set({ isLoading: false });
     }
   },
 
   loginWithEmailPassword: async (email: string, password: string) => {
-    set({ isLoading: true })
+    set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-      if (error) throw error
-      const user = data.user
-      set({ user: user ? { id: user.id, email: user.email ?? '' } : null })
-      if (user) {
-        await ensureUserOnServer()
-      }
+      const auth = getFirebaseClientAuth();
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      await syncFirebaseUser(credential.user, set);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message || '로그인에 실패했습니다')
+      const message = error instanceof Error ? error.message : String(error);
+      set({ error: message });
+      throw new Error(message || "로그인에 실패했습니다.");
     } finally {
-      set({ isLoading: false })
+      set({ isLoading: false });
     }
   },
 
-  loginWithOAuth: async (provider: 'google' | 'apple'): Promise<SignInResult> => {
+  loginWithOAuth: async (provider: "google" | "apple"): Promise<SignInResult> => {
+    set({ isLoading: true, error: null });
     try {
-      set({ isLoading: true, error: null })
-      
-      // 개발 환경과 프로덕션 환경 구분 - 쿼리스트링 없이 깔끔한 콜백 URL 사용
-      const redirectUrl = typeof window !== 'undefined' 
-        ? `${window.location.origin}/api/auth/callback`
-        : `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/callback`
-      
-      console.log('OAuth Redirect URL:', redirectUrl) // 디버깅용
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: redirectUrl,
-        },
-      })
-
-      if (error) {
-        set({ error: error.message, isLoading: false })
-        return { success: false, error: error.message }
-      }
-
-      if (!data?.url) {
-        const errorMsg = 'OAuth URL을 가져올 수 없습니다'
-        set({ error: errorMsg, isLoading: false })
-        return { success: false, error: errorMsg }
-      }
-
-      set({ isLoading: false })
-      return { success: true, url: data.url }
-
+      const auth = getFirebaseClientAuth();
+      const credential = await signInWithPopup(auth, getFirebaseOAuthProvider(provider));
+      await syncFirebaseUser(credential.user, set);
+      return { success: true };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'OAuth 로그인 중 오류가 발생했습니다'
-      set({ error: errorMsg, isLoading: false })
-      return { success: false, error: errorMsg }
+      const errorMsg =
+        error instanceof Error ? error.message : "소셜 로그인 중 오류가 발생했습니다.";
+      set({ error: errorMsg });
+      return { success: false, error: errorMsg };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  loginWithNativeToken: async (
+    provider: "google" | "apple",
+    idToken: string,
+    accessToken?: string,
+  ) => {
+    set({ isLoading: true, error: null });
+    try {
+      const auth = getFirebaseClientAuth();
+      const credential = getFirebaseCredential(provider, idToken, accessToken);
+      const result = await signInWithCredential(auth, credential);
+      await syncFirebaseUser(result.user, set);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      set({ error: message });
+      throw new Error(message || "네이티브 로그인 토큰 처리에 실패했습니다.");
+    } finally {
+      set({ isLoading: false });
     }
   },
 
   signUpWithEmailPassword: async (email: string, password: string) => {
-    set({ isLoading: true })
+    set({ isLoading: true, error: null });
     try {
-      // 이메일 인증도 깔끔한 콜백 URL 사용
-      const emailRedirectTo = typeof window !== 'undefined'
-        ? `${window.location.origin}/api/auth/callback`
-        : `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/callback`
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo,
-        },
-      })
-      if (error) throw error
+      const auth = getFirebaseClientAuth();
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(credential.user, {
+        url:
+          typeof window !== "undefined"
+            ? window.location.origin
+            : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+      });
+      await syncFirebaseUser(credential.user, set);
 
-      const needsEmailVerification = !data.session
-
-      if (data.user && data.session) {
-        set({ user: { id: data.user.id, email: data.user.email ?? '' } })
-        await ensureUserOnServer()
-      }
-
-      return { needsEmailVerification }
+      return { needsEmailVerification: !credential.user.emailVerified };
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message || '회원가입에 실패했습니다')
+      const message = error instanceof Error ? error.message : String(error);
+      set({ error: message });
+      throw new Error(message || "회원가입에 실패했습니다.");
     } finally {
-      set({ isLoading: false })
+      set({ isLoading: false });
     }
   },
 
   logout: async () => {
-    set({ isLoading: true })
+    set({ isLoading: true, error: null });
     try {
-      await supabase.auth.signOut()
-      set({ user: null })
+      const auth = getFirebaseClientAuth();
+      await signOut(auth);
+      clearFirebaseAuthCookie();
+      set({ user: null });
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(message || '로그아웃에 실패했습니다')
+      const message = error instanceof Error ? error.message : String(error);
+      set({ error: message });
+      throw new Error(message || "로그아웃에 실패했습니다.");
     } finally {
-      set({ isLoading: false })
+      set({ isLoading: false });
     }
   },
-}))
+}));

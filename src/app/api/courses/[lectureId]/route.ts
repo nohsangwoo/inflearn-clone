@@ -15,15 +15,6 @@ export async function GET(
   }
 
   const mockCourse = findMockCourse(id)
-  if (mockCourse) {
-    const previewSection = mockCourse.sections.find((section) => section.isFreePreview && section.previewVideoUrl)
-    return NextResponse.json({
-      ...mockCourse,
-      isMock: true,
-      previewSectionId: previewSection?.id ?? null,
-      previewSectionTitle: previewSection?.title ?? null,
-    })
-  }
 
   const lecture = await db
     .select({
@@ -65,8 +56,18 @@ export async function GET(
     .where(eq(lectures.id, id))
     .limit(1)
     .then((rows) => rows[0])
+    .catch(() => null)
 
   if (!lecture || !lecture.isActive) {
+    if (mockCourse) {
+      const previewSection = mockCourse.sections.find((section) => section.isFreePreview && section.previewVideoUrl)
+      return NextResponse.json({
+        ...mockCourse,
+        isMock: true,
+        previewSectionId: previewSection?.id ?? null,
+        previewSectionTitle: previewSection?.title ?? null,
+      })
+    }
     return NextResponse.json({ message: "not found" }, { status: 404 })
   }
 
@@ -109,9 +110,14 @@ export async function GET(
   const sectionRows = await db
     .select({
       id: curriculumSections.id,
+      curriculumId: curriculums.id,
+      moduleTitle: curriculumSections.moduleTitle,
       title: curriculumSections.title,
       description: curriculumSections.description,
       isActive: curriculumSections.isActive,
+      position: curriculumSections.position,
+      sectionDurationSeconds: curriculumSections.durationSeconds,
+      resources: curriculumSections.resources,
       videoId: videos.id,
       videoTitle: videos.title,
       videoUrl: videos.videoUrl,
@@ -124,8 +130,8 @@ export async function GET(
     .innerJoin(curriculums, eq(curriculumSections.curriculumId, curriculums.id))
     .leftJoin(videos, eq(videos.curriculumSectionId, curriculumSections.id))
     .where(eq(curriculums.lectureId, id))
-    .orderBy(asc(curriculumSections.id))
-    .limit(24)
+    .orderBy(asc(curriculums.id), asc(curriculumSections.position), asc(curriculumSections.id))
+    .limit(240)
 
   const cdnBase = process.env.CDN_URL || process.env.NEXT_PUBLIC_CDN_URL || "https://storage.lingoost.com"
   const imageUrl = lecture.imageUrl
@@ -184,7 +190,8 @@ export async function GET(
     previewSectionId: previewSection?.id ?? null,
     previewSectionTitle: previewSection?.title ?? null,
     includedFeatures: [
-      `${Math.max(1, Math.round(sectionRows.reduce((sum, section) => sum + Number(section.duration ?? 0), 0) / 3600))}시간 주문형 영상`,
+      `${Math.max(1, Math.round(sectionRows.reduce((sum, section) => sum + Number(section.duration ?? section.sectionDurationSeconds ?? 0), 0) / 3600))}시간 분량 커리큘럼`,
+      `${sectionRows.length}개 수업`,
       "계좌입금 승인 후 수강",
       "모바일/데스크톱 수강",
       "자막 및 참고 자료 지원",
@@ -193,19 +200,20 @@ export async function GET(
     lastUpdatedAt: lecture.createdAt,
     sections: sectionRows.map((s) => ({
       id: s.id,
-      moduleTitle: "Curriculum",
+      moduleTitle: s.moduleTitle || "커리큘럼",
       title: s.title,
       description: s.description,
       active: s.isActive,
       hasVideo: Boolean(s.videoId),
       hlsStatus: s.hlsStatus ?? null,
-      durationSeconds: s.duration ?? 0,
+      durationSeconds: s.duration ?? s.sectionDurationSeconds ?? 0,
       isFreePreview: Boolean(s.isFreePreview),
       previewVideoUrl: s.isFreePreview
         ? s.hlsStatus === "READY"
           ? toPublicMediaUrl(s.masterKey)
           : toPublicMediaUrl(s.videoUrl)
         : null,
+      resources: s.resources,
     })),
   })
 }

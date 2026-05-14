@@ -31,13 +31,18 @@ export async function GET(req: NextRequest) {
   }
   const where = and(...conditions)
 
-  const purchaseCount = sql<number>`count(distinct ${purchases.id})`
-  const reviewCount = sql<number>`count(distinct ${reviews.id})`
-  const likeCount = sql<number>`count(distinct ${likes.id})`
+  const purchaseCount = sql<number>`(select count(*)::int from ${purchases} where ${purchases.lectureId} = ${lectures.id})`
+  const reviewCount = sql<number>`(select count(*)::int from ${reviews} where ${reviews.lectureId} = ${lectures.id} and ${reviews.isDeleted} = false)`
+  const likeCount = sql<number>`(select count(*)::int from ${likes} where ${likes.lectureId} = ${lectures.id})`
   const liked = authUser
-    ? sql<boolean>`coalesce(bool_or(${likes.userId} = ${authUser.id}), false)`
+    ? sql<boolean>`exists(select 1 from ${likes} where ${likes.lectureId} = ${lectures.id} and ${likes.userId} = ${authUser.id})`
     : sql<boolean>`false`
-  const enrollmentAppliedCount = sql<number>`count(distinct case when ${enrollmentRequests.status} in ('AWAITING_PLATFORM_FEE', 'APPROVED') then ${enrollmentRequests.id} end)`
+  const enrollmentAppliedCount = sql<number>`(
+    select count(*)::int
+    from ${enrollmentRequests}
+    where ${enrollmentRequests.lectureId} = ${lectures.id}
+      and ${enrollmentRequests.status} in ('AWAITING_PLATFORM_FEE', 'APPROVED')
+  )`
   const effectivePrice = sql<number>`coalesce(${lectures.discountPrice}, ${lectures.price})`
   const orderBy = (() => {
     if (sort === "best") return [desc(purchaseCount), desc(lectures.createdAt)]
@@ -76,12 +81,7 @@ export async function GET(req: NextRequest) {
       })
       .from(lectures)
       .leftJoin(users, eq(lectures.instructorId, users.id))
-      .leftJoin(purchases, eq(purchases.lectureId, lectures.id))
-      .leftJoin(reviews, eq(reviews.lectureId, lectures.id))
-      .leftJoin(likes, eq(likes.lectureId, lectures.id))
-      .leftJoin(enrollmentRequests, eq(enrollmentRequests.lectureId, lectures.id))
       .where(where)
-      .groupBy(lectures.id, users.id)
       .orderBy(...orderBy)
       .offset((page - 1) * pageSize)
       .limit(pageSize)

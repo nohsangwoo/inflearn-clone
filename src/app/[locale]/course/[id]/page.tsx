@@ -12,27 +12,25 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, id } = await params;
   const lectureId = Number(id);
-  const mockLecture = Number.isFinite(lectureId) ? findMockCourse(lectureId) : null;
-  const lecture =
-    mockLecture ??
-    (Number.isFinite(lectureId)
-      ? await db.query.lectures
-          .findFirst({
-            where: eq(lectures.id, lectureId),
-            columns: {
-              title: true,
-              shortDescription: true,
-              description: true,
-              metaTitle: true,
-              metaDescription: true,
-              seoKeywords: true,
-              imageUrl: true,
-              ogImageUrl: true,
-              canonicalUrl: true,
-            },
-          })
-          .catch(() => null)
-      : null);
+  const dbLecture = Number.isFinite(lectureId)
+    ? await db.query.lectures
+        .findFirst({
+          where: eq(lectures.id, lectureId),
+          columns: {
+            title: true,
+            shortDescription: true,
+            description: true,
+            metaTitle: true,
+            metaDescription: true,
+            seoKeywords: true,
+            imageUrl: true,
+            ogImageUrl: true,
+            canonicalUrl: true,
+          },
+        })
+        .catch(() => null)
+    : null;
+  const lecture = dbLecture ?? (Number.isFinite(lectureId) ? findMockCourse(lectureId) : null);
 
   return generateSeoMetadata({
     title: lecture?.metaTitle || lecture?.title || "강의 상세",

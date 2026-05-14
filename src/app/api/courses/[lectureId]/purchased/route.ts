@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { and, eq } from "drizzle-orm"
-import { db, enrollmentRequests, purchases } from "@/db"
+import { db, enrollmentRequests, lectures, purchases } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { findMockCourse } from "@/lib/mock-courses"
 
@@ -8,7 +8,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ lect
   const { lectureId: id } = await params
   const lectureId = Number(id)
   if (!Number.isFinite(lectureId)) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
-  if (findMockCourse(lectureId)) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
+  const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, lectureId), columns: { id: true } }).catch(() => null)
+  if (!lecture && findMockCourse(lectureId)) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
+  if (!lecture) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
 
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })

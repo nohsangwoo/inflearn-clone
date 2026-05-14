@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { and, desc, eq } from 'drizzle-orm'
-import { db, fcmTokens, pushNotifications, users } from '@/db'
-import { createClient } from '@/lib/supabase/server'
+import { db, fcmTokens, pushNotifications } from '@/db'
 import { getMessaging } from '@/lib/firebase-admin'
+import { getAuthUserFromRequest } from '@/lib/auth/get-auth-user'
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ success: false }, { status: 401 })
-
-  const me = await db.query.users.findFirst({
-    where: eq(users.supabaseId, user.id),
-    columns: { role: true, id: true },
-  })
-  if (!me || me.role !== 'ADMIN') return NextResponse.json({ success: false }, { status: 403 })
+  const me = await getAuthUserFromRequest(request)
+  if (!me) return NextResponse.json({ success: false }, { status: 401 })
+  if (me.role !== 'ADMIN') return NextResponse.json({ success: false }, { status: 403 })
 
   const { title, body: msgBody, data, platform, onlyActive = true, foreground = false } = await request.json()
   if (!title || !msgBody) return NextResponse.json({ success: false }, { status: 400 })
@@ -77,4 +71,3 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ success: true, sent, failed })
 }
-

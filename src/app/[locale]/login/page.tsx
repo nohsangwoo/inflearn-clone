@@ -8,25 +8,18 @@ import { useAuthStore } from "@/lib/stores/auth-store"
 import { toast } from "sonner"
 import { getTranslation, useLocale } from "@/lib/translations"
 import { useDeviceDetection } from "@/hooks/useDeviceDetection"
-import { createClient } from "@/lib/supabase/client"
-
-type SupabaseAuthLike = {
-  setSession: (params: { access_token: string; refresh_token: string }) => Promise<{ data: unknown; error: unknown }>
-  signInWithIdToken: (params: { provider: 'google' | 'apple'; token: string; access_token?: string }) => Promise<{ data: unknown; error: unknown }>
-  exchangeCodeForSession: (code: string) => Promise<{ data: unknown; error: unknown }>
-}
-type SupabaseLike = { auth: SupabaseAuthLike }
 
 type NativeBridgeWindow = Window & {
   LingoostApp?: { isWebView?: boolean }
   LingoostAuth?: { postMessage: (message: string) => void }
   flutter_inappwebview?: { callHandler: (name: string, ...args: unknown[]) => Promise<unknown> }
-  __supabase?: SupabaseLike
-  supabase?: SupabaseLike
-  __pendingSupabaseSession?: { access_token: string; refresh_token: string }
   handleGoogleSignInToken?: (payload: { success: boolean; idToken?: string; accessToken?: string; user?: unknown }) => Promise<void>
   handleAppleSignInToken?: (payload: { success: boolean; idToken?: string; authorizationCode?: string }) => Promise<void>
-  receiveSupabaseSession?: (sessionData: { access_token: string; refresh_token: string }) => Promise<void>
+  receiveFirebaseIdToken?: (payload: {
+    provider: "google" | "apple"
+    idToken: string
+    accessToken?: string
+  }) => Promise<void>
 }
 
 export default function LoginPage() {
@@ -41,6 +34,8 @@ export default function LoginPage() {
     isLoading,
     setLoading,
     loginWithEmailPassword,
+    loginWithOAuth,
+    loginWithNativeToken,
     signUpWithEmailPassword,
     initialize,
   } = useAuthStore()
@@ -55,106 +50,44 @@ export default function LoginPage() {
     initialize()
   }, [initialize])
 
-  // Expose Supabase client and native token handler for WebView bridge
+  // Expose native token handlers for WebView bridge.
   useEffect(() => {
-    const supabase: SupabaseLike = createClient() as unknown as SupabaseLike
     const w = window as unknown as NativeBridgeWindow
-    w.__supabase = supabase
-    w.supabase = supabase
-
-    const consumePendingSession = async () => {
-      try {
-        const s = (window as unknown as NativeBridgeWindow).__pendingSupabaseSession
-        if (!s) return
-        const { error } = await supabase.auth.setSession({
-          access_token: s.access_token,
-          refresh_token: s.refresh_token,
-        })
-        if (!error) {
-          delete (window as any).__pendingSupabaseSession
-          await useAuthStore.getState().initialize()
-          router.replace('/')
-        }
-      } catch (e) {
-        console.error('consumePendingSession failed', e)
-      }
-    }
-
-    void consumePendingSession()
-    const onPending = () => { void consumePendingSession() }
-    window.addEventListener('pendingSupabaseSession', onPending)
 
     w.handleGoogleSignInToken = async (payload: { success: boolean; idToken?: string; accessToken?: string; user?: unknown }) => {
       if (!payload?.success) return
       try {
         if (payload.idToken) {
-          const { error } = await supabase.auth.signInWithIdToken({
-            provider: 'google',
-            token: payload.idToken,
-            access_token: payload.accessToken,
-          })
-          if (!error) {
-            await useAuthStore.getState().initialize()
-            router.replace('/')
-          }
+          await loginWithNativeToken("google", payload.idToken, payload.accessToken)
+          router.replace('/')
         }
-      } catch {
-        console.error('handleGoogleSignInToken failed')
+      } catch (error) {
+        console.error('handleGoogleSignInToken failed', error)
       }
     }
     w.handleAppleSignInToken = async (payload: { success: boolean; idToken?: string; authorizationCode?: string }) => {
       if (!payload?.success) return
       try {
         if (payload.idToken) {
-          const { error } = await supabase.auth.signInWithIdToken({
-            provider: 'apple',
-            token: payload.idToken,
-          })
-          if (!error) {
-            await useAuthStore.getState().initialize()
-            router.replace('/')
-          }
+          await loginWithNativeToken("apple", payload.idToken)
+          router.replace('/')
         }
-      } catch {
-        console.error('handleAppleSignInToken failed')
+      } catch (error) {
+        console.error('handleAppleSignInToken failed', error)
       }
     }
 
-    w.receiveSupabaseSession = async (sessionData: { access_token: string; refresh_token: string }) => {
+    w.receiveFirebaseIdToken = async (payload) => {
       try {
-        const { error } = await supabase.auth.setSession({
-          access_token: sessionData.access_token,
-          refresh_token: sessionData.refresh_token,
-        })
-        if (!error) {
-          await useAuthStore.getState().initialize()
+        if (payload?.idToken) {
+          await loginWithNativeToken(payload.provider, payload.idToken, payload.accessToken)
           router.replace('/')
         }
-      } catch {
-        console.error('receiveSupabaseSession failed')
+      } catch (error) {
+        console.error('receiveFirebaseIdToken failed', error)
       }
     }
-    return () => { window.removeEventListener('pendingSupabaseSession', onPending) }
-  }, [router])
-
-  // Android WebView 등에서 OAuth redirect 후 code 쿼리로 돌아온 경우, 클라이언트에서 직접 세션 교환
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const url = new URL(window.location.href)
-        const code = url.searchParams.get('code')
-        const error = url.searchParams.get('error')
-        if (!code || error) return
-        const supabase: SupabaseLike = (window as unknown as NativeBridgeWindow).__supabase || (createClient() as unknown as SupabaseLike)
-        const { error: exErr } = await supabase.auth.exchangeCodeForSession(code)
-        if (!exErr) {
-          await useAuthStore.getState().initialize()
-          router.replace('/')
-        }
-      } catch {}
-    }
-    run()
-  }, [router])
+  }, [loginWithNativeToken, router])
 
   useEffect(() => {
     if (user) {
@@ -253,8 +186,10 @@ export default function LoginPage() {
         }
       }
 
-      await useAuthStore.getState().loginWithOAuth(provider)
-      // OAuth는 외부로 리다이렉트되므로 여기서 추가 동작 없음
+      const result = await loginWithOAuth(provider)
+      if (!result.success) {
+        toast.error(result.error || t.errors.socialLoginFailed)
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       toast.error(message || t.errors.socialLoginFailed) // "소셜 로그인에 실패했습니다"

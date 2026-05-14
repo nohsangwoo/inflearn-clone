@@ -67,12 +67,12 @@ export const users = pgTable(
     settlementAccountNumber: text("settlementAccountNumber"),
     settlementAccountHolder: text("settlementAccountHolder"),
     role: roleEnum("role").notNull().default("STUDENT"),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
-    supabaseId: text("supabaseId").notNull(),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
+    firebaseUid: text("firebaseUid").notNull(),
   },
   (table) => [
     uniqueIndex("User_email_key").on(table.email),
-    uniqueIndex("User_supabaseId_key").on(table.supabaseId),
+    uniqueIndex("User_firebaseUid_key").on(table.firebaseUid),
   ],
 );
 
@@ -106,7 +106,7 @@ export const lectures = pgTable(
     isActive: boolean("isActive").notNull().default(true),
     imageUrl: text("imageUrl"),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
     instructorId: integer("instructorId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
   },
   (table) => [
@@ -123,7 +123,7 @@ export const reviews = pgTable(
     content: text("content").notNull(),
     rating: integer("rating").notNull(),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
     userId: integer("userId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
     lectureId: integer("lectureId").references(() => lectures.id, { onDelete: "set null", onUpdate: "cascade" }),
     parentId: integer("parentId"),
@@ -143,14 +143,14 @@ export const reviews = pgTable(
 export const carts = pgTable("Cart", {
   id: serial("id").primaryKey(),
   createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   userId: integer("userId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
 });
 
 export const likes = pgTable("Like", {
   id: serial("id").primaryKey(),
   createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   lectureId: integer("lectureId").references(() => lectures.id, { onDelete: "set null", onUpdate: "cascade" }),
   userId: integer("userId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
 });
@@ -158,7 +158,7 @@ export const likes = pgTable("Like", {
 export const curriculums = pgTable("Curriculum", {
   id: serial("id").primaryKey(),
   createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   lectureId: integer("lectureId").references(() => lectures.id, { onDelete: "set null", onUpdate: "cascade" }),
 });
 
@@ -166,8 +166,12 @@ export const curriculumSections = pgTable("CurriculumSection", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   description: text("description"),
+  moduleTitle: text("moduleTitle"),
+  position: integer("position").notNull().default(0),
+  durationSeconds: integer("durationSeconds").notNull().default(0),
+  resources: text("resources").array().notNull().default(sql`ARRAY[]::TEXT[]`),
   createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   curriculumId: integer("curriculumId").references(() => curriculums.id, { onDelete: "set null", onUpdate: "cascade" }),
   isActive: boolean("isActive").notNull().default(true),
 });
@@ -181,7 +185,7 @@ export const videos = pgTable("Video", {
   duration: integer("duration"),
   language: languageEnum("language").notNull().default("KO"),
   createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   curriculumSectionId: integer("curriculumSectionId").references(() => curriculumSections.id, {
     onDelete: "set null",
     onUpdate: "cascade",
@@ -205,7 +209,7 @@ export const captionTracks = pgTable(
     url: text("url").notNull(),
     isDefault: boolean("isDefault").notNull().default(false),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   },
   (table) => [
     index("CaptionTrack_videoId_idx").on(table.videoId),
@@ -222,7 +226,7 @@ export const dubTracks = pgTable(
     lufs: doublePrecision("lufs"),
     offsetMs: integer("offsetMs"),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
     videoId: integer("videoId").references(() => videos.id, { onDelete: "set null", onUpdate: "cascade" }),
     url: text("url"),
   },
@@ -233,7 +237,7 @@ export const files = pgTable("File", {
   id: serial("id").primaryKey(),
   url: text("url").notNull(),
   createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   curriculumSectionId: integer("curriculumSectionId").references(() => curriculumSections.id, {
     onDelete: "set null",
     onUpdate: "cascade",
@@ -251,7 +255,7 @@ export const purchases = pgTable(
       .notNull()
       .references(() => lectures.id, { onDelete: "restrict", onUpdate: "cascade" }),
     progress: doublePrecision("progress").notNull().default(0),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("Purchase_userId_lectureId_key").on(table.userId, table.lectureId)],
@@ -276,7 +280,7 @@ export const paymentOrders = pgTable(
       .references(() => lectures.id, { onDelete: "restrict", onUpdate: "cascade" }),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   },
   (table) => [uniqueIndex("PaymentOrder_orderId_key").on(table.orderId)],
 );
@@ -313,7 +317,7 @@ export const enrollmentRequests = pgTable(
     }),
     approvedAt: timestamp("approvedAt", { precision: 3, mode: "date" }),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   },
   (table) => [
     uniqueIndex("EnrollmentRequest_userId_lectureId_key").on(table.userId, table.lectureId),
@@ -340,7 +344,7 @@ export const payments = pgTable(
     receiptUrl: text("receiptUrl"),
     raw: jsonb("raw").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   },
   (table) => [
     uniqueIndex("Payment_paymentKey_key").on(table.paymentKey),
@@ -374,7 +378,7 @@ export const payouts = pgTable(
     memo: text("memo"),
     paidAt: timestamp("paidAt", { precision: 3, mode: "date" }),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   },
   (table) => [
     index("Payout_sellerId_idx").on(table.sellerId),
@@ -394,7 +398,7 @@ export const fcmTokens = pgTable(
     isActive: boolean("isActive").notNull().default(true),
     lastUsedAt: timestamp("lastUsedAt", { precision: 3, mode: "date" }),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
   },
   (table) => [
     uniqueIndex("FcmToken_token_key").on(table.token),
@@ -490,6 +494,13 @@ export const videosRelations = relations(videos, ({ one, many }) => ({
   }),
   dubTracks: many(dubTracks),
   captionTracks: many(captionTracks),
+}));
+
+export const filesRelations = relations(files, ({ one }) => ({
+  section: one(curriculumSections, {
+    fields: [files.curriculumSectionId],
+    references: [curriculumSections.id],
+  }),
 }));
 
 export const captionTracksRelations = relations(captionTracks, ({ one }) => ({

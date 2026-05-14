@@ -22,35 +22,6 @@ export async function POST(
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
 
-  const mockCourse = findMockCourse(lectureId)
-  if (mockCourse) {
-    if (!mockCourse.enrollmentAvailable) {
-      return NextResponse.json(
-        { message: `${getEnrollmentStatusLabel(mockCourse.enrollmentStatus ?? "PAUSED")} 상태입니다. 다음 신청 시기에 다시 신청해주세요.` },
-        { status: 409 },
-      )
-    }
-    return NextResponse.json(
-      {
-        purchased: false,
-        message: "수강 신청이 접수되었습니다. 안내된 계좌로 입금 후 판매자가 확인하면 수강권한이 열립니다.",
-        enrollmentRequest: {
-          id: `mock-${lectureId}`,
-          status: "AWAITING_PLATFORM_FEE",
-          amount: mockCourse.discountPrice ?? mockCourse.price,
-          platformFeeRateBps: 0,
-          platformFeeAmount: 0,
-          sellerReceivableAmount: mockCourse.discountPrice ?? mockCourse.price,
-          sellerBankName: "신한은행",
-          sellerAccountNumber: "110-000-000000",
-          sellerAccountHolder: mockCourse.instructor.nickname,
-          createdAt: new Date().toISOString(),
-        },
-      },
-      { status: 202 },
-    )
-  }
-
   const body = await req.json().catch(() => ({}))
   const studentMemo = typeof body?.studentMemo === "string" ? body.studentMemo.slice(0, 1000) : null
 
@@ -84,6 +55,34 @@ export async function POST(
   })
 
   if (!lecture || !lecture.isActive) {
+    const mockCourse = findMockCourse(lectureId)
+    if (mockCourse) {
+      if (!mockCourse.enrollmentAvailable) {
+        return NextResponse.json(
+          { message: `${getEnrollmentStatusLabel(mockCourse.enrollmentStatus ?? "PAUSED")} 상태입니다. 다음 신청 시기에 다시 신청해주세요.` },
+          { status: 409 },
+        )
+      }
+      return NextResponse.json(
+        {
+          purchased: false,
+          message: "수강 신청이 접수되었습니다. 안내된 계좌로 입금 후 판매자가 확인하면 수강권한이 열립니다.",
+          enrollmentRequest: {
+            id: `mock-${lectureId}`,
+            status: "AWAITING_PLATFORM_FEE",
+            amount: mockCourse.discountPrice ?? mockCourse.price,
+            platformFeeRateBps: 0,
+            platformFeeAmount: 0,
+            sellerReceivableAmount: mockCourse.discountPrice ?? mockCourse.price,
+            sellerBankName: "신한은행",
+            sellerAccountNumber: "110-000-000000",
+            sellerAccountHolder: mockCourse.instructor.nickname,
+            createdAt: new Date().toISOString(),
+          },
+        },
+        { status: 202 },
+      )
+    }
     return NextResponse.json({ message: "lecture not available" }, { status: 400 })
   }
   if (lecture.instructorId === user.id) {

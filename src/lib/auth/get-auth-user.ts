@@ -1,80 +1,105 @@
-import { NextRequest } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { eq } from "drizzle-orm"
-import { db, users } from "@/db"
-import { cookies as nextCookies } from "next/headers"
+import { NextRequest } from "next/server";
+import { getAuth } from "firebase-admin/auth";
+import { eq } from "drizzle-orm";
+import { cookies as nextCookies } from "next/headers";
+import { db, users } from "@/db";
+import { getFirebaseAdmin } from "@/lib/firebase-admin";
+import { FIREBASE_AUTH_COOKIE } from "@/lib/firebase/session";
 
 export type DbUser = {
-  id: number
-  email: string
-  supabaseId: string
-  role: "ADMIN" | "STUDENT" | "TEACHER"
+  id: number;
+  email: string;
+  firebaseUid: string;
+  role: "ADMIN" | "STUDENT" | "TEACHER";
+};
+
+async function readFirebaseToken(request?: NextRequest) {
+  const authorization = request?.headers.get("authorization");
+  if (authorization?.startsWith("Bearer ")) {
+    return authorization.slice("Bearer ".length).trim();
+  }
+
+  if (request) {
+    return request.cookies.get(FIREBASE_AUTH_COOKIE)?.value ?? null;
+  }
+
+  const cookieStore = await nextCookies();
+  return cookieStore.get(FIREBASE_AUTH_COOKIE)?.value ?? null;
 }
 
 /**
  * 현재 로그인한 유저의 DB User 레코드를 반환합니다.
- * - API Route에서는 NextRequest를 전달하세요.
- * - 서버 컴포넌트/라우트 핸들러 컨텍스트에서는 인자 없이 사용 가능합니다.
- * 로그인하지 않은 경우 null을 반환합니다.
+ * 클라이언트는 Firebase ID 토큰을 Authorization 헤더 또는 baksal_firebase_token 쿠키로 전달합니다.
  */
 export async function getAuthUserFromRequest(request?: NextRequest): Promise<DbUser | null> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase env missing")
+  const token = await readFirebaseToken(request);
+  if (!token) return null;
+
+  const app = getFirebaseAdmin();
+  if (!app) {
+    throw new Error("Firebase Admin env missing");
   }
 
-  const supabase = request
-    ? createServerClient(supabaseUrl, supabaseKey, {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll()
-          },
-          setAll() {
-            // API Route에서 응답 쿠키 설정은 라우트 핸들러에서 처리
-          },
-        },
-      })
-    : createServerClient(supabaseUrl, supabaseKey, {
-        cookies: {
-          async getAll() {
-            const store = await nextCookies()
-            return store.getAll()
-          },
-          async setAll() {
-            // 서버 컴포넌트 컨텍스트에서는 쿠키 설정 불가
-          },
-        },
-      })
-
-  const { data, error } = await supabase.auth.getUser()
-  if (error || !data?.user) return null
-
-  const supaUser = data.user
-  const email = supaUser.email ?? ""
+  const decoded = await getAuth(app).verifyIdToken(token).catch(() => null);
+  if (!decoded) return null;
+  const firebaseUid = decoded.uid;
+  const email = decoded.email || `${firebaseUid}@firebase.local`;
+  const isVerified = decoded.email_verified ?? true;
 
   let dbUser = await db.query.users.findFirst({
-    where: eq(users.supabaseId, supaUser.id),
-    columns: { id: true, email: true, supabaseId: true, role: true },
-  })
+    where: eq(users.firebaseUid, firebaseUid),
+    columns: { id: true, email: true, firebaseUid: true, role: true },
+  });
+
+  if (!dbUser) {
+    const existingByEmail = await db.query.users.findFirst({
+      where: eq(users.email, email),
+      columns: { id: true, email: true, firebaseUid: true, role: true },
+    });
+
+    if (existingByEmail) {
+      const [updated] = await db
+        .update(users)
+        .set({ firebaseUid, isVerified })
+        .where(eq(users.id, existingByEmail.id))
+        .returning({
+          id: users.id,
+          email: users.email,
+          firebaseUid: users.firebaseUid,
+          role: users.role,
+        });
+      dbUser = updated ?? existingByEmail;
+    }
+  }
+
   if (!dbUser) {
     const [created] = await db
       .insert(users)
       .values({
-        supabaseId: supaUser.id,
+        firebaseUid,
         email,
-        isVerified: true,
+        isVerified,
       })
-      .returning({ id: users.id, email: users.email, supabaseId: users.supabaseId, role: users.role })
-    dbUser = created ?? null
-  } else if (email && dbUser.email !== email) {
+      .returning({
+        id: users.id,
+        email: users.email,
+        firebaseUid: users.firebaseUid,
+        role: users.role,
+      });
+    dbUser = created ?? null;
+  } else if (email && (dbUser.email !== email || dbUser.firebaseUid !== firebaseUid)) {
     const [updated] = await db
       .update(users)
-      .set({ email })
-      .where(eq(users.supabaseId, supaUser.id))
-      .returning({ id: users.id, email: users.email, supabaseId: users.supabaseId, role: users.role })
-    dbUser = updated ?? dbUser
+      .set({ email, firebaseUid, isVerified })
+      .where(eq(users.id, dbUser.id))
+      .returning({
+        id: users.id,
+        email: users.email,
+        firebaseUid: users.firebaseUid,
+        role: users.role,
+      });
+    dbUser = updated ?? dbUser;
   }
 
-  return dbUser as DbUser
+  return dbUser as DbUser | null;
 }

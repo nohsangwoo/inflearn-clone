@@ -55,10 +55,12 @@ export async function POST(req: NextRequest) {
       vat: confirmed?.vat ?? null,
       receiptUrl: confirmed?.receipt?.url ?? null,
       raw: (confirmed ?? null) as Record<string, unknown> | null,
+      updatedAt: new Date(),
     }
 
     await db.transaction(async (tx) => {
-      await tx.update(paymentOrders).set({ status: "SUCCESS", paymentKey }).where(eq(paymentOrders.orderId, orderId))
+      const now = new Date()
+      await tx.update(paymentOrders).set({ status: "SUCCESS", paymentKey, updatedAt: now }).where(eq(paymentOrders.orderId, orderId))
 
       await tx
         .insert(payments)
@@ -85,9 +87,10 @@ export async function POST(req: NextRequest) {
           sellerAccountNumber: lecture?.instructor?.settlementAccountNumber ?? null,
           sellerAccountHolder: lecture?.instructor?.settlementAccountHolder ?? null,
           paymentOrderId: order.orderId,
-          approvedAt: new Date(),
+          approvedAt: now,
           approvedById: order.userId,
           adminMemo: "Toss payment auto approval",
+          updatedAt: now,
         })
         .onConflictDoUpdate({
           target: [enrollmentRequests.userId, enrollmentRequests.lectureId],
@@ -98,15 +101,15 @@ export async function POST(req: NextRequest) {
             platformFeeAmount: feeSnapshot.platformFeeAmount,
             sellerReceivableAmount: feeSnapshot.sellerReceivableAmount,
             paymentOrderId: order.orderId,
-            approvedAt: new Date(),
+            approvedAt: now,
             approvedById: order.userId,
             adminMemo: "Toss payment auto approval",
-            updatedAt: new Date(),
+            updatedAt: now,
           },
         })
       await tx
         .insert(purchases)
-        .values({ userId: order.userId, lectureId: order.lectureId })
+        .values({ userId: order.userId, lectureId: order.lectureId, updatedAt: now })
         .onConflictDoNothing({ target: [purchases.userId, purchases.lectureId] })
     })
 
@@ -120,7 +123,7 @@ export async function POST(req: NextRequest) {
       const maybeCode = (e as { code?: unknown }).code
       if (typeof maybeCode === "string" || typeof maybeCode === "number") code = maybeCode
     }
-    await db.update(paymentOrders).set({ status: "FAILED", failReason: message }).where(eq(paymentOrders.orderId, orderId))
+    await db.update(paymentOrders).set({ status: "FAILED", failReason: message, updatedAt: new Date() }).where(eq(paymentOrders.orderId, orderId))
     return NextResponse.json({ message, code }, { status: 400 })
   }
 }

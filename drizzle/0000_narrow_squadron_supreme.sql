@@ -252,6 +252,7 @@ ALTER TABLE "Like" ADD CONSTRAINT "Like_lectureId_Lecture_id_fk" FOREIGN KEY ("l
 ALTER TABLE "Like" ADD CONSTRAINT "Like_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE set null ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "PaymentOrder" ADD CONSTRAINT "PaymentOrder_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "PaymentOrder" ADD CONSTRAINT "PaymentOrder_lectureId_Lecture_id_fk" FOREIGN KEY ("lectureId") REFERENCES "public"."Lecture"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
+CREATE UNIQUE INDEX "PaymentOrder_orderId_key" ON "PaymentOrder" USING btree ("orderId");--> statement-breakpoint
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_orderId_PaymentOrder_orderId_fk" FOREIGN KEY ("orderId") REFERENCES "public"."PaymentOrder"("orderId") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "Payout" ADD CONSTRAINT "Payout_sellerId_User_id_fk" FOREIGN KEY ("sellerId") REFERENCES "public"."User"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "Purchase" ADD CONSTRAINT "Purchase_userId_User_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE restrict ON UPDATE cascade;--> statement-breakpoint
@@ -271,7 +272,6 @@ CREATE INDEX "FcmToken_deviceId_idx" ON "FcmToken" USING btree ("deviceId");--> 
 CREATE UNIQUE INDEX "Lecture_slug_key" ON "Lecture" USING btree ("slug");--> statement-breakpoint
 CREATE INDEX "Lecture_category_idx" ON "Lecture" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "Lecture_createdAt_idx" ON "Lecture" USING btree ("createdAt");--> statement-breakpoint
-CREATE UNIQUE INDEX "PaymentOrder_orderId_key" ON "PaymentOrder" USING btree ("orderId");--> statement-breakpoint
 CREATE UNIQUE INDEX "Payment_paymentKey_key" ON "Payment" USING btree ("paymentKey");--> statement-breakpoint
 CREATE UNIQUE INDEX "Payment_orderId_key" ON "Payment" USING btree ("orderId");--> statement-breakpoint
 CREATE INDEX "Payout_sellerId_idx" ON "Payout" USING btree ("sellerId");--> statement-breakpoint

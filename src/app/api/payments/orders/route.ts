@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
 
   if (amount === 0) {
     await db.transaction(async (tx) => {
+      const now = new Date()
       await tx
         .insert(enrollmentRequests)
         .values({
@@ -52,9 +53,10 @@ export async function POST(req: NextRequest) {
           platformFeeRateBps,
           platformFeeAmount,
           sellerReceivableAmount,
-          approvedAt: new Date(),
+          approvedAt: now,
           approvedById: user.id,
           adminMemo: "free payment order auto approval",
+          updatedAt: now,
         })
         .onConflictDoUpdate({
           target: [enrollmentRequests.userId, enrollmentRequests.lectureId],
@@ -64,15 +66,15 @@ export async function POST(req: NextRequest) {
             platformFeeRateBps,
             platformFeeAmount,
             sellerReceivableAmount,
-            approvedAt: new Date(),
+            approvedAt: now,
             approvedById: user.id,
             adminMemo: "free payment order auto approval",
-            updatedAt: new Date(),
+            updatedAt: now,
           },
         })
       await tx
         .insert(purchases)
-        .values({ userId: user.id, lectureId: lecture.id })
+        .values({ userId: user.id, lectureId: lecture.id, updatedAt: now })
         .onConflictDoNothing({ target: [purchases.userId, purchases.lectureId] })
     })
     return NextResponse.json({ free: true, lectureId: lecture.id, orderName, amount: 0, currency: "KRW" }, { status: 201 })
@@ -87,7 +89,8 @@ export async function POST(req: NextRequest) {
       amount,
       userId: user.id,
       lectureId: lecture.id,
-      metadata: { force, platformFeeRateBps, platformFeeAmount, sellerReceivableAmount }
+      metadata: { force, platformFeeRateBps, platformFeeAmount, sellerReceivableAmount },
+      updatedAt: new Date(),
     })
     .returning({
       orderId: paymentOrders.orderId,

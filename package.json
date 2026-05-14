@@ -10,6 +10,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
+    "db:seed": "tsx scripts/seed-neon.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
@@ -25,7 +26,6 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
-    "@supabase/ssr": "^0.7.0",
     "@tanstack/react-query": "^5.87.4",
     "@tanstack/react-query-devtools": "^5.87.4",
     "@tosspayments/tosspayments-sdk": "^2.4.0",
@@ -37,6 +37,7 @@
     "drizzle-orm": "^0.45.2",
     "embla-carousel-react": "^8.6.0",
     "execa": "^9.6.1",
+    "firebase": "^12.13.0",
     "firebase-admin": "^13.5.0",
     "hls.js": "^1.6.12",
     "lucide-react": "^0.543.0",

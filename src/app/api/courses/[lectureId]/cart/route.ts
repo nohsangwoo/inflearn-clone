@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { and, eq } from "drizzle-orm"
-import { db, carts, cartToLecture } from "@/db"
+import { db, carts, cartToLecture, lectures } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { findMockCourse } from "@/lib/mock-courses"
 
@@ -11,7 +11,8 @@ export async function GET(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  if (findMockCourse(id)) return NextResponse.json({ inCart: false })
+  const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, id), columns: { id: true } }).catch(() => null)
+  if (!lecture && findMockCourse(id)) return NextResponse.json({ inCart: false })
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ inCart: false })
   const cart = await db.query.carts.findFirst({ where: eq(carts.userId, user.id), columns: { id: true } })
@@ -32,7 +33,9 @@ export async function POST(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  if (findMockCourse(id)) return NextResponse.json({ message: "이 강의는 계좌입금 신청으로만 접수됩니다." }, { status: 400 })
+  const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, id), columns: { id: true } }).catch(() => null)
+  if (!lecture && findMockCourse(id)) return NextResponse.json({ message: "이 강의는 계좌입금 신청으로만 접수됩니다." }, { status: 400 })
+  if (!lecture) return NextResponse.json({ message: "lecture not found" }, { status: 404 })
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
 

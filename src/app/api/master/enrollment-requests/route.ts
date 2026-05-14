@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest) {
     if (status === "APPROVED") {
       await tx
         .insert(purchases)
-        .values({ userId: request.userId, lectureId: request.lectureId })
+        .values({ userId: request.userId, lectureId: request.lectureId, updatedAt: now })
         .onConflictDoNothing({ target: [purchases.userId, purchases.lectureId] })
     }
 

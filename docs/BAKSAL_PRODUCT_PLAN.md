@@ -24,7 +24,7 @@
 - `/[locale]`: 강의 탐색, 추천, 검색, 카테고리, 판매자 진입
 - `/[locale]/course/[id]`: 강의 상세, SEO 메타, 커리큘럼, 리뷰, 결제 CTA
 - `/[locale]/course/lecture`: 결제 후 수강 플레이어
-- `/[locale]/login`: Supabase 기반 로그인
+- `/[locale]/login`: Firebase Auth 기반 로그인
 - `/sitemap.xml`, `/robots.txt`: 공개 강의 중심 SEO
 
 ### 수강생 대시보드
@@ -56,7 +56,7 @@
 - Prisma는 제거하고 Drizzle ORM + `drizzle-kit`으로 스키마와 마이그레이션을 관리한다.
 - 서비스 개시 전 단계이므로 기존 Prisma migration history는 유지하지 않고 Drizzle baseline을 기준으로 새 DB를 구성한다.
 - 웹은 Next.js 빌드 안정성을 위해 Drizzle/Postgres 클라이언트를 lazy singleton으로 초기화한다.
-- 배포 DB는 Vercel + Neon 또는 기존 Supabase Postgres 중 실제 운영 연결성이 좋은 쪽을 쓰되, 앱 코드는 표준 Postgres 연결 문자열(`DATABASE_URL`, 필요 시 `DIRECT_URL`)만 요구하도록 둔다.
+- 배포 DB는 Vercel + Neon Postgres를 기준으로 두며, 앱 코드는 표준 Postgres 연결 문자열(`DATABASE_URL`, 필요 시 `DIRECT_URL`)만 요구하도록 둔다.
 
 ### Lecture
 
@@ -159,4 +159,4 @@ Toss Payments V2 원칙을 따른다.
 4. HLS 플레이어 안전성 보강 및 자막 표시
 5. 최고 관리자 대시보드와 정산 큐 구현
 6. HLS 테스트 소스 패키징 및 로컬 검증
-7. 배포 환경: Vercel + 현재 Postgres/Supabase 또는 Neon 중 실제 연결 상태에 맞춰 확정
+7. 배포 환경: Vercel + Neon Postgres + Firebase Auth 기준으로 확정

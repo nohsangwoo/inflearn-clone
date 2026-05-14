@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { and, desc, eq } from 'drizzle-orm'
-import { db, fcmTokens, pushNotifications, users } from '@/db'
-import { createClient } from '@/lib/supabase/server'
+import { and, eq } from 'drizzle-orm'
+import { db, fcmTokens, pushNotifications } from '@/db'
 import { getMessaging } from '@/lib/firebase-admin'
+import { getAuthUserFromRequest } from '@/lib/auth/get-auth-user'
 
 type UnicastBody = {
   userId?: number
@@ -22,27 +22,21 @@ export async function POST(request: NextRequest) {
     console.log(LOG, 'start')
 
     // 1) Auth check
-    const supabase = await createClient();
-    let user = null as { id: string } | null
+    let me = null as Awaited<ReturnType<typeof getAuthUserFromRequest>>
     try {
-      const { data } = await supabase.auth.getUser()
-      user = data.user as any
+      me = await getAuthUserFromRequest(request)
     } catch (e: any) {
-      console.error(LOG, 'supabase.getUser failed', e?.message || e)
+      console.error(LOG, 'firebase auth failed', e?.message || e)
       return NextResponse.json({ success: false, error: 'auth_unavailable' }, { status: 500 })
     }
-    if (!user) {
+    if (!me) {
       console.warn(LOG, 'no user in session')
       return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
     }
 
     // 2) Admin check
-    const me = await db.query.users.findFirst({
-      where: eq(users.supabaseId, user.id),
-      columns: { role: true, id: true },
-    })
     if (!me || me.role !== 'ADMIN') {
-      console.warn(LOG, 'forbidden user', { supabaseId: user.id, role: me?.role })
+      console.warn(LOG, 'forbidden user', { firebaseUid: me.firebaseUid, role: me?.role })
       return NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
     }
 
@@ -137,4 +131,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 })
   }
 }
-
