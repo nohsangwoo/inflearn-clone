@@ -229,6 +229,10 @@
 }
 
 @layer utilities {
+  body:has(.not-found-page) [data-bottom-navigation] {
+    display: none;
+  }
+
   .font-brand {
     font-family: var(--font-brand);
   }
@@ -243,5 +247,247 @@
 
   .photo-zoom {
     transform: translateZ(0);
+  }
+
+  .not-found-art {
+    overflow: hidden;
+    border-radius: 32px;
+    border: 1px solid var(--border);
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--primary) 8%, transparent) 1px, transparent 1px),
+      linear-gradient(180deg, color-mix(in srgb, var(--foreground) 7%, transparent) 1px, transparent 1px),
+      var(--background);
+    background-size: 36px 36px, 36px 36px, auto;
+  }
+
+  .not-found-art::before,
+  .not-found-art::after {
+    content: "";
+    position: absolute;
+    inset: 34px;
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+    border-radius: 24px;
+    pointer-events: none;
+  }
+
+  .not-found-art::after {
+    inset: 72px 48px;
+    border-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+    transform: skewY(-2deg);
+  }
+
+  .not-found-art__ticker {
+    position: absolute;
+    left: 32px;
+    right: 32px;
+    top: 28px;
+    display: flex;
+    gap: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  .not-found-art__ticker span {
+    display: inline-flex;
+    border-radius: 9999px;
+    border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+    background: color-mix(in srgb, var(--primary) 7%, var(--background));
+    padding: 6px 10px;
+  }
+
+  .not-found-art__wall {
+    position: absolute;
+    inset: 104px 44px 118px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 10px;
+    transform: perspective(860px) rotateY(-10deg) rotateX(4deg);
+    transform-origin: center;
+  }
+
+  .not-found-art__frame {
+    position: relative;
+    min-height: 84px;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, transparent), transparent 42%),
+      linear-gradient(180deg, color-mix(in srgb, var(--foreground) 95%, var(--background)), color-mix(in srgb, var(--foreground) 72%, var(--background)));
+    animation: lingoost-frame-pulse 3.4s ease-in-out infinite;
+  }
+
+  .not-found-art__frame:nth-child(3n) {
+    background:
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--primary) 90%, var(--background)) 0 4px, transparent 4px 12px),
+      linear-gradient(180deg, color-mix(in srgb, var(--foreground) 86%, var(--background)), color-mix(in srgb, var(--foreground) 58%, var(--background)));
+  }
+
+  .not-found-art__frame:nth-child(4n) {
+    transform: translateY(18px);
+  }
+
+  .not-found-art__frame span {
+    position: absolute;
+    inset: auto 12px 12px;
+    height: 8px;
+    border-radius: 9999px;
+    background: color-mix(in srgb, var(--background) 76%, transparent);
+  }
+
+  .not-found-art__number {
+    position: absolute;
+    left: clamp(28px, 7vw, 76px);
+    bottom: clamp(66px, 10vw, 114px);
+    color: var(--foreground);
+    font-size: clamp(92px, 19vw, 226px);
+    font-weight: 900;
+    line-height: 0.78;
+    opacity: 0.93;
+    transform: translateZ(0);
+  }
+
+  .not-found-art__number::after {
+    content: "404";
+    position: absolute;
+    inset: 0;
+    color: var(--primary);
+    clip-path: inset(52% 0 22% 0);
+    transform: translateX(9px);
+    opacity: 0.84;
+    animation: lingoost-glitch 2.8s steps(2, jump-none) infinite;
+  }
+
+  .not-found-art__scan {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--primary) 14%, transparent) 48%,
+      color-mix(in srgb, var(--primary) 38%, transparent) 50%,
+      color-mix(in srgb, var(--primary) 14%, transparent) 52%,
+      transparent 100%
+    );
+    transform: translateY(-70%);
+    animation: lingoost-scan 5.5s linear infinite;
+    mix-blend-mode: multiply;
+  }
+
+  .not-found-art__wave {
+    position: absolute;
+    right: 42px;
+    bottom: 52px;
+    display: flex;
+    align-items: end;
+    gap: 5px;
+    height: 82px;
+  }
+
+  .not-found-art__wave span {
+    width: 6px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--primary);
+    animation: lingoost-wave 1.8s ease-in-out infinite;
+  }
+
+  .not-found-art__caption {
+    position: absolute;
+    right: 40px;
+    bottom: 28px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  @keyframes lingoost-frame-pulse {
+    0%, 100% {
+      opacity: 0.62;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes lingoost-glitch {
+    0%, 78%, 100% {
+      transform: translateX(0);
+      opacity: 0;
+    }
+    80% {
+      transform: translateX(13px);
+      opacity: 0.86;
+    }
+    84% {
+      transform: translateX(-7px);
+      opacity: 0.76;
+    }
+    88% {
+      transform: translateX(5px);
+      opacity: 0.62;
+    }
+  }
+
+  @keyframes lingoost-scan {
+    from {
+      transform: translateY(-74%);
+    }
+    to {
+      transform: translateY(74%);
+    }
+  }
+
+  @keyframes lingoost-wave {
+    0%, 100% {
+      height: 18px;
+      opacity: 0.35;
+    }
+    50% {
+      height: 74px;
+      opacity: 1;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .not-found-art {
+      border-radius: 24px;
+    }
+
+    .not-found-art__wall {
+      inset: 88px 28px 104px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      transform: perspective(720px) rotateY(-7deg) rotateX(3deg);
+    }
+
+    .not-found-art__frame {
+      min-height: 64px;
+    }
+
+    .not-found-art__wave {
+      right: 28px;
+      bottom: 44px;
+      height: 58px;
+    }
+
+    .not-found-art__wave span {
+      width: 5px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .not-found-art__frame,
+    .not-found-art__number::after,
+    .not-found-art__scan,
+    .not-found-art__wave span {
+      animation: none;
+    }
   }
 }

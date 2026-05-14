@@ -44,8 +44,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="grid h-20 grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <Link href={withLocalePath(pathname, "/")} className="flex min-w-0 items-center gap-2" prefetch={false}>
+        <div className="flex h-20 items-center justify-between gap-4 md:grid md:grid-cols-[1fr_auto_1fr]">
+          <Link href={withLocalePath(pathname, "/")} className="flex min-w-0 shrink-0 items-center gap-2" prefetch={false}>
             <Image
               src="/logo.png?v=lingoost-20260515"
               alt={`${brand.name} logo`}

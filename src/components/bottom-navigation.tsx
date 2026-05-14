@@ -23,7 +23,7 @@ export function BottomNavigation() {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 backdrop-blur md:hidden">
+    <nav data-bottom-navigation className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 backdrop-blur md:hidden">
       <div className="grid h-16 grid-cols-3">
         {navItems.map((item) => {
           const Icon = item.icon
