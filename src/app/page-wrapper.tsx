@@ -248,7 +248,7 @@ export default function HomePageWrapper() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-16 md:px-6">
+      <section className="mx-auto max-w-[1440px] px-4 pb-16 md:px-6">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <h2 className="text-[22px] font-medium leading-[1.18]">시즌제 강의 둘러보기</h2>
@@ -271,7 +271,7 @@ export default function HomePageWrapper() {
             조건에 맞는 강의가 아직 없습니다.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {courses.map((course, index) => (
               <CourseTile
                 key={`${course.id}-${course.title}`}

@@ -105,13 +105,53 @@ const courses = [
   },
   {
     id: 201,
-    title: "Unreal Engine 5 Game Dev",
+    title: "Unreal Engine 5 Action RPG",
     subtitle: "Blueprint, C++ and action RPG prototype",
     label: "GAME DEVELOPMENT",
     discount: "COHORT 23% OFF",
     palette: ["#10131f", "#ff385c", "#f7f7f7", "#2dd4bf"],
     mood:
       "high-end real-time 3D game environment inspired by modern Unreal Engine 5 visuals, cinematic action RPG scene, glowing sci-fi portal, third-person hero silhouette, modular level design, dramatic Lumen-style lighting, Niagara-like energy particles, polished game development course thumbnail, no readable text, no official logos",
+  },
+  {
+    id: 202,
+    title: "Unity 6 Mobile Action",
+    subtitle: "C#, touch controls and Android build",
+    label: "MOBILE GAME",
+    discount: "EARLY BIRD 20% OFF",
+    palette: ["#162033", "#ff385c", "#ffffff", "#4ade80"],
+    mood:
+      "stylized mobile action game arena, bright Unity-like editor mood without logos, agile hero character, touch joystick UI shapes, C# script panels as abstract blocks, colorful low-poly environment, polished game development course thumbnail, no readable text, no official logos",
+  },
+  {
+    id: 203,
+    title: "Godot 4 Pixel RPG",
+    subtitle: "Tiles, dialogue and turn-based combat",
+    label: "INDIE GAME",
+    discount: "LAUNCH 29% OFF",
+    palette: ["#17221b", "#ff385c", "#fff7ed", "#7c3aed"],
+    mood:
+      "beautiful isometric pixel RPG village, tilemap grid, tiny adventurer character, dialogue window silhouettes, cozy fantasy forest, modern indie game course thumbnail composition, crisp pixels mixed with premium lighting, no readable text, no official logos",
+  },
+  {
+    id: 204,
+    title: "Blender to Unreal Worlds",
+    subtitle: "Environment art and lighting portfolio",
+    label: "GAME ART",
+    discount: "COHORT 23% OFF",
+    palette: ["#111827", "#ff385c", "#f7f7f7", "#60a5fa"],
+    mood:
+      "AAA-quality game environment art scene, modular stone ruins and forest courtyard, Blender blockout shapes transitioning into a polished Unreal-style lit scene, cinematic composition, environment artist portfolio mood, no readable text, no official logos",
+  },
+  {
+    id: 205,
+    title: "Niagara VFX Mastery",
+    subtitle: "Portals, combat sparks and particles",
+    label: "GAME VFX",
+    discount: "OPENING 22% OFF",
+    palette: ["#0f1020", "#ff385c", "#f7f7f7", "#22d3ee"],
+    mood:
+      "spectacular real-time game VFX scene, glowing magic portal, energy particles, combat sparks, stylized sci-fi fantasy spell effect, Niagara-like particle system visualization, dark premium game course thumbnail, no readable text, no official logos",
   },
 ]
 
