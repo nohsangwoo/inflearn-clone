@@ -46,6 +46,9 @@ export const lectures = pgTable("Lecture", {
   - `NEXT_PUBLIC_CDN_URL` (기본값: `https://storage.lingoost.com`)
 - Supabase
   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- 수강신청/수수료
+  - `PLATFORM_FEE_RATE_BPS`: 전역 플랫폼 수수료율. 0이면 이벤트 자동승인, 100이면 1%, 1000이면 10%
+  - `PLATFORM_BANK_NAME`, `PLATFORM_BANK_ACCOUNT_NUMBER`, `PLATFORM_BANK_ACCOUNT_HOLDER`: 판매자가 플랫폼 수수료를 입금할 계좌 안내
 - 로컬 HLS/더빙 처리
   - `ELEVENLABS_API_KEY`: 선택한 언어의 자동 더빙 생성
   - `FFMPEG_PATH`: 선택 사항. 없으면 `ffmpeg-static` 또는 시스템 `ffmpeg`를 사용
@@ -102,6 +105,16 @@ export const lectures = pgTable("Lecture", {
   - `PATCH /api/admin/videos/[videoId]`
     - 바디(부분 갱신): `{ title?, description?, thumbnailUrl?, language?, videoUrl?, duration? }`
   - `DELETE /api/admin/videos/[videoId]`
+
+- 판매자 계좌 / 수강신청
+  - `GET /api/admin/bank-account`, `PATCH /api/admin/bank-account`
+    - 판매자가 수강생 입금 안내용 계좌를 등록한다.
+  - `GET /api/admin/enrollment-requests`
+    - 판매자 강의의 플랫폼 수수료 입금 대기 신청을 조회한다.
+  - `POST /api/courses/[lectureId]/enrollment`
+    - 수강생 수강 신청. 플랫폼 수수료율 0%면 즉시 `Purchase` 생성, 수수료가 있으면 최고관리자 승인 대기.
+  - `GET /api/master/enrollment-requests`, `PATCH /api/master/enrollment-requests`
+    - 최고관리자가 판매자의 플랫폼 수수료 입금을 확인하고 수강권한을 최종 승인한다.
 
 - 참고자료 파일 레코드
   - `POST /api/admin/files`

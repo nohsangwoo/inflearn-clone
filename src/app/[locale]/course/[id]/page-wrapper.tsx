@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import axios from 'axios'
 import { useParams, useRouter, usePathname } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -19,8 +19,8 @@ import {
   Tags,
 } from 'lucide-react'
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
+import { toCdnUrl } from '@/lib/brand'
 import { getTranslation, useLocale } from '@/lib/translations'
-import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk'
 
 type Detail = {
   id: number
@@ -63,6 +63,34 @@ type ReviewItem = {
   replies?: ReviewItem[]
 }
 
+type EnrollmentRequest = {
+  id: string
+  status: 'AWAITING_PLATFORM_FEE' | 'APPROVED' | 'REJECTED' | 'CANCELED'
+  amount: number
+  platformFeeRateBps: number
+  platformFeeAmount: number
+  sellerReceivableAmount: number
+  sellerBankName?: string | null
+  sellerAccountNumber?: string | null
+  sellerAccountHolder?: string | null
+  createdAt: string
+  approvedAt?: string | null
+}
+
+function enrollmentLabel(status: EnrollmentRequest['status']) {
+  if (status === 'AWAITING_PLATFORM_FEE') return '입금 확인 대기'
+  if (status === 'APPROVED') return '승인 완료'
+  if (status === 'REJECTED') return '반려'
+  return '취소'
+}
+
+const detailHeroImages = [
+  'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80',
+  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1600&q=80',
+  'https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1600&q=80',
+  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80',
+]
+
 export default function CourseDetailPageWrapper() {
   const params = useParams<{ id: string }>()
   const lectureId = Number(params?.id)
@@ -73,15 +101,6 @@ export default function CourseDetailPageWrapper() {
   const queryClient = useQueryClient()
   const [like, setLike] = useState(false)
   const [inCart, setInCart] = useState(false)
-  const [isWidgetOpen, setIsWidgetOpen] = useState(false)
-  const widgetsRef = useRef<unknown>(null)
-  const orderRef = useRef<{
-    orderId: string
-    orderName: string
-    amount: number
-    successUrl: string
-    failUrl: string
-  } | null>(null)
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['course-detail', lectureId],
@@ -98,11 +117,13 @@ export default function CourseDetailPageWrapper() {
     enabled: Number.isFinite(lectureId),
     queryFn: async () => {
       const { data } = await axios.get(`/api/courses/purchased`, { params: { lectureId } })
-      return data as { purchased: boolean }
+      return data as { purchased: boolean; enrollmentRequest: EnrollmentRequest | null }
     },
   })
 
   const purchased = Boolean(purchasedRes?.purchased)
+  const enrollmentRequest = purchasedRes?.enrollmentRequest ?? null
+  const isEnrollmentPending = enrollmentRequest?.status === 'AWAITING_PLATFORM_FEE'
 
   // 초기 좋아요/장바구니 상태
   useQuery({
@@ -134,6 +155,10 @@ export default function CourseDetailPageWrapper() {
       : detail.price
     return effective === 0 ? t.free : `₩${effective.toLocaleString()}` // "무료"
   }, [detail, t.free])
+  const heroImage = useMemo(() => {
+    if (!detail) return ''
+    return toCdnUrl(detail.imageUrl) || detailHeroImages[detail.id % detailHeroImages.length]
+  }, [detail])
 
   // 액션
   const addToCart = useMutation({
@@ -188,99 +213,25 @@ export default function CourseDetailPageWrapper() {
     },
     onSuccess: res => setLike(Boolean(res?.liked)),
   })
-  const purchase = useMutation({
+  const enroll = useMutation({
     mutationFn: async () => {
       if (!detail) return
-      console.log('[Purchase] creating order for lecture', detail.id)
-      // 1) 서버에서 주문 생성
-      const { data: order } = await axios.post(`/api/payments/orders`, {
-        lectureId: detail.id,
-      })
-
-      if (order.free) {
-        await queryClient.invalidateQueries({ queryKey: ['course-purchased', lectureId] })
-        alert('무료 강의 수강권이 등록되었습니다.')
-        return
-      }
-
-      // 2) 결제 위젯 호출 (Redirect 방식)
-      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
-      if (!clientKey) {
-        console.error('[Purchase] missing env NEXT_PUBLIC_TOSS_CLIENT_KEY')
-        alert('결제 설정이 올바르지 않습니다. 관리자에게 문의해주세요. (clientKey)')
-        return
-      }
-
-      const toss = await loadTossPayments(clientKey)
-      const widgets = toss.widgets({ customerKey: ANONYMOUS })
-
-      const successUrl = `${window.location.origin}/${locale}/payments/success`
-      const failUrl = `${window.location.origin}/${locale}/payments/fail`
-
-      const amount = Number(order.amount)
-      if (!Number.isFinite(amount) || amount < 100) {
-        alert('결제 금액이 유효하지 않습니다. (최소 100원)')
-        return
-      }
-
-      // 결제창에서 허용될만한 안전한 주문명으로 정규화 (개행/제어문자 제거)
-      const normalizedOrderName = String(order.orderName || '')
-        .replace(/\s+/g, ' ')
-        .replace(/[\r\n\t]/g, ' ')
-        .replace(/[^\p{L}\p{N} _\-\[\]\(\)·.,!?]/gu, '')
-        .trim()
-        .slice(0, 100) || '강의 결제'
-
-      console.log('[Purchase] opening payment widget (v2 widgets)', {
-        orderId: order.orderId,
-        amount,
-        orderName: normalizedOrderName,
-        successUrl,
-        failUrl,
-      })
-
-      // 위젯 UI 렌더 후 사용자가 결제수단 선택 → 결제하기 버튼으로 요청
-      widgetsRef.current = widgets
-      orderRef.current = {
-        orderId: order.orderId,
-        orderName: normalizedOrderName,
-        amount,
-        successUrl,
-        failUrl,
-      }
-      setIsWidgetOpen(true)
+      const { data } = await axios.post(`/api/courses/${detail.id}/enrollment`, {})
+      return data as { purchased: boolean; message?: string; enrollmentRequest?: EnrollmentRequest }
     },
-    onSuccess: () => {
-      // 결제창 호출 직후에는 아직 결제 전일 수 있으나, 성공 후 페이지에서 확정됨
-      // 여기서는 낙관적 UX로 구매여부 재조회 트리거
-      queryClient.invalidateQueries({ queryKey: ['course-purchased', lectureId] })
+    onSuccess: async (data) => {
+      await queryClient.invalidateQueries({ queryKey: ['course-purchased', lectureId] })
+      await queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] })
+      if (data?.message) alert(data.message)
     },
     onError: (err: unknown) => {
       const anyErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string }
       const status = anyErr?.response?.status
-      const message = anyErr?.response?.data?.message || anyErr?.message || '결제 요청 중 오류가 발생했습니다.'
-      console.error('[Purchase] error', { status, message, err })
-      alert(`결제 요청에 실패했습니다.\n${message}`)
+      const message = anyErr?.response?.data?.message || anyErr?.message || '수강 신청 중 오류가 발생했습니다.'
+      console.error('[Enrollment] error', { status, message, err })
+      alert(`수강 신청에 실패했습니다.\n${message}`)
     },
   })
-
-  // 위젯 오픈 시 결제수단/약관 UI 렌더링
-  useEffect(() => {
-    const renderWidgets = async () => {
-      if (!isWidgetOpen) return
-      const widgets = widgetsRef.current as
-        | { setAmount: (p: { currency: string; value: number }) => Promise<void>; renderPaymentMethods: (p: { selector: string; variantKey?: string }) => Promise<void>; renderAgreement: (p: { selector: string; variantKey?: string }) => Promise<void> }
-        | null
-      const ord = orderRef.current
-      if (!widgets || !ord) return
-      await widgets.setAmount({ currency: 'KRW', value: ord.amount })
-      await Promise.all([
-        widgets.renderPaymentMethods({ selector: '#toss-payments-methods', variantKey: 'DEFAULT' }),
-        widgets.renderAgreement({ selector: '#toss-payments-agreement', variantKey: 'AGREEMENT' }),
-      ])
-    }
-    void renderWidgets()
-  }, [isWidgetOpen])
 
   // 학습하기 버튼 핸들러
   const handleStartLearning = () => {
@@ -337,10 +288,31 @@ export default function CourseDetailPageWrapper() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
-      {/* 헤더 섹션 */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
-        <div className="space-y-6">
-          <div className="space-y-4 rounded-lg border bg-card p-5 md:p-7">
+        <div className="space-y-8">
+          <section className="space-y-5">
+            <div className="relative aspect-[16/9] overflow-hidden rounded-[14px] bg-secondary">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={heroImage}
+                alt={detail.title}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute left-4 top-4 rounded-full bg-background px-3 py-1 text-[11px] font-semibold shadow-sm">
+                {detail.category || '프리뷰 강의'}
+              </div>
+              <button
+                type="button"
+                aria-label="관심 강의"
+                onClick={() => likeToggle.mutate()}
+                disabled={likeToggle.isPending}
+                className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:text-primary disabled:opacity-60"
+              >
+                <Heart className={like ? 'size-5 fill-primary text-primary' : 'size-5'} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
               {detail.category ? <Badge variant="secondary">{detail.category}</Badge> : null}
               {detail.level ? <Badge variant="outline">{detail.level}</Badge> : null}
@@ -351,17 +323,17 @@ export default function CourseDetailPageWrapper() {
                 </Badge>
               ))}
             </div>
-            <h1 className="text-3xl font-black leading-tight md:text-5xl">
+            <h1 className="text-[22px] font-medium leading-[1.18] md:text-[28px] md:font-bold md:leading-[1.43]">
               {detail.title}
             </h1>
             {detail.shortDescription ? (
-              <p className="max-w-3xl text-lg leading-8 text-muted-foreground">
+              <p className="max-w-3xl text-[16px] leading-6 text-muted-foreground">
                 {detail.shortDescription}
               </p>
             ) : null}
             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
               <div className="inline-flex items-center gap-1">
-                <Star className="h-4 w-4 text-yellow-500" />
+                <Star className="h-4 w-4 fill-foreground text-foreground" />
                 <span className="font-medium text-foreground">
                   {detail.avgRating?.toFixed(1)}
                 </span>
@@ -386,21 +358,22 @@ export default function CourseDetailPageWrapper() {
               </div>
             </div>
             {detail.description && (
-              <p className="max-w-4xl text-sm leading-7 text-foreground/90 whitespace-pre-line">
+              <p className="max-w-4xl whitespace-pre-line text-[16px] leading-7 text-muted-foreground">
                 {detail.description}
               </p>
             )}
-          </div>
+            </div>
+          </section>
 
           {(detail.learningOutcomes?.length || detail.targetAudience || detail.requirements) ? (
             <section className="grid gap-4 md:grid-cols-3">
               {detail.learningOutcomes?.length ? (
-                <div className="rounded-lg border bg-card p-5">
-                  <h2 className="font-bold">배우게 되는 것</h2>
+                <div className="rounded-[14px] border bg-card p-5">
+                  <h2 className="text-[16px] font-semibold leading-[1.25]">배우게 되는 것</h2>
                   <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
                     {detail.learningOutcomes.slice(0, 5).map((item) => (
                       <li key={item} className="flex gap-2">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-700" />
+                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -408,27 +381,26 @@ export default function CourseDetailPageWrapper() {
                 </div>
               ) : null}
               {detail.targetAudience ? (
-                <div className="rounded-lg border bg-card p-5">
-                  <h2 className="font-bold">추천 대상</h2>
+                <div className="rounded-[14px] border bg-card p-5">
+                  <h2 className="text-[16px] font-semibold leading-[1.25]">추천 대상</h2>
                   <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.targetAudience}</p>
                 </div>
               ) : null}
               {detail.requirements ? (
-                <div className="rounded-lg border bg-card p-5">
-                  <h2 className="font-bold">준비물</h2>
+                <div className="rounded-[14px] border bg-card p-5">
+                  <h2 className="text-[16px] font-semibold leading-[1.25]">준비물</h2>
                   <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.requirements}</p>
                 </div>
               ) : null}
             </section>
           ) : null}
 
-          {/* 커리큘럼 요약 */}
-          <div className="space-y-3 rounded-lg border bg-card p-5">
+          <div className="space-y-3 rounded-[14px] border bg-card p-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black">{t.curriculum}</h2> {/* "커리큘럼" */}
+              <h2 className="text-[21px] font-bold leading-[1.43]">{t.curriculum}</h2> {/* "커리큘럼" */}
               <span className="text-sm text-muted-foreground">{detail.sections.length}개 수업</span>
             </div>
-            <div className="divide-y rounded-md border bg-background">
+            <div className="divide-y rounded-[14px] border bg-background">
               {detail.sections.length === 0 ? (
                 <div className="p-3 text-sm text-muted-foreground">
                   {t.noCurriculum} {/* "커리큘럼이 아직 없습니다." */}
@@ -453,7 +425,7 @@ export default function CourseDetailPageWrapper() {
                         {purchased ? (
                           <HlsPlayerModal sectionId={s.id} title={s.title} />
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
                             <Lock className="size-3" />
                             결제 후 공개
                           </span>
@@ -470,31 +442,30 @@ export default function CourseDetailPageWrapper() {
           <Reviews lectureId={detail.id} />
         </div>
 
-        {/* 우측 플로팅 카드 */}
         <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-20">
+          <div className="lg:sticky lg:top-24">
             <Card>
-              <CardContent className="p-4 space-y-3">
-                <div className="text-2xl font-bold">{priceText}</div>
+              <CardContent className="space-y-4 p-5">
+                <div className="text-[21px] font-bold leading-[1.43]">{priceText}</div>
                 {typeof detail.discountPrice === 'number' &&
                   (detail.discountPrice as number) < detail.price && (
                     <div className="text-xs text-muted-foreground">
                       {t.originalPrice} ₩{detail.price.toLocaleString()} {/* "정가" */}
                     </div>
                   )}
-                <div className="flex gap-2">
+                <div className="grid gap-2">
                   {!purchased ? (
                     <>
                       <Button
-                        className="flex-1"
-                        onClick={() => purchase.mutate()}
-                        disabled={purchase.isPending}
+                        className="w-full"
+                        onClick={() => enroll.mutate()}
+                        disabled={enroll.isPending || isEnrollmentPending}
                       >
-                        {t.enroll}
+                        {isEnrollmentPending ? '승인 대기 중' : t.enroll}
                       </Button>
                       <Button
                         variant={inCart ? 'secondary' : 'outline'}
-                        className="flex-1"
+                        className="w-full"
                         onClick={() => addToCart.mutate()}
                         disabled={addToCart.isPending}
                       >
@@ -502,36 +473,34 @@ export default function CourseDetailPageWrapper() {
                       </Button>
                     </>
                   ) : (
-                    <Button className="flex-1" variant="secondary" disabled>
+                    <Button className="w-full" variant="secondary" disabled>
                       구입 완료
                     </Button>
                   )}
                 </div>
 
-              {isWidgetOpen && (
-                <div className="space-y-3">
-                  <div id="toss-payments-methods" />
-                  <div id="toss-payments-agreement" />
-                  <Button
-                    className="w-full"
-                    onClick={async () => {
-                      const widgets = widgetsRef.current as
-                        | { requestPayment: (p: { orderId: string; orderName: string; successUrl: string; failUrl: string }) => Promise<void> }
-                        | null
-                      const ord = orderRef.current
-                      if (!widgets || !ord) return
-                      await widgets.requestPayment({
-                        orderId: ord.orderId,
-                        orderName: ord.orderName,
-                        successUrl: ord.successUrl,
-                        failUrl: ord.failUrl,
-                      })
-                    }}
-                  >
-                    {t.enroll}
-                  </Button>
-                </div>
-              )}
+                {enrollmentRequest ? (
+                  <div className="space-y-2 rounded-[14px] border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-foreground">수강 신청 상태</span>
+                      <Badge variant={purchased ? 'secondary' : 'outline'}>{enrollmentLabel(enrollmentRequest.status)}</Badge>
+                    </div>
+                    <div>신청 금액 ₩{enrollmentRequest.amount.toLocaleString()}</div>
+                    {enrollmentRequest.platformFeeRateBps > 0 ? (
+                      <div>
+                        플랫폼 수수료 {(enrollmentRequest.platformFeeRateBps / 100).toFixed(2)}% · 판매자 입금 확인 대기
+                      </div>
+                    ) : (
+                      <div>플랫폼 수수료 0% 이벤트 적용으로 즉시 승인됩니다.</div>
+                    )}
+                    {!purchased && enrollmentRequest.sellerAccountNumber ? (
+                      <div className="rounded-[14px] border bg-background p-2">
+                        판매자 입금 계좌: {enrollmentRequest.sellerBankName} {enrollmentRequest.sellerAccountNumber}
+                        {enrollmentRequest.sellerAccountHolder ? ` (${enrollmentRequest.sellerAccountHolder})` : ''}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <Button
                   className="w-full"
@@ -545,13 +514,13 @@ export default function CourseDetailPageWrapper() {
 
                 <Button
                   variant="ghost"
-                  className="w-full"
+                  className="w-full rounded-full"
                   onClick={() => likeToggle.mutate()}
                   disabled={likeToggle.isPending}
                 >
                   <Heart
                     className={`h-4 w-4 mr-2 ${
-                      like ? 'fill-red-500 text-red-500' : ''
+                      like ? 'fill-primary text-primary' : ''
                     }`}
                   />{' '}
                   {detail.likeCount.toLocaleString()}{t.peoplesLikes} {/* "명이 좋아함" */}
@@ -565,7 +534,6 @@ export default function CourseDetailPageWrapper() {
   )
 }
 
-// 리뷰 컴포넌트
 function Reviews({ lectureId }: { lectureId: number }) {
   const pathname = usePathname()
   const locale = useLocale(pathname)
@@ -603,19 +571,18 @@ function Reviews({ lectureId }: { lectureId: number }) {
   })
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-medium">{t.reviews} ({reviews.length})</h2> {/* "리뷰" */}
+      <h2 className="text-[21px] font-bold leading-[1.43]">{t.reviews} ({reviews.length})</h2> {/* "리뷰" */}
       <div className="space-y-3">
-        {/* 작성 */}
         <Card>
-          <CardContent className="p-3">
-            <div className="text-sm font-medium mb-1">{t.writeReview}</div> {/* "리뷰 작성" */}
-            <div className="flex gap-1 mb-2">
+          <CardContent className="p-4">
+            <div className="mb-2 text-sm font-medium">{t.writeReview}</div> {/* "리뷰 작성" */}
+            <div className="mb-3 flex gap-1">
               {[1, 2, 3, 4, 5].map(i => (
                 <button
                   key={i}
                   onClick={() => setRating(i)}
                   className={`text-lg ${
-                    i <= rating ? 'text-yellow-500' : 'text-muted-foreground'
+                    i <= rating ? 'text-foreground' : 'text-muted-foreground'
                   }`}
                 >
                   ★
@@ -624,7 +591,7 @@ function Reviews({ lectureId }: { lectureId: number }) {
             </div>
             <textarea
               placeholder={t.reviewPlaceholder} // "강의 리뷰를 남겨주세요"
-              className="w-full border rounded px-2 py-1 text-sm bg-background"
+              className="min-h-24 w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
               rows={2}
               onKeyDown={e => {
                 if (e.ctrlKey && e.key === 'Enter') {
@@ -636,12 +603,11 @@ function Reviews({ lectureId }: { lectureId: number }) {
                 }
               }}
             />
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="mt-1 text-xs text-muted-foreground">
               {t.sendWithCtrlEnter} {/* "Ctrl+Enter로 전송" */}
             </div>
           </CardContent>
         </Card>
-        {/* 목록 */}
         <div className="space-y-2">
           {reviews.length === 0 && (
             <div className="text-sm text-muted-foreground">
@@ -651,7 +617,7 @@ function Reviews({ lectureId }: { lectureId: number }) {
           {reviews.map(
             rv =>
               rv && (
-                <div key={rv.id} className="border rounded p-3 space-y-2">
+                <div key={rv.id} className="space-y-2 rounded-[14px] border p-4">
                   <div className="flex items-center gap-2">
                     <Avatar className="size-6">
                       <AvatarFallback>
@@ -667,7 +633,7 @@ function Reviews({ lectureId }: { lectureId: number }) {
                           key={i}
                           className={
                             i <= rv.rating
-                              ? 'text-yellow-500'
+                              ? 'text-foreground'
                               : 'text-muted-foreground'
                           }
                         >
@@ -676,14 +642,13 @@ function Reviews({ lectureId }: { lectureId: number }) {
                       ))}
                     </div>
                   </div>
-                  <div className="text-sm whitespace-pre-line">
+                  <div className="whitespace-pre-line text-sm">
                     {rv.content}
                   </div>
-                  {/* 대댓글 1뎁스 */}
-                  <div className="pl-3 border-l space-y-2">
+                  <div className="space-y-2 border-l pl-3">
                     {(rv.replies ?? []).map(rep => (
                       <div key={rep.id} className="text-sm text-foreground/90">
-                        <span className="text-xs text-muted-foreground mr-1">
+                        <span className="mr-1 text-xs text-muted-foreground">
                           {t.reply} {/* "답글" */}
                         </span>
                         {rep.content}
@@ -692,7 +657,7 @@ function Reviews({ lectureId }: { lectureId: number }) {
                     <div className="flex items-center gap-2">
                       <input
                         placeholder={t.replyPlaceholder} // "답글 작성"
-                        className="flex-1 border rounded px-2 py-1 text-xs bg-background"
+                        className="h-10 flex-1 rounded-lg border bg-background px-3 text-xs outline-none focus:border-foreground"
                         onKeyDown={e => {
                           const v = (e.target as HTMLInputElement).value
                           if (e.key === 'Enter' && v.trim()) {

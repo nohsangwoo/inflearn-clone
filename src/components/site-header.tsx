@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, BookOpen, Compass, GraduationCap, LogOut, ShieldCheck, User } from "lucide-react"
+import { BarChart3, GraduationCap, LogOut, Menu, PlayCircle, ShieldCheck, Sparkles, User, Video } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,17 +13,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LanguageSwitcher } from "@/components/language-switcher"
-import { ModeToggle } from "@/components/mode-toggle"
 import { brand, withLocalePath } from "@/lib/brand"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 const navItems = [
-  { href: "/", label: "탐색", icon: Compass },
-  { href: "/me", label: "내 학습", icon: BookOpen },
-  { href: "/admin", label: "판매자", icon: GraduationCap },
-  { href: "/master", label: "관리자", icon: ShieldCheck },
+  { href: "/", label: "강의", icon: PlayCircle, isNew: false },
+  { href: "/admin", label: "스튜디오", icon: Video, isNew: true },
+  { href: "/me", label: "학습", icon: Sparkles, isNew: true },
 ]
 
 export function SiteHeader() {
@@ -43,20 +41,19 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/88 backdrop-blur supports-[backdrop-filter]:bg-background/72">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="flex h-16 items-center gap-4">
-          <Link href={withLocalePath(pathname, "/")} className="flex items-center gap-3" prefetch={false}>
-            <span className="grid size-9 place-items-center rounded-lg bg-primary text-sm font-black text-primary-foreground">
+        <div className="grid h-20 grid-cols-[1fr_auto_1fr] items-center gap-4">
+          <Link href={withLocalePath(pathname, "/")} className="flex min-w-0 items-center gap-2" prefetch={false}>
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
               박
             </span>
-            <span className="leading-tight">
-              <span className="block text-base font-black">{brand.name}</span>
-              <span className="hidden text-xs text-muted-foreground sm:block">Course exchange platform</span>
+            <span className="truncate text-[18px] font-semibold text-primary">
+              {brand.name}
             </span>
           </Link>
 
-          <nav className="ml-4 hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-8 md:flex">
             {navItems.map((item) => {
               const Icon = item.icon
               const href = withLocalePath(pathname, item.href)
@@ -70,43 +67,65 @@ export function SiteHeader() {
                   href={href}
                   prefetch={false}
                   className={cn(
-                    "inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors",
-                    active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    "relative inline-flex h-16 flex-col items-center justify-center gap-1 text-sm font-semibold transition-colors",
+                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <Icon className="size-4" />
-                  {item.label}
+                  <span className="relative grid size-8 place-items-center">
+                    <Icon className="size-6" strokeWidth={1.8} />
+                    {item.isNew ? (
+                      <span className="absolute -right-4 -top-1 rounded-full bg-primary px-1.5 py-0.5 text-[8px] font-bold leading-none text-primary-foreground">
+                        NEW
+                      </span>
+                    ) : null}
+                  </span>
+                  <span>{item.label}</span>
+                  {active ? <span className="absolute bottom-0 h-0.5 w-8 rounded-full bg-foreground" /> : null}
                 </Link>
               )
             })}
           </nav>
 
-          <div className="flex-1" />
-
-          <div className="hidden items-center gap-2 sm:flex">
-            <LanguageSwitcher />
-            <ModeToggle />
-          </div>
-
-          {!user ? (
-            <Button asChild size="sm">
-              <Link href={withLocalePath(pathname, "/login")} prefetch={false}>
-                로그인
+          <div className="flex items-center justify-end gap-2">
+            <Button asChild variant="ghost" size="sm" className="hidden rounded-full px-4 font-semibold lg:inline-flex">
+              <Link href={withLocalePath(pathname, "/admin")} prefetch={false}>
+                강의 판매하기
               </Link>
             </Button>
-          ) : (
+            <LanguageSwitcher />
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="size-10 p-0">
-                  <Avatar>
-                    <AvatarImage src="/avatar.png" alt="profile" />
-                    <AvatarFallback>ME</AvatarFallback>
-                  </Avatar>
+                <Button variant="outline" className="h-11 rounded-full border-border px-3">
+                  <Menu className="size-4" />
+                  {user ? (
+                    <Avatar className="size-7">
+                      <AvatarImage src="/avatar.png" alt="profile" />
+                      <AvatarFallback>ME</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <User className="size-5 rounded-full bg-accent p-1" />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">{user.email}</div>
-                <DropdownMenuSeparator />
+                {user ? (
+                  <>
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">{user.email}</div>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
+                {!user ? (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href={withLocalePath(pathname, "/login")} prefetch={false}>
+                        <User className="size-4" />
+                        로그인
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
                 <DropdownMenuItem asChild>
                   <Link href={withLocalePath(pathname, "/me")} prefetch={false}>
                     <BarChart3 className="size-4" />
@@ -132,13 +151,15 @@ export function SiteHeader() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} disabled={isLoading}>
-                  <LogOut className="size-4" />
-                  로그아웃
-                </DropdownMenuItem>
+                {user ? (
+                  <DropdownMenuItem onClick={handleLogout} disabled={isLoading}>
+                    <LogOut className="size-4" />
+                    로그아웃
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+          </div>
         </div>
       </div>
     </header>

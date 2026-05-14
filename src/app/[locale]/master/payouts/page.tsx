@@ -46,7 +46,7 @@ export default function MasterPayoutsPage() {
     <div className="space-y-6">
       <div>
         <Badge variant="secondary" className="mb-3">Manual payout</Badge>
-        <h1 className="text-3xl font-black">판매자 수동 정산</h1>
+        <h1 className="text-[28px] font-bold leading-[1.43]">판매자 수동 정산</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           자동 송금 전까지 최고 관리자가 검토하고 지급 상태를 수동으로 관리합니다.
         </p>
@@ -58,11 +58,11 @@ export default function MasterPayoutsPage() {
         </CardHeader>
         <CardContent>
           {payouts.length === 0 ? (
-            <div className="rounded-md border bg-background p-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-[14px] border bg-background p-8 text-center text-sm text-muted-foreground">
               정산 요청이 없습니다. 추후 결제 집계에서 자동 생성하도록 확장할 수 있습니다.
             </div>
           ) : (
-            <div className="divide-y rounded-md border">
+            <div className="divide-y rounded-[14px] border">
               {payouts.map((payout) => (
                 <div key={payout.id} className="grid gap-4 p-4 lg:grid-cols-[1fr_150px_140px_220px] lg:items-center">
                   <div className="min-w-0">
@@ -72,7 +72,7 @@ export default function MasterPayoutsPage() {
                     </div>
                     {payout.memo ? <div className="mt-1 text-xs text-muted-foreground">{payout.memo}</div> : null}
                   </div>
-                  <div className="text-lg font-black">{money(payout.payoutAmount)}</div>
+                  <div className="text-lg font-semibold">{money(payout.payoutAmount)}</div>
                   <Badge variant={payout.status === "PAID" ? "secondary" : "outline"}>{payout.status}</Badge>
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     <Button size="sm" variant="outline" onClick={() => update.mutate({ id: payout.id, status: "APPROVED" })}>

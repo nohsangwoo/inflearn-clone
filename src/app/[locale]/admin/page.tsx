@@ -1,13 +1,15 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import axios from "axios"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowRight, BadgeCheck, CircleDollarSign, RadioTower, Sparkles, Users, Video } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { withLocalePath } from "@/lib/brand"
 
 type Summary = {
@@ -18,7 +20,28 @@ type Summary = {
   activeLectureCount: number
   hlsPending: number
   dubReady: number
+  pendingEnrollmentCount: number
+  pendingPlatformFeeAmount: number
   lectures: Array<{ id: number; title: string; isActive: boolean; purchaseCount: number; reviewCount: number }>
+}
+
+type BankAccount = {
+  settlementBankName?: string | null
+  settlementAccountNumber?: string | null
+  settlementAccountHolder?: string | null
+}
+
+type SellerEnrollmentResponse = {
+  platformDepositAccount: { bankName: string; accountNumber: string; accountHolder: string }
+  requests: Array<{
+    id: string
+    amount: number
+    platformFeeRateBps: number
+    platformFeeAmount: number
+    createdAt: string
+    user: { email: string; nickname?: string | null }
+    lecture: { id: number; title: string }
+  }>
 }
 
 function money(value: number) {
@@ -27,6 +50,8 @@ function money(value: number) {
 
 export default function AdminDashboardPage() {
   const pathname = usePathname()
+  const qc = useQueryClient()
+  const [bankForm, setBankForm] = useState<BankAccount>({})
   const { data } = useQuery({
     queryKey: ["seller-summary"],
     queryFn: async () => {
@@ -34,6 +59,34 @@ export default function AdminDashboardPage() {
       return data as Summary
     },
   })
+  const { data: bankAccount } = useQuery({
+    queryKey: ["seller-bank-account"],
+    queryFn: async () => {
+      const { data } = await axios.get("/api/admin/bank-account")
+      return data as BankAccount
+    },
+  })
+  const { data: pendingEnrollments } = useQuery({
+    queryKey: ["seller-enrollment-requests"],
+    queryFn: async () => {
+      const { data } = await axios.get("/api/admin/enrollment-requests")
+      return data as SellerEnrollmentResponse
+    },
+  })
+  const saveBank = useMutation({
+    mutationFn: async () => {
+      const { data } = await axios.patch("/api/admin/bank-account", bankForm)
+      return data as BankAccount
+    },
+    onSuccess: (saved) => {
+      setBankForm(saved)
+      qc.invalidateQueries({ queryKey: ["seller-bank-account"] })
+    },
+  })
+
+  useEffect(() => {
+    if (bankAccount) setBankForm(bankAccount)
+  }, [bankAccount])
 
   const summary = data ?? {
     grossRevenue: 0,
@@ -43,15 +96,19 @@ export default function AdminDashboardPage() {
     activeLectureCount: 0,
     hlsPending: 0,
     dubReady: 0,
+    pendingEnrollmentCount: 0,
+    pendingPlatformFeeAmount: 0,
     lectures: [],
   }
+  const enrollmentRequests = pendingEnrollments?.requests ?? []
+  const platformDepositAccount = pendingEnrollments?.platformDepositAccount
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <Badge variant="secondary" className="mb-3">판매자 스튜디오</Badge>
-          <h1 className="text-3xl font-black">오늘의 강의 운영</h1>
+          <h1 className="text-[28px] font-bold leading-[1.43]">오늘의 강의 운영</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             강의 판매, 수강생, HLS 처리, 더빙 상태와 정산 예정액을 한 곳에서 확인합니다.
           </p>
@@ -67,9 +124,9 @@ export default function AdminDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { title: "누적 결제", value: money(summary.grossRevenue), icon: CircleDollarSign, help: "승인 완료 주문 기준" },
-          { title: "정산 예상", value: money(summary.estimatedPayout), icon: BadgeCheck, help: "임시 80% 기준" },
+          { title: "정산 예상", value: money(summary.estimatedPayout), icon: BadgeCheck, help: "플랫폼 수수료 정책 기준" },
           { title: "수강생", value: `${summary.totalStudents.toLocaleString()}명`, icon: Users, help: `${summary.activeLectureCount}/${summary.lectureCount}개 공개` },
-          { title: "HLS 대기", value: `${summary.hlsPending}건`, icon: RadioTower, help: `${summary.dubReady}개 더빙 트랙 ready` },
+          { title: "수강 승인 대기", value: `${summary.pendingEnrollmentCount}건`, icon: RadioTower, help: `입금할 플랫폼 수수료 ${money(summary.pendingPlatformFeeAmount)}` },
         ].map((item) => {
           const Icon = item.icon
           return (
@@ -79,12 +136,75 @@ export default function AdminDashboardPage() {
                 <Icon className="size-5 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-black">{item.value}</div>
+                <div className="text-[22px] font-semibold leading-[1.18]">{item.value}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{item.help}</div>
               </CardContent>
             </Card>
           )
         })}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>판매자 입금 계좌</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Input
+                placeholder="은행명"
+                value={bankForm.settlementBankName ?? ""}
+                onChange={(event) => setBankForm((prev) => ({ ...prev, settlementBankName: event.target.value }))}
+              />
+              <Input
+                placeholder="계좌번호"
+                value={bankForm.settlementAccountNumber ?? ""}
+                onChange={(event) => setBankForm((prev) => ({ ...prev, settlementAccountNumber: event.target.value }))}
+              />
+              <Input
+                placeholder="예금주"
+                value={bankForm.settlementAccountHolder ?? ""}
+                onChange={(event) => setBankForm((prev) => ({ ...prev, settlementAccountHolder: event.target.value }))}
+              />
+            </div>
+            <Button size="sm" onClick={() => saveBank.mutate()} disabled={saveBank.isPending}>
+              계좌 저장
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              수강생이 입금할 판매자 계좌입니다. 수강 신청 시점의 계좌 정보가 신청 기록에 저장됩니다.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>수강 승인 대기</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {enrollmentRequests.length === 0 ? (
+              <div className="rounded-[14px] border bg-background p-4 text-sm text-muted-foreground">입금 확인 대기 중인 수강 신청이 없습니다.</div>
+            ) : (
+              <div className="divide-y rounded-[14px] border">
+                {enrollmentRequests.slice(0, 5).map((request) => (
+                  <div key={request.id} className="grid gap-2 p-3 text-sm md:grid-cols-[1fr_150px] md:items-center">
+                    <div className="min-w-0">
+                      <div className="truncate font-bold">{request.lecture.title}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        신청자 {request.user.nickname || request.user.email} · 수수료 {(request.platformFeeRateBps / 100).toFixed(2)}%
+                      </div>
+                      {platformDepositAccount?.accountNumber ? (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          플랫폼 입금 계좌 {platformDepositAccount.bankName} {platformDepositAccount.accountNumber} {platformDepositAccount.accountHolder}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="font-semibold">{money(request.platformFeeAmount)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -93,7 +213,7 @@ export default function AdminDashboardPage() {
             <CardTitle>최근 강의 상태</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="divide-y rounded-md border">
+            <div className="divide-y rounded-[14px] border">
               {summary.lectures.length === 0 ? (
                 <div className="p-5 text-sm text-muted-foreground">아직 등록한 강의가 없습니다.</div>
               ) : (
@@ -129,7 +249,7 @@ export default function AdminDashboardPage() {
             ].map((item) => {
               const Icon = item.icon
               return (
-                <div key={item.text} className="flex gap-3 rounded-md border bg-background p-3 text-sm">
+                <div key={item.text} className="flex gap-3 rounded-[14px] border bg-background p-3 text-sm">
                   <Icon className="mt-0.5 size-4 shrink-0 text-primary" />
                   <span>{item.text}</span>
                 </div>

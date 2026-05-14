@@ -113,7 +113,7 @@ export function CourseCard({ course }: { course: CourseItem }) {
   return (
     <Link href={courseUrl} className="block h-full">
       <Card className="group h-full overflow-hidden">
-        <div className="relative aspect-video bg-muted overflow-hidden">
+        <div className="relative aspect-square overflow-hidden bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={course.thumbnail} alt={course.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
           <div className="absolute top-2 right-2 z-10">
@@ -125,7 +125,7 @@ export function CourseCard({ course }: { course: CourseItem }) {
               aria-label="좋아요"
               disabled={likeToggle.isPending}
             >
-              <Heart className={`h-4 w-4 ${liked ? "fill-current text-red-500" : ""}`} />
+              <Heart className={`h-4 w-4 ${liked ? "fill-primary text-primary" : ""}`} />
               {likeCount > 0 && (
                 <span className="ml-1 text-xs">{likeCount}</span>
               )}
@@ -133,7 +133,7 @@ export function CourseCard({ course }: { course: CourseItem }) {
           </div>
         </div>
         <CardHeader>
-          <CardTitle className="text-base leading-tight line-clamp-2 min-h-10">
+          <CardTitle className="min-h-10 text-base leading-tight line-clamp-2">
             {course.title}
           </CardTitle>
         </CardHeader>
@@ -149,7 +149,7 @@ export function CourseCard({ course }: { course: CourseItem }) {
           {course.tags && (
             <div className="flex flex-wrap gap-1">
               {course.tags.slice(0, 3).map((t) => (
-                <span key={t} className="rounded bg-accent px-2 py-0.5 text-xs text-accent-foreground">
+                <span key={t} className="rounded-full bg-accent px-2.5 py-0.5 text-xs text-accent-foreground">
                   {t}
                 </span>
               ))}
@@ -162,7 +162,7 @@ export function CourseCard({ course }: { course: CourseItem }) {
                 <span className="text-[11px] text-muted-foreground line-through whitespace-nowrap">{course.originalPrice}</span>
               )}
               {typeof course.discountPercent === "number" && course.discountPercent > 0 && (
-                <span className="text-[10px] font-semibold text-green-700 bg-green-50 rounded px-1 py-0.5 whitespace-nowrap">-{course.discountPercent}%</span>
+                <span className="whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">-{course.discountPercent}%</span>
               )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">

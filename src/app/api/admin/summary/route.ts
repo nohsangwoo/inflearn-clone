@@ -1,5 +1,5 @@
-import { and, count, desc, eq, inArray, ne, sum } from "drizzle-orm"
-import { db, curriculums, curriculumSections, dubTracks, lectures, paymentOrders, purchases, reviews, videos } from "@/db"
+import { and, count, desc, eq, inArray, isNull, ne, sum } from "drizzle-orm"
+import { db, curriculums, curriculumSections, dubTracks, enrollmentRequests, lectures, paymentOrders, purchases, reviews, videos } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   const grossRevenue = orders.reduce((sum, order) => sum + order.amount, 0)
   const totalStudents = sellerLectures.reduce((sum, lecture) => sum + lecture.purchaseCount, 0)
-  const [hlsPendingRow, dubReadyRow] = lectureIds.length
+  const [hlsPendingRow, dubReadyRow, pendingEnrollmentRow, approvedEnrollmentRow] = lectureIds.length
     ? await Promise.all([
         db
           .select({ value: count(videos.id) })
@@ -52,17 +52,49 @@ export async function GET(req: NextRequest) {
           .innerJoin(curriculums, eq(curriculumSections.curriculumId, curriculums.id))
           .where(and(inArray(curriculums.lectureId, lectureIds), eq(dubTracks.status, "ready")))
           .then((rows) => rows[0]),
+        db
+          .select({
+            count: count(enrollmentRequests.id),
+            platformFeeAmount: sum(enrollmentRequests.platformFeeAmount),
+          })
+          .from(enrollmentRequests)
+          .where(
+            and(
+              inArray(enrollmentRequests.lectureId, lectureIds),
+              eq(enrollmentRequests.status, "AWAITING_PLATFORM_FEE"),
+            ),
+          )
+          .then((rows) => rows[0]),
+        db
+          .select({
+            amount: sum(enrollmentRequests.amount),
+            sellerReceivableAmount: sum(enrollmentRequests.sellerReceivableAmount),
+          })
+          .from(enrollmentRequests)
+          .where(
+            and(
+              inArray(enrollmentRequests.lectureId, lectureIds),
+              eq(enrollmentRequests.status, "APPROVED"),
+              isNull(enrollmentRequests.paymentOrderId),
+            ),
+          )
+          .then((rows) => rows[0]),
       ])
-    : [{ value: 0 }, { value: 0 }]
+    : [{ value: 0 }, { value: 0 }, { count: 0, platformFeeAmount: 0 }, { amount: 0, sellerReceivableAmount: 0 }]
+
+  const manualEnrollmentRevenue = Number(approvedEnrollmentRow?.amount ?? 0)
+  const manualSellerReceivable = Number(approvedEnrollmentRow?.sellerReceivableAmount ?? 0)
 
   return NextResponse.json({
-    grossRevenue,
-    estimatedPayout: Math.max(0, Math.round(grossRevenue * 0.8)),
+    grossRevenue: grossRevenue + manualEnrollmentRevenue,
+    estimatedPayout: Math.max(0, grossRevenue + manualSellerReceivable),
     totalStudents,
     lectureCount: sellerLectures.length,
     activeLectureCount: sellerLectures.filter((lecture) => lecture.isActive).length,
     hlsPending: hlsPendingRow?.value ?? 0,
     dubReady: dubReadyRow?.value ?? 0,
+    pendingEnrollmentCount: pendingEnrollmentRow?.count ?? 0,
+    pendingPlatformFeeAmount: Number(pendingEnrollmentRow?.platformFeeAmount ?? 0),
     recentOrders: orders,
     lectures: sellerLectures.slice(0, 5).map((lecture) => ({
       id: lecture.id,

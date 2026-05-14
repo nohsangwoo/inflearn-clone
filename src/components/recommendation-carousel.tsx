@@ -51,8 +51,8 @@ export function RecommendationCarousel({ items }: { items: Course[] }) {
               className="shrink-0 basis-[85%] sm:basis-1/2 md:basis-1/3 lg:basis-1/5"
             >
               <Link href={currentLocale === 'ko' ? `/course/${c.id}` : `/${currentLocale}/course/${c.id}`} className="block h-full">
-                <div className="rounded-lg border overflow-hidden bg-card h-full hover:shadow-sm transition-shadow">
-                  <div className="aspect-video bg-muted">
+                <div className="h-full overflow-hidden rounded-[14px] border bg-card transition-shadow hover:shadow-sm">
+                  <div className="aspect-square bg-muted">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={c.thumbnail} alt={c.title} className="h-full w-full object-cover" />
                   </div>
@@ -72,5 +72,4 @@ export function RecommendationCarousel({ items }: { items: Course[] }) {
 }
 
 export default RecommendationCarousel
-
 

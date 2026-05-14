@@ -5,21 +5,9 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import axios from "axios"
 import { useQuery } from "@tanstack/react-query"
-import {
-  ArrowRight,
-  BookOpen,
-  CheckCircle2,
-  GraduationCap,
-  LayoutDashboard,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Tags,
-  Video,
-} from "lucide-react"
+import { BookOpen, Heart, Search, Star, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { brand, toCdnUrl, withLocalePath } from "@/lib/brand"
 import { cn } from "@/lib/utils"
 
@@ -42,57 +30,153 @@ type ApiCourse = {
   instructor?: { nickname?: string | null; email?: string }
 }
 
+const previewImages = [
+  "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80",
+]
+
 const fallbackCourses: ApiCourse[] = [
   {
     id: 101,
-    title: "Next.js 결제형 강의 플랫폼 실전",
-    shortDescription: "상품, 결제, 수강권, SEO까지 한 번에 연결하는 웹 서비스 제작",
+    title: "Next.js로 강의 거래소 만들기",
+    shortDescription: "상품, 수강신청, 결제 확장, SEO까지 웹 플랫폼의 뼈대를 완성합니다.",
     description: "웹 우선 강의 플랫폼을 직접 만들며 서비스 구조를 익힙니다.",
     category: "웹 개발",
     level: "중급",
-    tags: ["Next.js", "Toss", "SEO"],
+    tags: ["Next.js", "Drizzle", "SEO"],
     price: 99000,
     discountPrice: 69000,
-    imageUrl: null,
+    imageUrl: previewImages[0],
     createdAt: new Date().toISOString(),
     purchaseCount: 1240,
     reviewCount: 186,
-    avgRating: 4.8,
+    avgRating: 4.88,
     instructor: { nickname: "박살랩" },
   },
   {
     id: 102,
-    title: "HLS 스트리밍과 다국어 더빙 파이프라인",
-    shortDescription: "ffmpeg, S3, CloudFront, ElevenLabs로 유료 강의 영상을 안전하게 운영",
+    title: "HLS 스트리밍과 영상 운영",
+    shortDescription: "ffmpeg, HLS, 자막, 더빙 트랙을 강의 서비스 흐름에 맞게 설계합니다.",
     description: "동영상 강의를 판매할 때 필요한 HLS 운영 전략을 다룹니다.",
     category: "미디어",
     level: "고급",
-    tags: ["HLS", "FFmpeg", "ElevenLabs"],
+    tags: ["HLS", "FFmpeg", "Caption"],
     price: 129000,
     discountPrice: null,
-    imageUrl: null,
+    imageUrl: previewImages[1],
     createdAt: new Date().toISOString(),
     purchaseCount: 520,
     reviewCount: 73,
-    avgRating: 4.9,
+    avgRating: 4.91,
     instructor: { nickname: "스트림마스터" },
   },
   {
     id: 103,
     title: "AI 시대 판매되는 강의 기획법",
-    shortDescription: "검색되는 커리큘럼, 전환되는 상세 페이지, 완주율 높은 수업 설계",
+    shortDescription: "검색되는 커리큘럼, 전환되는 상세 페이지, 완주율 높은 수업 설계.",
     description: "강의 판매자가 콘텐츠를 시장에 맞게 설계하는 법을 배웁니다.",
     category: "크리에이터",
     level: "입문",
     tags: ["기획", "마케팅", "커리큘럼"],
     price: 59000,
     discountPrice: 39000,
-    imageUrl: null,
+    imageUrl: previewImages[2],
     createdAt: new Date().toISOString(),
     purchaseCount: 870,
     reviewCount: 92,
-    avgRating: 4.7,
+    avgRating: 4.74,
     instructor: { nickname: "콘텐츠빌더" },
+  },
+  {
+    id: 104,
+    title: "수강생이 끝까지 보는 강의 편집",
+    shortDescription: "긴 영상보다 오래 남는 리듬, 챕터, 프리뷰 이미지를 설계합니다.",
+    description: "촬영 이후 실제 판매 페이지에 올라가는 결과물을 다듬습니다.",
+    category: "디자인",
+    level: "입문",
+    tags: ["편집", "썸네일", "완주율"],
+    price: 79000,
+    discountPrice: 59000,
+    imageUrl: previewImages[3],
+    createdAt: new Date().toISOString(),
+    purchaseCount: 438,
+    reviewCount: 61,
+    avgRating: 4.82,
+    instructor: { nickname: "컷앤런" },
+  },
+  {
+    id: 105,
+    title: "강의 판매자를 위한 SEO 실전",
+    shortDescription: "태그, 메타 타이틀, 사이트맵, 검색 의도를 강의 등록 폼에 녹입니다.",
+    description: "강의가 검색 결과에 남도록 구조화하는 방법을 다룹니다.",
+    category: "비즈니스",
+    level: "중급",
+    tags: ["SEO", "검색", "콘텐츠"],
+    price: 89000,
+    discountPrice: null,
+    imageUrl: previewImages[4],
+    createdAt: new Date().toISOString(),
+    purchaseCount: 312,
+    reviewCount: 44,
+    avgRating: 4.79,
+    instructor: { nickname: "검색설계자" },
+  },
+  {
+    id: 106,
+    title: "자동 더빙과 다국어 강의 운영",
+    shortDescription: "ElevenLabs 기반 더빙을 수업 단위로 승인하고 운영하는 실전 플로우.",
+    description: "다국어 오디오 트랙을 운영하고 관리하는 방식을 배웁니다.",
+    category: "AI",
+    level: "고급",
+    tags: ["AI", "더빙", "글로벌"],
+    price: 119000,
+    discountPrice: 99000,
+    imageUrl: previewImages[5],
+    createdAt: new Date().toISOString(),
+    purchaseCount: 284,
+    reviewCount: 39,
+    avgRating: 4.86,
+    instructor: { nickname: "보이스빌더" },
+  },
+  {
+    id: 107,
+    title: "1인 강사의 정산과 운영 장부",
+    shortDescription: "수강신청, 입금 확인, 수수료율 스냅샷, 수동 승인까지 설계합니다.",
+    description: "초기 마켓플레이스 운영에 필요한 장부 흐름을 만듭니다.",
+    category: "비즈니스",
+    level: "입문",
+    tags: ["정산", "입금확인", "운영"],
+    price: 49000,
+    discountPrice: 0,
+    imageUrl: previewImages[6],
+    createdAt: new Date().toISOString(),
+    purchaseCount: 156,
+    reviewCount: 21,
+    avgRating: 4.67,
+    instructor: { nickname: "운영노트" },
+  },
+  {
+    id: 108,
+    title: "초보 판매자용 첫 강의 출시",
+    shortDescription: "한 편의 프리뷰에서 첫 유료 커리큘럼까지 필요한 최소 단계를 정리합니다.",
+    description: "강의를 처음 파는 사람에게 필요한 등록과 출시 체크리스트입니다.",
+    category: "크리에이터",
+    level: "입문",
+    tags: ["출시", "프리뷰", "판매"],
+    price: 69000,
+    discountPrice: 49000,
+    imageUrl: previewImages[7],
+    createdAt: new Date().toISOString(),
+    purchaseCount: 221,
+    reviewCount: 28,
+    avgRating: 4.7,
+    instructor: { nickname: "첫강의클럽" },
   },
 ]
 
@@ -108,14 +192,7 @@ function formatPrice(course: ApiCourse) {
 }
 
 function getCourseImage(course: ApiCourse, index: number) {
-  const image = toCdnUrl(course.imageUrl)
-  if (image) return image
-  const palettes = [
-    "from-[#123c69] via-[#2f6f8f] to-[#70c1b3]",
-    "from-[#1d3557] via-[#457b9d] to-[#f6c85f]",
-    "from-[#263238] via-[#607d8b] to-[#ef6f6c]",
-  ]
-  return palettes[index % palettes.length]
+  return toCdnUrl(course.imageUrl) || previewImages[index % previewImages.length]
 }
 
 export default function HomePageWrapper() {
@@ -163,240 +240,195 @@ export default function HomePageWrapper() {
     })
   }, [category, data?.items, keyword])
 
-  const sellerHref = withLocalePath(pathname, "/admin")
-  const dashboardHref = withLocalePath(pathname, "/me")
-
   return (
-    <div className="bg-background">
-      <section className="border-b bg-[linear-gradient(180deg,oklch(0.995_0.006_104),oklch(0.965_0.018_230))]">
-        <div className="mx-auto grid min-h-[520px] max-w-7xl grid-cols-1 gap-10 px-4 py-10 md:grid-cols-[1.05fr_0.95fr] md:px-6 md:py-14">
-          <div className="flex flex-col justify-center gap-8">
-            <div className="space-y-5">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary" className="border border-primary/15 bg-secondary/80 text-secondary-foreground">
-                  Web-first course marketplace
-                </Badge>
-                <Badge variant="outline" className="bg-background/70">
-                  HLS · Toss Payments · SEO
-                </Badge>
-              </div>
-              <div className="space-y-4">
-                <h1 className="max-w-3xl text-4xl font-black leading-[1.08] text-foreground sm:text-5xl lg:text-6xl">
-                  {brand.name}
-                </h1>
-                <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                  판매자는 강의를 올리고, 수강생은 결제 후 바로 학습합니다. 검색 노출, 다국어 더빙, 자막, 수동 정산까지 처음부터 웹 플랫폼 기준으로 설계합니다.
-                </p>
-              </div>
-            </div>
+    <main className="bg-background text-foreground">
+      <section className="mx-auto max-w-7xl px-4 pb-8 pt-8 md:px-6 md:pb-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-[14px] font-medium text-muted-foreground">강의 판매자와 수강생을 잇는 웹 우선 마켓</p>
+          <h1 className="mt-3 text-[28px] font-bold leading-[1.43] md:text-[32px]">
+            {brand.name}에서 다음 강의를 찾아보세요
+          </h1>
+        </div>
 
-            <div className="max-w-3xl space-y-3">
-              <div className="flex min-h-14 items-center gap-2 rounded-lg border bg-card p-2 shadow-sm">
-                <Search className="ml-2 size-5 text-muted-foreground" />
-                <Input
-                  value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
-                  placeholder="강의명, 기술, 판매자를 검색하세요"
-                  className="h-11 border-0 bg-transparent shadow-none focus-visible:ring-0"
-                />
-                <Button className="h-11 px-4">
-                  탐색
-                  <ArrowRight className="size-4" />
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
+        <div className="mx-auto mt-8 max-w-4xl rounded-full border border-border bg-background p-2 marketplace-shadow">
+          <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-[1.2fr_0.8fr_0.8fr_56px] md:divide-x md:divide-y-0">
+            <label className="px-5 py-3">
+              <span className="block text-[14px] font-medium text-foreground">무엇을 배우나요?</span>
+              <input
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                placeholder="HLS, Next.js, 강의 기획"
+                className="mt-1 w-full bg-transparent text-[14px] text-muted-foreground outline-none placeholder:text-muted-foreground"
+              />
+            </label>
+            <label className="px-5 py-3">
+              <span className="block text-[14px] font-medium text-foreground">카테고리</span>
+              <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                className="mt-1 w-full appearance-none bg-transparent text-[14px] text-muted-foreground outline-none"
+              >
                 {categories.map((item) => (
-                  <button
-                    key={item}
-                    onClick={() => setCategory(item)}
-                    className={cn(
-                      "rounded-md border px-3 py-2 text-sm transition-colors",
-                      category === item
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "bg-background/70 text-muted-foreground hover:border-primary/40 hover:text-foreground",
-                    )}
-                  >
-                    {item}
-                  </button>
+                  <option key={item}>{item}</option>
                 ))}
-              </div>
-            </div>
-
-            <div className="grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
-              {[
-                ["2단계", "업로드 후 HLS 변환"],
-                ["서버확정", "금액 검증 결제 승인"],
-                ["SEO", "강의별 메타/사이트맵"],
-              ].map(([value, label]) => (
-                <div key={label} className="rounded-lg border bg-card px-4 py-3">
-                  <div className="text-xl font-black text-primary">{value}</div>
-                  <div className="text-sm text-muted-foreground">{label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-end">
-            <div className="w-full rounded-lg border bg-card p-4 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-muted-foreground">오늘의 운영 화면</div>
-                  <div className="text-xl font-bold">판매자 대시보드 미리보기</div>
-                </div>
-                <Button asChild variant="outline">
-                  <Link href={sellerHref}>
-                    열기
-                    <LayoutDashboard className="size-4" />
-                  </Link>
-                </Button>
-              </div>
-              <div className="grid gap-3">
-                {[
-                  { icon: Video, label: "HLS 처리 대기", value: "3건", tone: "text-primary" },
-                  { icon: Sparkles, label: "더빙 생성 완료", value: "18트랙", tone: "text-emerald-700" },
-                  { icon: ShieldCheck, label: "정산 검토 예정", value: "₩1,420,000", tone: "text-red-700" },
-                ].map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <div key={item.label} className="flex items-center justify-between rounded-md border bg-background px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Icon className={cn("size-5", item.tone)} />
-                        <span className="text-sm font-medium">{item.label}</span>
-                      </div>
-                      <span className="font-black">{item.value}</span>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Button asChild className="h-11">
-                  <Link href={sellerHref}>강의 판매 시작</Link>
-                </Button>
-                <Button asChild variant="secondary" className="h-11">
-                  <Link href={dashboardHref}>내 학습 보기</Link>
-                </Button>
-              </div>
+              </select>
+            </label>
+            <label className="px-5 py-3">
+              <span className="block text-[14px] font-medium text-foreground">정렬</span>
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value as typeof sort)}
+                className="mt-1 w-full appearance-none bg-transparent text-[14px] text-muted-foreground outline-none"
+              >
+                <option value="latest">최신 강의</option>
+                <option value="best">인기 강의</option>
+                <option value="priceAsc">낮은 가격</option>
+              </select>
+            </label>
+            <div className="flex items-center justify-center p-2">
+              <Button size="icon" className="size-12 rounded-full" aria-label="검색">
+                <Search className="size-5" />
+              </Button>
             </div>
           </div>
+        </div>
+
+        <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
+          {categories.map((item) => (
+            <button
+              key={item}
+              onClick={() => setCategory(item)}
+              className={cn(
+                "shrink-0 rounded-full border px-4 py-2 text-[14px] font-medium transition-colors",
+                category === item
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background text-muted-foreground hover:border-foreground hover:text-foreground",
+              )}
+            >
+              {item}
+            </button>
+          ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
-        <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <section className="mx-auto max-w-7xl px-4 pb-16 md:px-6">
+        <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-black">지금 열려있는 강의</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              결제, 영상, 자막, 더빙까지 판매 가능한 강의 단위로 정리됩니다.
+            <h2 className="text-[22px] font-medium leading-[1.18]">프리뷰 강의</h2>
+            <p className="mt-2 text-[14px] leading-[1.43] text-muted-foreground">
+              아직 DB가 비어 있어도 시장에 보일 강의 카탈로그를 먼저 확인할 수 있습니다.
             </p>
           </div>
-          <div className="flex gap-2">
-            {[
-              ["latest", "최신"],
-              ["best", "인기"],
-              ["priceAsc", "낮은 가격"],
-            ].map(([value, label]) => (
-              <Button
-                key={value}
-                size="sm"
-                variant={sort === value ? "default" : "outline"}
-                onClick={() => setSort(value as typeof sort)}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
+          <Button asChild variant="ghost" className="hidden rounded-full px-4 md:inline-flex">
+            <Link href={withLocalePath(pathname, "/admin")}>
+              강의 올리기
+              <BookOpen className="size-4" />
+            </Link>
+          </Button>
         </div>
 
         {isLoading && !data ? (
-          <div className="rounded-lg border bg-card p-8 text-sm text-muted-foreground">강의 목록을 불러오는 중입니다.</div>
+          <div className="rounded-[14px] border border-border bg-card p-8 text-sm text-muted-foreground">강의 목록을 불러오는 중입니다.</div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-4">
             {courses.map((course, index) => (
-              <CourseTile key={`${course.id}-${course.title}`} course={course} image={getCourseImage(course, index)} pathname={pathname} />
+              <CourseTile key={`${course.id}-${course.title}`} course={course} image={getCourseImage(course, index)} pathname={pathname} index={index} />
             ))}
           </div>
         )}
       </section>
 
-      <section className="border-y bg-card">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-0 px-4 md:grid-cols-3 md:px-6">
+      <section className="border-t border-border bg-secondary">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-3 md:px-6">
           {[
-            { icon: GraduationCap, title: "수강생", body: "구매한 강의만 안전하게 열고, 마지막 수업과 언어 설정을 이어갑니다." },
-            { icon: Tags, title: "판매자", body: "태그, SEO, 커리큘럼, 영상, 자막, 더빙 상태를 하나의 편집 화면에서 관리합니다." },
-            { icon: ShieldCheck, title: "최고 관리자", body: "결제, 정산, 콘텐츠, 푸시를 전체 플랫폼 단위로 확인하고 제어합니다." },
-          ].map((item) => {
-            const Icon = item.icon
-            return (
-              <div key={item.title} className="border-b py-8 md:border-b-0 md:border-r md:px-6 last:border-r-0">
-                <Icon className="mb-4 size-6 text-primary" />
-                <h3 className="text-lg font-bold">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.body}</p>
-              </div>
-            )
-          })}
+            ["Support", "수강 신청, 계좌입금, 수강권한을 단계별로 확인합니다."],
+            ["Hosting", "판매자는 계좌, 커리큘럼, HLS, 자막, 더빙 상태를 관리합니다."],
+            ["Baksal", "지금은 0% 수수료 이벤트, 이후 수수료율 스냅샷으로 운영됩니다."],
+          ].map(([title, body]) => (
+            <div key={title}>
+              <h3 className="text-[16px] font-medium">{title}</h3>
+              <p className="mt-3 text-[14px] leading-[1.43] text-muted-foreground">{body}</p>
+            </div>
+          ))}
         </div>
       </section>
-    </div>
+    </main>
   )
 }
 
-function CourseTile({ course, image, pathname }: { course: ApiCourse; image: string; pathname: string }) {
+function CourseTile({
+  course,
+  image,
+  pathname,
+  index,
+}: {
+  course: ApiCourse
+  image: string
+  pathname: string
+  index: number
+}) {
   const courseHref = withLocalePath(pathname, `/course/${course.id}`)
-  const isCssImage = image.startsWith("from-")
   const discount =
-    typeof course.discountPrice === "number" && course.discountPrice < course.price
+    typeof course.discountPrice === "number" && course.discountPrice < course.price && course.price > 0
       ? Math.round((1 - course.discountPrice / course.price) * 100)
       : null
 
   return (
-    <Link href={courseHref} className="group block h-full">
-      <article className="flex h-full flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md">
-        <div className={cn("relative aspect-[16/9] overflow-hidden", isCssImage && `bg-gradient-to-br ${image}`)}>
-          {isCssImage ? (
-            <div className="absolute inset-0 flex items-end p-5 text-white">
-              <BookOpen className="size-8 opacity-90" />
-            </div>
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt={course.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-          )}
-          {discount ? (
-            <div className="absolute left-3 top-3 rounded-md bg-red-600 px-2 py-1 text-xs font-bold text-white">
-              {discount}% 할인
-            </div>
-          ) : null}
-        </div>
-        <div className="flex flex-1 flex-col gap-4 p-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5">
-              {course.category ? <Badge variant="secondary">{course.category}</Badge> : null}
-              {course.level ? <Badge variant="outline">{course.level}</Badge> : null}
-            </div>
-            <h3 className="min-h-12 text-lg font-black leading-6 line-clamp-2">{course.title}</h3>
-            <p className="min-h-12 text-sm leading-6 text-muted-foreground line-clamp-2">
-              {course.shortDescription || course.description || "강의 소개가 곧 업데이트됩니다."}
-            </p>
+    <Link href={courseHref} className="group block min-w-0">
+      <article className="min-w-0">
+        <div className="relative aspect-square overflow-hidden rounded-[14px] bg-secondary">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={image}
+            alt={course.title}
+            className="photo-zoom h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          />
+          <div className="absolute left-3 top-3 rounded-full bg-background px-3 py-1 text-[11px] font-semibold shadow-sm">
+            {index < 3 ? "인기 프리뷰" : course.category || "강의"}
           </div>
-          <div className="mt-auto space-y-3">
-            <div className="flex flex-wrap gap-1.5">
-              {(course.tags ?? []).slice(0, 3).map((tag) => (
-                <span key={tag} className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-                  #{tag}
-                </span>
-              ))}
+          <button
+            type="button"
+            aria-label="관심 강의"
+            className="absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors group-hover:text-primary"
+          >
+            <Heart className="size-5" />
+          </button>
+          <div className="absolute bottom-3 left-3 flex gap-1">
+            {[0, 1, 2].map((dot) => (
+              <span key={dot} className={cn("size-1.5 rounded-full bg-background", dot === 0 ? "opacity-100" : "opacity-60")} />
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-3">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="min-w-0 truncate text-[16px] font-semibold leading-[1.25]">{course.title}</h3>
+            <span className="inline-flex shrink-0 items-center gap-1 text-[14px] text-foreground">
+              <Star className="size-3.5 fill-foreground" />
+              {course.avgRating?.toFixed(2) ?? "4.80"}
+            </span>
+          </div>
+          <p className="mt-1 line-clamp-2 min-h-10 text-[14px] leading-[1.43] text-muted-foreground">
+            {course.shortDescription || course.description || "강의 소개가 곧 업데이트됩니다."}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {(course.tags ?? []).slice(0, 2).map((tag) => (
+              <Badge key={tag} variant="outline" className="rounded-full border-border px-2 py-0 text-[11px]">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+          <div className="mt-3 flex items-end justify-between gap-2">
+            <div className="text-[14px] text-muted-foreground">
+              <div>{course.instructor?.nickname || course.instructor?.email || "박살강의 판매자"}</div>
+              <div className="mt-1 inline-flex items-center gap-1">
+                <Users className="size-3.5" />
+                {course.purchaseCount?.toLocaleString() ?? "0"}명
+              </div>
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs text-muted-foreground">{course.instructor?.nickname || course.instructor?.email || "박살강의 판매자"}</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <CheckCircle2 className="size-3 text-emerald-700" />
-                  {course.avgRating?.toFixed(1) ?? "4.8"} · {course.purchaseCount?.toLocaleString() ?? "0"}명
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-lg font-black">{formatPrice(course)}</div>
-                {discount ? <div className="text-xs text-muted-foreground line-through">₩{course.price.toLocaleString()}</div> : null}
-              </div>
+            <div className="text-right text-[14px]">
+              <div className="font-semibold text-foreground">{formatPrice(course)}</div>
+              {discount ? <div className="text-[13px] text-muted-foreground">{discount}% off</div> : null}
             </div>
           </div>
         </div>

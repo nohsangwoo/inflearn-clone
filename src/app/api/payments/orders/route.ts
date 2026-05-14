@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { and, eq } from "drizzle-orm"
-import { db, lectures, paymentOrders, purchases } from "@/db"
+import { db, enrollmentRequests, lectures, paymentOrders, purchases } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { generateOrderId } from "@/lib/payments/toss"
+import { calculatePlatformFeeAmount, getEffectiveLectureAmount, getPlatformFeeRateBps } from "@/lib/enrollments"
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUserFromRequest(req)
@@ -17,13 +18,16 @@ export async function POST(req: NextRequest) {
 
   const lecture = await db.query.lectures.findFirst({
     where: eq(lectures.id, lectureId),
-    columns: { id: true, title: true, price: true, discountPrice: true, isActive: true },
+    columns: { id: true, title: true, price: true, discountPrice: true, isActive: true, instructorId: true, platformFeeRateBps: true },
   })
   if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "lecture not purchasable" }, { status: 400 })
   }
 
-  const amount = typeof lecture.discountPrice === "number" && lecture.discountPrice < lecture.price ? lecture.discountPrice : lecture.price
+  const amount = getEffectiveLectureAmount(lecture)
+  const platformFeeRateBps = getPlatformFeeRateBps(lecture)
+  const platformFeeAmount = calculatePlatformFeeAmount(amount, platformFeeRateBps)
+  const sellerReceivableAmount = Math.max(0, amount - platformFeeAmount)
   const orderName = lecture.title.slice(0, 100)
 
   // 이미 구매한 경우 차단 (테스트 강제 생성 허용 시 우회)
@@ -36,10 +40,41 @@ export async function POST(req: NextRequest) {
   }
 
   if (amount === 0) {
-    await db
-      .insert(purchases)
-      .values({ userId: user.id, lectureId: lecture.id })
-      .onConflictDoNothing({ target: [purchases.userId, purchases.lectureId] })
+    await db.transaction(async (tx) => {
+      await tx
+        .insert(enrollmentRequests)
+        .values({
+          userId: user.id,
+          lectureId: lecture.id,
+          sellerId: lecture.instructorId,
+          status: "APPROVED",
+          amount,
+          platformFeeRateBps,
+          platformFeeAmount,
+          sellerReceivableAmount,
+          approvedAt: new Date(),
+          approvedById: user.id,
+          adminMemo: "free payment order auto approval",
+        })
+        .onConflictDoUpdate({
+          target: [enrollmentRequests.userId, enrollmentRequests.lectureId],
+          set: {
+            status: "APPROVED",
+            amount,
+            platformFeeRateBps,
+            platformFeeAmount,
+            sellerReceivableAmount,
+            approvedAt: new Date(),
+            approvedById: user.id,
+            adminMemo: "free payment order auto approval",
+            updatedAt: new Date(),
+          },
+        })
+      await tx
+        .insert(purchases)
+        .values({ userId: user.id, lectureId: lecture.id })
+        .onConflictDoNothing({ target: [purchases.userId, purchases.lectureId] })
+    })
     return NextResponse.json({ free: true, lectureId: lecture.id, orderName, amount: 0, currency: "KRW" }, { status: 201 })
   }
 
@@ -52,7 +87,7 @@ export async function POST(req: NextRequest) {
       amount,
       userId: user.id,
       lectureId: lecture.id,
-      metadata: { force }
+      metadata: { force, platformFeeRateBps, platformFeeAmount, sellerReceivableAmount }
     })
     .returning({
       orderId: paymentOrders.orderId,

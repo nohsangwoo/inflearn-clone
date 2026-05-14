@@ -36,7 +36,7 @@ export default function MePurchasedCoursesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-black">내 강의</h1>
+        <h1 className="text-[28px] font-bold leading-[1.43]">내 강의</h1>
         <p className="mt-2 text-sm text-muted-foreground">구매한 강의를 확인하고 학습을 이어가세요.</p>
       </div>
 
@@ -46,16 +46,16 @@ export default function MePurchasedCoursesPage() {
         </CardHeader>
         <CardContent>
           {purchases.length === 0 ? (
-            <div className="rounded-md border bg-background p-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-[14px] border bg-background p-8 text-center text-sm text-muted-foreground">
               구매한 강의가 없습니다.
             </div>
           ) : (
-            <div className="divide-y rounded-md border">
+            <div className="divide-y rounded-[14px] border">
               {purchases.map((purchase) => {
                 const image = toCdnUrl(purchase.lecture.imageUrl)
                 return (
                   <div key={purchase.id} className="grid gap-4 p-4 md:grid-cols-[112px_1fr_130px] md:items-center">
-                    <div className="aspect-video overflow-hidden rounded-md bg-muted">
+                    <div className="aspect-square overflow-hidden rounded-[14px] bg-muted">
                       {image ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={image} alt={purchase.lecture.title} className="h-full w-full object-cover" />

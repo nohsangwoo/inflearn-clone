@@ -1,5 +1,5 @@
-import { count, desc, eq, ne, sum } from "drizzle-orm"
-import { db, lectures as lectureTable, paymentOrders, payouts, users as userTable, videos } from "@/db"
+import { and, count, eq, isNull, ne, sum } from "drizzle-orm"
+import { db, enrollmentRequests, lectures as lectureTable, paymentOrders, payouts, users as userTable, videos } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   if (user.role !== "ADMIN") return NextResponse.json({ message: "forbidden" }, { status: 403 })
 
-  const [usersRow, lecturesRow, ordersRow, pendingPayoutsRow, hlsPendingRow] = await Promise.all([
+  const [usersRow, lecturesRow, ordersRow, pendingPayoutsRow, hlsPendingRow, pendingEnrollmentRow, approvedEnrollmentRow] = await Promise.all([
     db.select({ value: count() }).from(userTable).then((rows) => rows[0]),
     db.select({ value: count() }).from(lectureTable).then((rows) => rows[0]),
     db
@@ -22,6 +22,16 @@ export async function GET(req: NextRequest) {
       .where(eq(payouts.status, "PENDING"))
       .then((rows) => rows[0]),
     db.select({ value: count() }).from(videos).where(ne(videos.hlsStatus, "READY")).then((rows) => rows[0]),
+    db
+      .select({ count: count(enrollmentRequests.id), platformFeeAmount: sum(enrollmentRequests.platformFeeAmount) })
+      .from(enrollmentRequests)
+      .where(eq(enrollmentRequests.status, "AWAITING_PLATFORM_FEE"))
+      .then((rows) => rows[0]),
+    db
+      .select({ amount: sum(enrollmentRequests.amount), total: count(enrollmentRequests.id) })
+      .from(enrollmentRequests)
+      .where(and(eq(enrollmentRequests.status, "APPROVED"), isNull(enrollmentRequests.paymentOrderId)))
+      .then((rows) => rows[0]),
   ])
 
   const recentOrders = await db.query.paymentOrders.findMany({
@@ -40,11 +50,13 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     users: usersRow?.value ?? 0,
     lectures: lecturesRow?.value ?? 0,
-    successfulOrderCount: ordersRow?.total ?? 0,
-    grossRevenue: Number(ordersRow?.amount ?? 0),
+    successfulOrderCount: (ordersRow?.total ?? 0) + (approvedEnrollmentRow?.total ?? 0),
+    grossRevenue: Number(ordersRow?.amount ?? 0) + Number(approvedEnrollmentRow?.amount ?? 0),
     pendingPayoutCount: pendingPayoutsRow?.total ?? 0,
     pendingPayoutAmount: Number(pendingPayoutsRow?.amount ?? 0),
     hlsPending: hlsPendingRow?.value ?? 0,
+    pendingEnrollmentCount: pendingEnrollmentRow?.count ?? 0,
+    pendingEnrollmentPlatformFeeAmount: Number(pendingEnrollmentRow?.platformFeeAmount ?? 0),
     recentOrders,
   })
 }

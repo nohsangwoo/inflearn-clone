@@ -44,7 +44,7 @@ export default function MeDashboardPage() {
     <div className="space-y-6">
       <div>
         <Badge variant="secondary" className="mb-3">Learner dashboard</Badge>
-        <h1 className="text-3xl font-black">내 학습</h1>
+        <h1 className="text-[28px] font-bold leading-[1.43]">내 학습</h1>
         <p className="mt-2 text-sm text-muted-foreground">구매한 강의를 이어보고, 관심 강의와 알림을 확인합니다.</p>
       </div>
 
@@ -63,7 +63,7 @@ export default function MeDashboardPage() {
                 <Icon className="size-5 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-black">{item.value}</div>
+                <div className="text-[22px] font-semibold leading-[1.18]">{item.value}</div>
               </CardContent>
             </Card>
           )
@@ -76,7 +76,7 @@ export default function MeDashboardPage() {
         </CardHeader>
         <CardContent>
           {summary.purchases.length === 0 ? (
-            <div className="rounded-md border bg-background p-8 text-center text-sm text-muted-foreground">
+            <div className="rounded-[14px] border bg-background p-8 text-center text-sm text-muted-foreground">
               아직 구매한 강의가 없습니다. 탐색 화면에서 강의를 찾아보세요.
             </div>
           ) : (
@@ -84,8 +84,8 @@ export default function MeDashboardPage() {
               {summary.purchases.map((purchase) => {
                 const image = toCdnUrl(purchase.lecture.imageUrl)
                 return (
-                  <div key={purchase.id} className="grid grid-cols-[96px_1fr] gap-4 rounded-lg border bg-background p-3">
-                    <div className="aspect-video overflow-hidden rounded-md bg-muted">
+                  <div key={purchase.id} className="grid grid-cols-[96px_1fr] gap-4 rounded-[14px] border bg-background p-3">
+                    <div className="aspect-video overflow-hidden rounded-[14px] bg-muted">
                       {image ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={image} alt={purchase.lecture.title} className="h-full w-full object-cover" />

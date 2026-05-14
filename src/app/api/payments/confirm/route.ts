@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { eq } from "drizzle-orm"
-import { db, paymentOrders, payments, purchases } from "@/db"
+import { db, enrollmentRequests, lectures, paymentOrders, payments, purchases } from "@/db"
 import { confirmTossPayment } from "@/lib/payments/toss"
 
 type TossConfirmResponse = {
@@ -28,6 +28,19 @@ export async function POST(req: NextRequest) {
   if (order.amount !== amount) {
     return NextResponse.json({ message: "amount mismatch" }, { status: 400 })
   }
+  const lecture = await db.query.lectures.findFirst({
+    where: eq(lectures.id, order.lectureId),
+    columns: { instructorId: true },
+    with: {
+      instructor: {
+        columns: {
+          settlementBankName: true,
+          settlementAccountNumber: true,
+          settlementAccountHolder: true,
+        },
+      },
+    },
+  })
 
   try {
     const confirmed = (await confirmTossPayment({ paymentKey, orderId, amount })) as TossConfirmResponse
@@ -56,6 +69,41 @@ export async function POST(req: NextRequest) {
         })
 
       // 구매 등록
+      const feeSnapshot = readFeeSnapshot(order.metadata, amount)
+      await tx
+        .insert(enrollmentRequests)
+        .values({
+          userId: order.userId,
+          lectureId: order.lectureId,
+          sellerId: lecture?.instructorId ?? null,
+          status: "APPROVED",
+          amount,
+          platformFeeRateBps: feeSnapshot.platformFeeRateBps,
+          platformFeeAmount: feeSnapshot.platformFeeAmount,
+          sellerReceivableAmount: feeSnapshot.sellerReceivableAmount,
+          sellerBankName: lecture?.instructor?.settlementBankName ?? null,
+          sellerAccountNumber: lecture?.instructor?.settlementAccountNumber ?? null,
+          sellerAccountHolder: lecture?.instructor?.settlementAccountHolder ?? null,
+          paymentOrderId: order.orderId,
+          approvedAt: new Date(),
+          approvedById: order.userId,
+          adminMemo: "Toss payment auto approval",
+        })
+        .onConflictDoUpdate({
+          target: [enrollmentRequests.userId, enrollmentRequests.lectureId],
+          set: {
+            status: "APPROVED",
+            amount,
+            platformFeeRateBps: feeSnapshot.platformFeeRateBps,
+            platformFeeAmount: feeSnapshot.platformFeeAmount,
+            sellerReceivableAmount: feeSnapshot.sellerReceivableAmount,
+            paymentOrderId: order.orderId,
+            approvedAt: new Date(),
+            approvedById: order.userId,
+            adminMemo: "Toss payment auto approval",
+            updatedAt: new Date(),
+          },
+        })
       await tx
         .insert(purchases)
         .values({ userId: order.userId, lectureId: order.lectureId })
@@ -75,4 +123,21 @@ export async function POST(req: NextRequest) {
     await db.update(paymentOrders).set({ status: "FAILED", failReason: message }).where(eq(paymentOrders.orderId, orderId))
     return NextResponse.json({ message, code }, { status: 400 })
   }
+}
+
+function readFeeSnapshot(metadata: Record<string, unknown> | null, amount: number) {
+  const platformFeeRateBps = numberFromMetadata(metadata, "platformFeeRateBps")
+  const platformFeeAmount = numberFromMetadata(metadata, "platformFeeAmount")
+  const sellerReceivableAmount = numberFromMetadata(metadata, "sellerReceivableAmount")
+
+  return {
+    platformFeeRateBps,
+    platformFeeAmount,
+    sellerReceivableAmount: sellerReceivableAmount || Math.max(0, amount - platformFeeAmount),
+  }
+}
+
+function numberFromMetadata(metadata: Record<string, unknown> | null, key: string) {
+  const value = metadata?.[key]
+  return typeof value === "number" && Number.isFinite(value) ? value : 0
 }

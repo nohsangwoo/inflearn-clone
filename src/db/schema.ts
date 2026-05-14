@@ -44,6 +44,12 @@ export const languageEnum = pgEnum("Language", [
 export const paymentStatusEnum = pgEnum("PaymentStatus", ["PENDING", "SUCCESS", "FAILED", "CANCELED"]);
 export const payoutStatusEnum = pgEnum("PayoutStatus", ["PENDING", "APPROVED", "PAID", "HOLD", "CANCELED"]);
 export const hlsStatusEnum = pgEnum("HlsStatus", ["PENDING", "PROCESSING", "READY", "FAILED"]);
+export const enrollmentStatusEnum = pgEnum("EnrollmentStatus", [
+  "AWAITING_PLATFORM_FEE",
+  "APPROVED",
+  "REJECTED",
+  "CANCELED",
+]);
 
 export const users = pgTable(
   "User",
@@ -57,6 +63,9 @@ export const users = pgTable(
     phoneNumber: text("phoneNumber"),
     profileAddress: text("profileAddress"),
     profileImageUrl: text("profileImageUrl"),
+    settlementBankName: text("settlementBankName"),
+    settlementAccountNumber: text("settlementAccountNumber"),
+    settlementAccountHolder: text("settlementAccountHolder"),
     role: roleEnum("role").notNull().default("STUDENT"),
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
     supabaseId: text("supabaseId").notNull(),
@@ -87,6 +96,7 @@ export const lectures = pgTable(
     metaDescription: text("metaDescription"),
     ogImageUrl: text("ogImageUrl"),
     canonicalUrl: text("canonicalUrl"),
+    platformFeeRateBps: integer("platformFeeRateBps").notNull().default(0),
     price: integer("price").notNull(),
     discountPrice: integer("discountPrice"),
     isActive: boolean("isActive").notNull().default(true),
@@ -266,6 +276,49 @@ export const paymentOrders = pgTable(
   (table) => [uniqueIndex("PaymentOrder_orderId_key").on(table.orderId)],
 );
 
+export const enrollmentRequests = pgTable(
+  "EnrollmentRequest",
+  {
+    id: text("id").primaryKey().$defaultFn(textId),
+    userId: integer("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    lectureId: integer("lectureId")
+      .notNull()
+      .references(() => lectures.id, { onDelete: "restrict", onUpdate: "cascade" }),
+    sellerId: integer("sellerId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
+    status: enrollmentStatusEnum("status").notNull().default("AWAITING_PLATFORM_FEE"),
+    amount: integer("amount").notNull(),
+    platformFeeRateBps: integer("platformFeeRateBps").notNull().default(0),
+    platformFeeAmount: integer("platformFeeAmount").notNull().default(0),
+    sellerReceivableAmount: integer("sellerReceivableAmount").notNull(),
+    sellerBankName: text("sellerBankName"),
+    sellerAccountNumber: text("sellerAccountNumber"),
+    sellerAccountHolder: text("sellerAccountHolder"),
+    paymentOrderId: text("paymentOrderId").references(() => paymentOrders.orderId, {
+      onDelete: "set null",
+      onUpdate: "cascade",
+    }),
+    studentMemo: text("studentMemo"),
+    sellerMemo: text("sellerMemo"),
+    adminMemo: text("adminMemo"),
+    approvedById: integer("approvedById").references(() => users.id, {
+      onDelete: "set null",
+      onUpdate: "cascade",
+    }),
+    approvedAt: timestamp("approvedAt", { precision: 3, mode: "date" }),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().$onUpdate(now),
+  },
+  (table) => [
+    uniqueIndex("EnrollmentRequest_userId_lectureId_key").on(table.userId, table.lectureId),
+    uniqueIndex("EnrollmentRequest_paymentOrderId_key").on(table.paymentOrderId),
+    index("EnrollmentRequest_status_idx").on(table.status),
+    index("EnrollmentRequest_seller_status_idx").on(table.sellerId, table.status),
+    index("EnrollmentRequest_createdAt_idx").on(table.createdAt),
+  ],
+);
+
 export const payments = pgTable(
   "Payment",
   {
@@ -396,6 +449,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   reviews: many(reviews),
   carts: many(carts),
   paymentOrders: many(paymentOrders),
+  enrollmentRequests: many(enrollmentRequests, { relationName: "studentEnrollmentRequests" }),
+  sellerEnrollmentRequests: many(enrollmentRequests, { relationName: "sellerEnrollmentRequests" }),
+  approvedEnrollmentRequests: many(enrollmentRequests, { relationName: "approvedEnrollmentRequests" }),
   payouts: many(payouts),
   fcmTokens: many(fcmTokens),
   pushNotifications: many(pushNotifications),
@@ -408,6 +464,7 @@ export const lecturesRelations = relations(lectures, ({ one, many }) => ({
   likes: many(likes),
   purchases: many(purchases),
   paymentOrders: many(paymentOrders),
+  enrollmentRequests: many(enrollmentRequests),
 }));
 
 export const curriculumsRelations = relations(curriculums, ({ one, many }) => ({
@@ -447,6 +504,33 @@ export const paymentOrdersRelations = relations(paymentOrders, ({ one }) => ({
   user: one(users, { fields: [paymentOrders.userId], references: [users.id] }),
   lecture: one(lectures, { fields: [paymentOrders.lectureId], references: [lectures.id] }),
   payment: one(payments, { fields: [paymentOrders.orderId], references: [payments.orderId] }),
+  enrollmentRequest: one(enrollmentRequests, {
+    fields: [paymentOrders.orderId],
+    references: [enrollmentRequests.paymentOrderId],
+  }),
+}));
+
+export const enrollmentRequestsRelations = relations(enrollmentRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [enrollmentRequests.userId],
+    references: [users.id],
+    relationName: "studentEnrollmentRequests",
+  }),
+  lecture: one(lectures, { fields: [enrollmentRequests.lectureId], references: [lectures.id] }),
+  seller: one(users, {
+    fields: [enrollmentRequests.sellerId],
+    references: [users.id],
+    relationName: "sellerEnrollmentRequests",
+  }),
+  paymentOrder: one(paymentOrders, {
+    fields: [enrollmentRequests.paymentOrderId],
+    references: [paymentOrders.orderId],
+  }),
+  approvedBy: one(users, {
+    fields: [enrollmentRequests.approvedById],
+    references: [users.id],
+    relationName: "approvedEnrollmentRequests",
+  }),
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
@@ -462,3 +546,4 @@ export type Language = (typeof languageEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
 export type PayoutStatus = (typeof payoutStatusEnum.enumValues)[number];
 export type HlsStatus = (typeof hlsStatusEnum.enumValues)[number];
+export type EnrollmentStatus = (typeof enrollmentStatusEnum.enumValues)[number];

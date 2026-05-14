@@ -286,7 +286,7 @@ export default function EditCoursePage() {
                   },
                 )
               }
-              className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="min-h-24 w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
             />
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -338,7 +338,7 @@ export default function EditCoursePage() {
               <label className="text-sm text-muted-foreground">추천 대상</label>
               <textarea
                 defaultValue={lecture?.targetAudience ?? ""}
-                className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-24 w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
                 onBlur={(e) => updateLecture.mutate({ targetAudience: e.target.value })}
               />
             </div>
@@ -346,7 +346,7 @@ export default function EditCoursePage() {
               <label className="text-sm text-muted-foreground">준비물/선수 지식</label>
               <textarea
                 defaultValue={lecture?.requirements ?? ""}
-                className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-24 w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
                 onBlur={(e) => updateLecture.mutate({ requirements: e.target.value })}
               />
             </div>
@@ -355,12 +355,12 @@ export default function EditCoursePage() {
               <textarea
                 defaultValue={(lecture?.learningOutcomes ?? []).join("\n")}
                 placeholder="줄바꿈으로 여러 개 입력"
-                className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-24 w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
                 onBlur={(e) => updateLecture.mutate({ learningOutcomes: e.target.value.split("\n").map((v) => v.trim()).filter(Boolean) })}
               />
             </div>
           </div>
-          <div className="rounded-md border bg-background p-4">
+          <div className="rounded-[14px] border bg-background p-4">
             <div className="mb-3 text-sm font-medium">SEO 메타</div>
             <div className="grid gap-3">
               <Input
@@ -463,7 +463,7 @@ export default function EditCoursePage() {
                 const src = localPreviewUrl ?? (lecture?.imageUrl ? `${cdnBase}/${lecture.imageUrl}` : null)
                 return src ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={src} alt="thumbnail" className="h-16 w-16 rounded object-cover border" />
+                <img src={src} alt="thumbnail" className="h-16 w-16 rounded-[14px] border object-cover" />
                 ) : null
               })()}
             </div>
@@ -487,7 +487,7 @@ export default function EditCoursePage() {
             <p className="text-sm text-muted-foreground">아직 섹션이 없습니다.</p>
           ) : (
             (curriculums ?? []).map((cur, idx) => (
-              <div key={cur.id} className="rounded-md border">
+              <div key={cur.id} className="rounded-[14px] border">
                 <div className="flex items-center justify-between p-3">
                   <div className="font-medium">섹션 {idx + 1}</div>
                   <div className="space-x-2">
@@ -548,7 +548,7 @@ export default function EditCoursePage() {
                                       },
                                     )
                                   }
-                                  className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  className="min-h-24 w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
                                 />
                               </div>
                               <div className="flex items-center gap-3">
@@ -568,7 +568,7 @@ export default function EditCoursePage() {
                                 <span className="text-xs text-muted-foreground">공개</span>
                                 <Button
                                   variant="ghost"
-                                  className="ml-auto text-red-600"
+                                  className="ml-auto text-destructive"
                                   onClick={async () => {
                                     try {
                                       await deleteSection.mutateAsync(sec.id)
@@ -617,7 +617,7 @@ export default function EditCoursePage() {
                                             <OriginalPlayer videoUrl={v.videoUrl} title={v.title ?? undefined} />
                                             <Button
                                               variant="ghost"
-                                              className="text-red-600"
+                                              className="text-destructive"
                                               onClick={async () => {
                                                 try {
                                                   await deleteVideo.mutateAsync(v.id)
@@ -635,7 +635,7 @@ export default function EditCoursePage() {
                                             {Array.isArray((v as { DubTrack?: DubItem[] }).DubTrack) && (v as { DubTrack?: DubItem[] }).DubTrack!.length > 0 ? (
                                               <div className="flex flex-wrap gap-2">
                                                 {(v as { DubTrack?: DubItem[] }).DubTrack!.map((t: DubItem) => (
-                                                  <span key={t.id} className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 ${t.status === 'ready' ? 'border-green-400 text-green-700' : t.status === 'processing' ? 'border-amber-400 text-amber-700' : t.status === 'failed' ? 'border-red-400 text-red-700' : 'border-muted-foreground text-muted-foreground'}`}>
+                                                  <span key={t.id} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 ${t.status === 'ready' ? 'border-primary text-primary' : t.status === 'processing' ? 'border-foreground text-foreground' : t.status === 'failed' ? 'border-destructive text-destructive' : 'border-muted-foreground text-muted-foreground'}`}>
                                                     <span className="font-mono">{t.lang}</span>
                                                     <span>·</span>
                                                     <span>{t.status}</span>
@@ -688,7 +688,7 @@ export default function EditCoursePage() {
                                           </a>
                                           <Button
                                             variant="ghost"
-                                            className="text-red-600"
+                                            className="text-destructive"
                                             onClick={async () => {
                                               try {
                                                 await deleteFileRec.mutateAsync(f.id)
@@ -738,7 +738,7 @@ function FileDropzone({ onFiles }: CommonDropzoneProps) {
   return (
     <div
       {...getRootProps()}
-      className={`border rounded px-3 py-2 text-sm cursor-pointer ${isDragActive ? "bg-accent" : "bg-background"}`}
+      className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${isDragActive ? "bg-accent" : "bg-background"}`}
     >
       <input {...getInputProps()} />
       {isDragActive ? "여기에 파일을 놓으세요" : "파일 선택 또는 드래그앤드랍"}
@@ -784,7 +784,7 @@ function CaptionManager({ videoId, captions }: { videoId: number; captions: Capt
   })
 
   return (
-    <div className="rounded-md border bg-background p-3">
+    <div className="rounded-[14px] border bg-background p-3">
       <div className="mb-2 text-sm font-medium">자막 트랙</div>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-[80px_120px_1fr_auto]">
         <Input value={lang} onChange={(e) => setLang(e.target.value)} placeholder="ko" />
@@ -802,14 +802,14 @@ function CaptionManager({ videoId, captions }: { videoId: number; captions: Capt
         ) : (
           captions.map((caption) => (
             <div key={caption.id} className="flex items-center gap-2 text-xs">
-              <span className="rounded border px-2 py-1 font-medium">{caption.label}</span>
+              <span className="rounded-full border px-2.5 py-1 font-medium">{caption.label}</span>
               <span className="text-muted-foreground">{caption.lang} · {caption.format}</span>
               <span className="min-w-0 flex-1 truncate text-muted-foreground">{caption.url}</span>
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="text-red-600"
+                className="text-destructive"
                 onClick={() => deleteCaption.mutate(caption.id)}
               >
                 삭제
