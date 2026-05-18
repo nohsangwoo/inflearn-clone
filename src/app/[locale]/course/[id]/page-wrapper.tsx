@@ -24,6 +24,7 @@ import {
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
 import FreePreviewPlayerModal from '@/components/video/free-preview-player-modal'
 import { getCoursePreviewImage } from '@/lib/course-images'
+import { getCourseDetailScene } from '@/lib/course-detail-scenes'
 import type { CourseDetail as Detail } from '@/lib/course-detail-data'
 import { getEnrollmentStatusLabel } from '@/lib/enrollment-window'
 import { useAuthStore } from '@/lib/stores/auth-store'
@@ -171,6 +172,7 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
         '모바일/데스크톱 수강',
         '검색 최적화된 강의 상세',
       ]
+  const detailScene = detail ? getCourseDetailScene(detail.id) : null
 
   // 액션
   const likeToggle = useMutation({
@@ -433,6 +435,29 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
                   <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.requirements}</p>
                 </div>
               ) : null}
+            </section>
+          ) : null}
+
+          {detailScene ? (
+            <section className="space-y-4 rounded-[14px] border bg-card p-5">
+              <div>
+                <p className="text-sm font-medium text-primary">실전 프로젝트 화면</p>
+                <h2 className="mt-1 text-[21px] font-bold leading-[1.43]">{detailScene.title}</h2>
+              </div>
+              <figure className="overflow-hidden rounded-[14px] border bg-background">
+                <div className="relative aspect-video bg-secondary">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={detailScene.imageUrl}
+                    alt={detailScene.alt}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+                <figcaption className="border-t bg-background px-4 py-3 text-sm leading-6 text-muted-foreground">
+                  {detailScene.caption}
+                </figcaption>
+              </figure>
             </section>
           ) : null}
 
