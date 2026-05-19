@@ -531,140 +531,263 @@ function renderAnalytics(w, scene, c) {
 function renderGoogleSearchConsole(w, scene, c) {
   const x = w.x
   const y = w.y + 42
-  const navW = Math.min(210, Math.max(154, Math.round(w.w * 0.16)))
-  const mainX = x + navW + 32
-  const mainW = w.w - navW - 64
-  const cardGap = 16
-  const cardW = (mainW - cardGap * 3) / 4
-  const chartTop = y + 260
-  const chartBottom = y + Math.min(w.h - 118, 550)
+  const navW = 236
+  const topH = 64
+  const mainX = x + navW
+  const mainY = y + topH
+  const mainW = w.w - navW
+  const contentX = mainX + 34
+  const contentW = mainW - 68
+  const cardGap = 12
+  const cardW = (contentW - cardGap * 3) / 4
+  const chartTop = mainY + 188
+  const chartBottom = mainY + 366
   const chartH = chartBottom - chartTop
   const metrics = [
-    ["Total clicks", w.clicks, "#1a73e8"],
-    ["Impressions", w.impressions, "#7e57c2"],
-    ["Average CTR", w.ctr, "#00897b"],
-    ["Position", w.position, "#f9ab00"],
+    ["Total clicks", w.clicks, "#1a73e8", "#ffffff"],
+    ["Total impressions", w.impressions, "#673ab7", "#ffffff"],
+    ["Average CTR", w.ctr, "#ffffff", "#188038"],
+    ["Average position", w.position, "#ffffff", "#b06000"],
   ]
-  const chartValues = [0.76, 0.58, 0.68, 0.36, 0.43, 0.2, 0.3, 0.08]
-  const secondaryValues = [0.86, 0.68, 0.78, 0.52, 0.58, 0.38, 0.44, 0.28]
+  const chartValues = [0.76, 0.64, 0.71, 0.46, 0.5, 0.29, 0.35, 0.18, 0.27, 0.08]
+  const secondaryValues = [0.9, 0.79, 0.82, 0.62, 0.66, 0.48, 0.54, 0.38, 0.45, 0.24]
   const chartPoints = chartValues.map((value, i) => {
-    const px = mainX + (mainW * i) / (chartValues.length - 1)
+    const px = contentX + 24 + ((contentW - 48) * i) / (chartValues.length - 1)
     const py = chartTop + chartH * value
     return `${px},${py}`
   }).join(" ")
   const secondaryPoints = secondaryValues.map((value, i) => {
-    const px = mainX + (mainW * i) / (secondaryValues.length - 1)
+    const px = contentX + 24 + ((contentW - 48) * i) / (secondaryValues.length - 1)
     const py = chartTop + chartH * value
     return `${px},${py}`
   }).join(" ")
+  const navItems = [
+    ["Overview", false, 0],
+    ["Performance", true, 0],
+    ["URL inspection", false, 0],
+    ["Indexing", false, 1],
+    ["Pages", false, 2],
+    ["Sitemaps", false, 2],
+    ["Removals", false, 2],
+    ["Experience", false, 1],
+    ["Core Web Vitals", false, 2],
+    ["Enhancements", false, 1],
+  ]
+  const tableRows = [
+    ["seo 강의 상세페이지", "426", "8,912", "4.8%", "6.7"],
+    ["강의 판매 사이트 만들기", "312", "7,104", "4.4%", "7.2"],
+    ["온라인 강의 플랫폼", "246", "6,330", "3.9%", "8.1"],
+    ["강의 seo 최적화", "188", "5,482", "3.4%", "9.6"],
+    ["수강 신청 페이지", "104", "3,204", "3.2%", "10.4"],
+  ]
 
   return windowChrome(w, scene, c, `
-    ${rect(x, y, navW, w.h - 42, { rx: 0, fill: "#f8fafd" })}
-    ${text(x + 24, y + 40, "Search", { size: 18, weight: 850, fill: "#3c4043" })}
-    ${text(x + 24, y + 64, "Console", { size: 18, weight: 850, fill: "#3c4043" })}
-    ${["Overview", "Performance", "URL inspection", "Pages", "Sitemaps"].map((item, i) => {
-      const active = i === 1
-      return `${active ? rect(x + 16, y + 94 + i * 42, navW - 32, 32, { rx: 16, fill: "#e8f0fe" }) : ""}${text(x + 30, y + 116 + i * 42, item, { size: 13, weight: active ? 850 : 650, fill: active ? "#1a73e8" : "#5f6368" })}`
+    ${rect(x, y, w.w, topH, { rx: 0, fill: "#ffffff" })}
+    ${line(x, y + topH, x + w.w, y + topH, { stroke: "#e0e3e7", width: 1 })}
+    ${text(x + 30, y + 39, "☰", { size: 20, weight: 700, fill: "#5f6368" })}
+    ${text(x + 68, y + 40, "Search Console", { size: 19, weight: 800, fill: "#3c4043" })}
+    ${rect(x + 314, y + 14, 648, 36, { rx: 18, fill: "#f1f3f4" })}
+    ${text(x + 340, y + 38, `Inspect any URL in ${w.property}`, { size: 13, weight: 650, fill: "#5f6368" })}
+    ${text(x + w.w - 134, y + 38, "Export  ⚙  ?", { size: 13, weight: 800, fill: "#5f6368" })}
+    ${rect(x, mainY, navW, w.h - 42 - topH, { rx: 0, fill: "#ffffff" })}
+    ${line(x + navW, mainY, x + navW, y + w.h, { stroke: "#e0e3e7", width: 1 })}
+    ${rect(x + 18, mainY + 18, navW - 36, 42, { rx: 8, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(x + 34, mainY + 44, w.property, { size: 12, weight: 800, fill: "#3c4043" })}
+    ${navItems.map(([item, active, level], i) => {
+      const yy = mainY + 90 + i * 34
+      return `${active ? rect(x + 12, yy - 22, navW - 24, 30, { rx: 15, fill: "#e8f0fe" }) : ""}${text(x + 28 + level * 16, yy, item, { size: level === 1 ? 12 : 13, weight: active ? 850 : level === 1 ? 850 : 650, fill: active ? "#1a73e8" : level === 1 ? "#3c4043" : "#5f6368" })}`
     }).join("")}
-    ${rect(mainX, y + 24, mainW, 36, { rx: 18, fill: "#f1f3f4" })}
-    ${text(mainX + 24, y + 48, w.property, { size: 14, weight: 700, fill: "#3c4043" })}
-    ${text(mainX, y + 94, "Performance on Search results", { size: 21, weight: 850, fill: "#202124" })}
-    ${text(mainX, y + 120, `Query: ${w.query}`, { size: 13, weight: 650, fill: "#5f6368" })}
-    ${metrics.map(([label, value, fill], i) => {
-      const mx = mainX + i * (cardW + cardGap)
-      return `${rect(mx, y + 144, cardW, 78, { rx: 14, fill: i === 0 ? "#e8f0fe" : "#ffffff", stroke: "#dadce0" })}${text(mx + 18, y + 172, label, { size: 12, weight: 800, fill: "#5f6368" })}${text(mx + 18, y + 205, value, { size: 25, weight: 900, fill })}`
+    ${rect(mainX, mainY, mainW, w.h - 42 - topH, { rx: 0, fill: "#f8fafd" })}
+    ${text(contentX, mainY + 42, "Performance on Search results", { size: 22, weight: 850, fill: "#202124" })}
+    ${rect(contentX, mainY + 62, 82, 30, { rx: 15, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 41, mainY + 82, "24 hours", { size: 12, weight: 800, fill: "#5f6368", anchor: "middle" })}
+    ${rect(contentX + 94, mainY + 62, 92, 30, { rx: 15, fill: "#e8f0fe", stroke: "#d2e3fc" })}
+    ${text(contentX + 140, mainY + 82, "3 months", { size: 12, weight: 900, fill: "#1a73e8", anchor: "middle" })}
+    ${rect(contentX + 198, mainY + 62, 102, 30, { rx: 15, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 249, mainY + 82, "Search type", { size: 12, weight: 800, fill: "#5f6368", anchor: "middle" })}
+    ${rect(contentX + 312, mainY + 62, 210, 30, { rx: 15, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 417, mainY + 82, `Query: ${w.query}`, { size: 12, weight: 800, fill: "#3c4043", anchor: "middle" })}
+    ${text(contentX + contentW - 96, mainY + 82, "Last update: 3 hours ago", { size: 12, weight: 700, fill: "#5f6368", anchor: "end" })}
+    ${metrics.map(([label, value, fill, valueFill], i) => {
+      const mx = contentX + i * (cardW + cardGap)
+      const isFilled = i < 2
+      return `${rect(mx, mainY + 112, cardW, 72, { rx: 10, fill, stroke: isFilled ? fill : "#dadce0" })}${text(mx + 16, mainY + 137, `☑ ${label}`, { size: 12, weight: 850, fill: isFilled ? "#ffffff" : "#5f6368" })}${text(mx + 16, mainY + 171, value, { size: 26, weight: 900, fill: valueFill })}`
     }).join("")}
-    ${line(mainX, chartTop + chartH, mainX + mainW, chartTop + chartH, { stroke: "#e0e3e7", width: 1 })}
-    ${line(mainX, chartTop + chartH * 0.66, mainX + mainW, chartTop + chartH * 0.66, { stroke: "#e0e3e7", width: 1 })}
-    ${line(mainX, chartTop + chartH * 0.33, mainX + mainW, chartTop + chartH * 0.33, { stroke: "#e0e3e7", width: 1 })}
+    ${rect(contentX, chartTop - 14, contentW, chartH + 54, { rx: 0, fill: "#ffffff", stroke: "#dadce0" })}
+    ${[0, 0.25, 0.5, 0.75, 1].map((step) => line(contentX + 24, chartTop + chartH * step, contentX + contentW - 24, chartTop + chartH * step, { stroke: "#eef0f3", width: 1 })).join("")}
     <polyline points="${chartPoints}" fill="none" stroke="#1a73e8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
     <polyline points="${secondaryPoints}" fill="none" stroke="#7e57c2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.78"/>
-    ${rect(mainX, y + w.h - 98, mainW, 52, { rx: 14, fill: "#ffffff", stroke: "#dadce0" })}
-    ${text(mainX + 24, y + w.h - 66, "Submitted sitemap: /sitemap.xml", { size: 14, weight: 850, fill: "#188038" })}
-    ${text(mainX + mainW - 224, y + w.h - 66, "Indexed pages: 214", { size: 14, weight: 800, fill: "#3c4043" })}
+    ${text(contentX + 24, chartTop + chartH + 30, "Apr 20", { size: 11, weight: 700, fill: "#80868b" })}
+    ${text(contentX + contentW / 2, chartTop + chartH + 30, "May 05", { size: 11, weight: 700, fill: "#80868b", anchor: "middle" })}
+    ${text(contentX + contentW - 24, chartTop + chartH + 30, "May 18", { size: 11, weight: 700, fill: "#80868b", anchor: "end" })}
+    ${rect(contentX, mainY + 432, contentW, 238, { rx: 10, fill: "#ffffff", stroke: "#dadce0" })}
+    ${["QUERIES", "PAGES", "COUNTRIES", "DEVICES", "SEARCH APPEARANCE", "DATES"].map((tab, i) => {
+      const positions = [28, 140, 260, 392, 520, 706]
+      return `${text(contentX + positions[i], mainY + 464, tab, { size: 11, weight: i === 0 ? 900 : 750, fill: i === 0 ? "#1a73e8" : "#5f6368" })}${i === 0 ? line(contentX + 28, mainY + 474, contentX + 80, mainY + 474, { stroke: "#1a73e8", width: 3 }) : ""}`
+    }).join("")}
+    ${line(contentX, mainY + 486, contentX + contentW, mainY + 486, { stroke: "#e0e3e7", width: 1 })}
+    ${text(contentX + 28, mainY + 512, "Top queries", { size: 12, weight: 900, fill: "#5f6368" })}
+    ${text(contentX + contentW - 330, mainY + 512, "Clicks", { size: 12, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + contentW - 220, mainY + 512, "Impr.", { size: 12, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + contentW - 120, mainY + 512, "CTR", { size: 12, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + contentW - 32, mainY + 512, "Position", { size: 12, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${tableRows.map((row, i) => {
+      const yy = mainY + 542 + i * 28
+      return `${line(contentX + 20, yy - 20, contentX + contentW - 20, yy - 20, { stroke: "#edf0f2", width: 1 })}${text(contentX + 28, yy, row[0], { size: 12, weight: 750, fill: "#202124" })}${text(contentX + contentW - 330, yy, row[1], { size: 12, weight: 800, fill: "#1a73e8", anchor: "end" })}${text(contentX + contentW - 220, yy, row[2], { size: 12, weight: 800, fill: "#673ab7", anchor: "end" })}${text(contentX + contentW - 120, yy, row[3], { size: 12, weight: 750, fill: "#3c4043", anchor: "end" })}${text(contentX + contentW - 32, yy, row[4], { size: 12, weight: 750, fill: "#3c4043", anchor: "end" })}`
+    }).join("")}
   `)
 }
 
 function renderGoogleTagManager(w, scene, c) {
   const x = w.x
   const y = w.y + 42
+  const topH = 72
+  const navW = 226
+  const mainX = x + navW
+  const mainY = y + topH
+  const contentX = mainX + 34
+  const contentW = w.w - navW - 68
+  const navItems = ["Overview", "Tags", "Triggers", "Variables", "Folders", "Templates"]
+  const tagRows = [
+    ["GA4 Config", "Google Analytics: GA4 Configuration", "All Pages", "2 hours ago"],
+    ["course_detail_view", "Google Analytics: GA4 Event", "Course detail page", "2 hours ago"],
+    ["preview_image_view", "Google Analytics: GA4 Event", "Preview image visible", "Yesterday"],
+    ["enrollment_click", "Google Analytics: GA4 Event", "Apply button click", "Yesterday"],
+    ["scroll_90_percent", "Google Analytics: GA4 Event", "Course page depth", "May 17"],
+  ]
   return windowChrome(w, scene, c, `
-    ${rect(x, y, w.w, 58, { rx: 0, fill: "#f8fafd" })}
-    ${text(x + 32, y + 37, "Tag Manager", { size: 20, weight: 850, fill: "#3c4043" })}
-    ${rect(x + w.w - 210, y + 15, 164, 30, { rx: 15, fill: "#e8f0fe" })}
-    ${text(x + w.w - 128, y + 36, w.container, { size: 13, weight: 900, fill: "#1a73e8", anchor: "middle" })}
-    ${text(x + 32, y + 92, "Workspace changes", { size: 20, weight: 850, fill: "#202124" })}
-    ${text(x + 32, y + 118, "Course SEO events are ready to publish.", { size: 13, weight: 650, fill: "#5f6368" })}
-    ${rect(x + 32, y + 142, 178, 78, { rx: 16, fill: "#e8f0fe", stroke: "#d2e3fc" })}
-    ${text(x + 54, y + 172, "Tags", { size: 13, weight: 850, fill: "#1a73e8" })}
-    ${text(x + 54, y + 204, "4 ready", { size: 25, weight: 900, fill: "#202124" })}
-    ${rect(x + 230, y + 142, 178, 78, { rx: 16, fill: "#fff7e0", stroke: "#fde293" })}
-    ${text(x + 252, y + 172, "Triggers", { size: 13, weight: 850, fill: "#b06000" })}
-    ${text(x + 252, y + 204, "3 active", { size: 25, weight: 900, fill: "#202124" })}
-    ${rect(x + 428, y + 142, 196, 78, { rx: 16, fill: "#e6f4ea", stroke: "#ceead6" })}
-    ${text(x + 450, y + 172, "Preview", { size: 13, weight: 850, fill: "#188038" })}
-    ${text(x + 450, y + 204, "Connected", { size: 23, weight: 900, fill: "#202124" })}
-    ${rect(x + 32, y + 242, w.w - 64, 40, { rx: 10, fill: "#ffffff", stroke: "#dadce0" })}
-    ${text(x + 52, y + 267, "Name", { size: 12, weight: 900, fill: "#5f6368" })}
-    ${text(x + 390, y + 267, "Trigger", { size: 12, weight: 900, fill: "#5f6368" })}
-    ${(w.tags ?? []).map((tag, i) => {
-      const yy = y + 292 + i * 28
-      return `${line(x + 34, yy - 19, x + w.w - 34, yy - 19, { stroke: "#edf0f2", width: 1 })}${text(x + 52, yy, tag, { size: 13, weight: 800, fill: "#202124" })}${text(x + 390, yy, i === 0 ? "All pages" : "Course detail page", { size: 13, weight: 650, fill: "#5f6368" })}${rect(x + w.w - 116, yy - 18, 70, 24, { rx: 12, fill: "#e6f4ea" })}${text(x + w.w - 81, yy - 2, "Live", { size: 11, weight: 900, fill: "#188038", anchor: "middle" })}`
+    ${rect(x, y, w.w, topH, { rx: 0, fill: "#ffffff" })}
+    ${line(x, y + topH, x + w.w, y + topH, { stroke: "#e0e3e7", width: 1 })}
+    ${text(x + 30, y + 34, "Tag Manager", { size: 20, weight: 850, fill: "#3c4043" })}
+    ${text(x + 30, y + 56, "Lingoost / Web container", { size: 12, weight: 700, fill: "#5f6368" })}
+    ${["Workspace", "Versions", "Admin"].map((tab, i) => `${text(x + 330 + i * 116, y + 45, tab, { size: 14, weight: i === 0 ? 900 : 750, fill: i === 0 ? "#1a73e8" : "#5f6368" })}${i === 0 ? line(x + 330, y + 68, x + 404, y + 68, { stroke: "#1a73e8", width: 3 }) : ""}`).join("")}
+    ${rect(x + w.w - 268, y + 20, 92, 34, { rx: 4, fill: "#ffffff", stroke: "#1a73e8" })}
+    ${text(x + w.w - 222, y + 42, "Preview", { size: 13, weight: 850, fill: "#1a73e8", anchor: "middle" })}
+    ${rect(x + w.w - 162, y + 20, 94, 34, { rx: 4, fill: "#1a73e8" })}
+    ${text(x + w.w - 115, y + 42, "Submit", { size: 13, weight: 900, fill: "#ffffff", anchor: "middle" })}
+    ${rect(x, mainY, navW, w.h - 42 - topH, { rx: 0, fill: "#ffffff" })}
+    ${line(x + navW, mainY, x + navW, y + w.h, { stroke: "#e0e3e7", width: 1 })}
+    ${text(x + 26, mainY + 35, "CURRENT WORKSPACE", { size: 10, weight: 900, fill: "#80868b" })}
+    ${rect(x + 20, mainY + 50, navW - 40, 46, { rx: 6, fill: "#f8fafd", stroke: "#dadce0" })}
+    ${text(x + 36, mainY + 78, "Default Workspace", { size: 13, weight: 850, fill: "#202124" })}
+    ${navItems.map((item, i) => {
+      const active = i === 0
+      const yy = mainY + 128 + i * 38
+      return `${active ? rect(x + 12, yy - 24, navW - 24, 32, { rx: 16, fill: "#e8f0fe" }) : ""}${text(x + 36, yy, item, { size: 13, weight: active ? 900 : 700, fill: active ? "#1a73e8" : "#5f6368" })}`
     }).join("")}
-    ${rect(x + 32, y + 420, Math.max(360, w.w * 0.46), 176, { rx: 18, fill: "#ffffff", stroke: "#dadce0" })}
-    ${text(x + 58, y + 454, "Tag Assistant preview", { size: 18, weight: 900, fill: "#202124" })}
-    ${["Page View  /ko/course/105", "course_detail_view", "preview_image_view", "enrollment_click"].map((event, i) => `${rect(x + 58, y + 480 + i * 28, 16, 16, { rx: 8, fill: i === 0 ? "#e8f0fe" : "#e6f4ea" })}${text(x + 86, y + 494 + i * 28, event, { size: 13, weight: 750, fill: "#3c4043" })}${text(x + 356, y + 494 + i * 28, i === 0 ? "page load" : "GA4 event", { size: 12, weight: 700, fill: "#5f6368" })}`).join("")}
-    ${rect(x + w.w - 430, y + 420, 364, 176, { rx: 18, fill: "#f8fafd", stroke: "#dadce0" })}
-    ${text(x + w.w - 400, y + 454, "Variables checked", { size: 18, weight: 900, fill: "#202124" })}
-    ${["course_id = 105", "course_category = business", "locale = ko", "member_state = anonymous"].map((item, i) => `${text(x + w.w - 400, y + 490 + i * 28, item, { size: 13, weight: 750, fill: "#3c4043" })}`).join("")}
+    ${rect(mainX, mainY, w.w - navW, w.h - 42 - topH, { rx: 0, fill: "#f8f9fa" })}
+    ${text(contentX, mainY + 42, "Default Workspace", { size: 24, weight: 850, fill: "#202124" })}
+    ${text(contentX, mainY + 70, w.container, { size: 12, weight: 800, fill: "#5f6368" })}
+    ${rect(contentX, mainY + 100, 292, 150, { rx: 6, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 22, mainY + 130, "Workspace Changes", { size: 17, weight: 850, fill: "#202124" })}
+    ${text(contentX + 22, mainY + 158, "Modified tags and triggers", { size: 12, weight: 700, fill: "#5f6368" })}
+    ${[["Modified", "5"], ["Added", "2"], ["Deleted", "0"]].map(([label, value], i) => `${text(contentX + 34 + i * 86, mainY + 202, value, { size: 26, weight: 900, fill: i === 2 ? "#5f6368" : "#1a73e8", anchor: "middle" })}${text(contentX + 34 + i * 86, mainY + 224, label, { size: 11, weight: 800, fill: "#5f6368", anchor: "middle" })}`).join("")}
+    ${rect(contentX + 318, mainY + 100, 292, 150, { rx: 6, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 340, mainY + 130, "Container Quality", { size: 17, weight: 850, fill: "#202124" })}
+    ${text(contentX + 340, mainY + 160, "No critical issues detected", { size: 12, weight: 700, fill: "#188038" })}
+    ${rect(contentX + 340, mainY + 184, 228, 18, { rx: 9, fill: "#e6f4ea" })}
+    ${rect(contentX + 340, mainY + 184, 190, 18, { rx: 9, fill: "#34a853" })}
+    ${text(contentX + 340, mainY + 228, "Consent mode · GA4 · click events", { size: 12, weight: 700, fill: "#5f6368" })}
+    ${rect(contentX + 636, mainY + 100, Math.max(240, contentW - 636), 150, { rx: 6, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 660, mainY + 130, "Tag Assistant", { size: 17, weight: 850, fill: "#202124" })}
+    ${text(contentX + 660, mainY + 160, "Connected to https://www.lingoost.com/ko/course/105", { size: 12, weight: 700, fill: "#3c4043" })}
+    ${text(contentX + 660, mainY + 190, "Events received: page_view, view_item, select_content", { size: 12, weight: 700, fill: "#5f6368" })}
+    ${rect(contentX + 660, mainY + 210, 102, 24, { rx: 12, fill: "#e6f4ea" })}
+    ${text(contentX + 711, mainY + 226, "Connected", { size: 11, weight: 900, fill: "#188038", anchor: "middle" })}
+    ${rect(contentX, mainY + 278, contentW, 318, { rx: 6, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 24, mainY + 312, "Tags", { size: 18, weight: 850, fill: "#202124" })}
+    ${rect(contentX + contentW - 122, mainY + 292, 92, 30, { rx: 4, fill: "#1a73e8" })}
+    ${text(contentX + contentW - 76, mainY + 312, "New", { size: 12, weight: 900, fill: "#ffffff", anchor: "middle" })}
+    ${line(contentX, mainY + 336, contentX + contentW, mainY + 336, { stroke: "#e0e3e7", width: 1 })}
+    ${text(contentX + 24, mainY + 362, "Name", { size: 11, weight: 900, fill: "#5f6368" })}
+    ${text(contentX + 348, mainY + 362, "Type", { size: 11, weight: 900, fill: "#5f6368" })}
+    ${text(contentX + 632, mainY + 362, "Firing Triggers", { size: 11, weight: 900, fill: "#5f6368" })}
+    ${text(contentX + contentW - 42, mainY + 362, "Last edited", { size: 11, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${tagRows.map((row, i) => {
+      const yy = mainY + 396 + i * 42
+      return `${line(contentX + 20, yy - 24, contentX + contentW - 20, yy - 24, { stroke: "#edf0f2", width: 1 })}${text(contentX + 24, yy, row[0], { size: 13, weight: 850, fill: "#202124" })}${text(contentX + 348, yy, row[1], { size: 12, weight: 650, fill: "#5f6368" })}${text(contentX + 632, yy, row[2], { size: 12, weight: 750, fill: "#3c4043" })}${text(contentX + contentW - 42, yy, row[3], { size: 12, weight: 650, fill: "#5f6368", anchor: "end" })}`
+    }).join("")}
   `)
 }
 
 function renderGoogleAnalytics(w, scene, c) {
   const x = w.x
   const y = w.y + 42
-  const chart = [
-    [x + 330, y + 174],
-    [x + 452, y + 146],
-    [x + 574, y + 158],
-    [x + 696, y + 108],
-    [x + 818, y + 126],
-    [x + 940, y + 88],
-    [x + 1062, y + 104],
-    [x + 1184, y + 72],
-  ].map((point) => point.join(",")).join(" ")
-  const cards = [
-    ["Users", "12.8K", "#1a73e8"],
-    ["Organic search", "64.2%", "#34a853"],
-    ["Enroll clicks", "416", "#f9ab00"],
+  const navW = 244
+  const topH = 58
+  const mainX = x + navW
+  const mainY = y + topH
+  const contentX = mainX + 32
+  const contentW = w.w - navW - 64
+  const chartAreaX = contentX
+  const chartAreaY = mainY + 120
+  const chartAreaW = contentW - 280
+  const chartAreaH = 178
+  const chart = [0.82, 0.72, 0.78, 0.55, 0.62, 0.4, 0.48, 0.25, 0.33, 0.18].map((value, i) => {
+    const px = chartAreaX + 18 + ((chartAreaW - 36) * i) / 9
+    const py = chartAreaY + 22 + chartAreaH * value
+    return `${px},${py}`
+  }).join(" ")
+  const rows = [
+    ["Organic Search", "8,221", "12,402", "9,814", "1m 14s", "7.42", "61,482", "416"],
+    ["Direct", "2,104", "3,078", "1,892", "0m 46s", "4.18", "12,118", "72"],
+    ["Referral", "1,084", "1,642", "1,104", "0m 58s", "5.06", "7,410", "38"],
+    ["Organic Social", "671", "844", "526", "0m 39s", "3.88", "3,020", "19"],
+    ["Email", "430", "512", "398", "1m 03s", "6.14", "2,441", "14"],
+    ["Unassigned", "188", "244", "102", "0m 21s", "2.11", "642", "4"],
+  ]
+  const bars = [
+    ["Organic Search", 0.92, "#f9ab00"],
+    ["Direct", 0.38, "#1a73e8"],
+    ["Referral", 0.23, "#34a853"],
+    ["Organic Social", 0.15, "#a142f4"],
+    ["Email", 0.09, "#00acc1"],
   ]
 
   return windowChrome(w, scene, c, `
-    ${rect(x, y, 206, w.h - 42, { rx: 0, fill: "#f8fafd" })}
-    ${text(x + 28, y + 38, "Analytics", { size: 21, weight: 850, fill: "#3c4043" })}
-    ${["Reports", "Acquisition", "Engagement", "Conversions"].map((item, i) => `${i === 1 ? rect(x + 18, y + 68 + i * 38, 166, 30, { rx: 15, fill: "#fef7e0" }) : ""}${text(x + 34, y + 89 + i * 38, item, { size: 13, weight: i === 1 ? 850 : 650, fill: i === 1 ? "#b06000" : "#5f6368" })}`).join("")}
-    ${text(x + 236, y + 44, w.report, { size: 22, weight: 900, fill: "#202124" })}
-    ${cards.map(([label, value, fill], i) => {
-      const cx = x + 236 + i * 160
-      return `${rect(cx, y + 70, 138, 72, { rx: 16, fill: "#ffffff", stroke: "#dadce0" })}${text(cx + 18, y + 98, label, { size: 12, weight: 850, fill: "#5f6368" })}${text(cx + 18, y + 130, value, { size: 25, weight: 900, fill })}`
+    ${rect(x, y, w.w, topH, { rx: 0, fill: "#ffffff" })}
+    ${line(x, y + topH, x + w.w, y + topH, { stroke: "#e0e3e7", width: 1 })}
+    ${text(x + 28, y + 36, "Analytics", { size: 20, weight: 850, fill: "#3c4043" })}
+    ${rect(x + 244, y + 12, 540, 34, { rx: 17, fill: "#f1f3f4" })}
+    ${text(x + 268, y + 35, "Try searching \"organic course detail traffic\"", { size: 12, weight: 650, fill: "#5f6368" })}
+    ${text(x + w.w - 112, y + 35, "Lingoost Web", { size: 12, weight: 850, fill: "#3c4043", anchor: "end" })}
+    ${rect(x, mainY, navW, w.h - 42 - topH, { rx: 0, fill: "#ffffff" })}
+    ${line(x + navW, mainY, x + navW, y + w.h, { stroke: "#e0e3e7", width: 1 })}
+    ${["Home", "Reports", "Acquisition", "Traffic acquisition", "Engagement", "Monetization", "Retention"].map((item, i) => {
+      const active = item === "Traffic acquisition"
+      const yy = mainY + 36 + i * 34
+      return `${active ? rect(x + 18, yy - 22, navW - 36, 30, { rx: 15, fill: "#fef7e0" }) : ""}${text(x + (i === 3 ? 46 : 30), yy, item, { size: i === 2 ? 12 : 13, weight: active ? 900 : i === 2 ? 850 : 650, fill: active ? "#b06000" : i === 2 ? "#3c4043" : "#5f6368" })}`
     }).join("")}
-    ${line(x + 236, y + 198, x + w.w - 420, y + 198, { stroke: "#e0e3e7", width: 1 })}
-    ${line(x + 236, y + 152, x + w.w - 420, y + 152, { stroke: "#e0e3e7", width: 1 })}
-    ${line(x + 236, y + 106, x + w.w - 420, y + 106, { stroke: "#e0e3e7", width: 1 })}
+    ${rect(mainX, mainY, w.w - navW, w.h - 42 - topH, { rx: 0, fill: "#ffffff" })}
+    ${text(contentX, mainY + 40, "Traffic acquisition: Session default channel group", { size: 22, weight: 850, fill: "#202124" })}
+    ${text(contentX, mainY + 68, "Last 28 days · May 20, 2026", { size: 12, weight: 700, fill: "#5f6368" })}
+    ${rect(contentX, mainY + 88, 120, 28, { rx: 14, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 60, mainY + 107, "Add filter", { size: 12, weight: 850, fill: "#5f6368", anchor: "middle" })}
+    ${rect(contentX, chartAreaY, chartAreaW, chartAreaH + 44, { rx: 8, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(chartAreaX + 20, chartAreaY + 28, "Users by Session default channel group over time", { size: 13, weight: 850, fill: "#202124" })}
+    ${[0.25, 0.5, 0.75, 1].map((step) => line(chartAreaX + 20, chartAreaY + 38 + chartAreaH * step, chartAreaX + chartAreaW - 20, chartAreaY + 38 + chartAreaH * step, { stroke: "#eef0f3", width: 1 })).join("")}
     <polyline points="${chart}" fill="none" stroke="#f9ab00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    <polyline points="${chart.replaceAll(String(y + 174), String(y + 190)).replaceAll(String(y + 146), String(y + 164)).replaceAll(String(y + 158), String(y + 176)).replaceAll(String(y + 108), String(y + 132)).replaceAll(String(y + 126), String(y + 145)).replaceAll(String(y + 88), String(y + 120)).replaceAll(String(y + 104), String(y + 136)).replaceAll(String(y + 72), String(y + 104))}" fill="none" stroke="#1a73e8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
-    ${rect(x + w.w - 382, y + 64, 330, 148, { rx: 18, fill: "#ffffff", stroke: "#dadce0" })}
-    ${text(x + w.w - 354, y + 96, "Key events", { size: 17, weight: 900, fill: "#202124" })}
-    ${(w.events ?? []).map(([event, value], i) => `${text(x + w.w - 354, y + 126 + i * 25, event, { size: 13, weight: 750, fill: "#3c4043" })}${text(x + w.w - 76, y + 126 + i * 25, value, { size: 13, weight: 900, fill: "#202124", anchor: "end" })}`).join("")}
-    ${rect(x + 236, y + 286, w.w - 288, 286, { rx: 18, fill: "#ffffff", stroke: "#dadce0" })}
-    ${text(x + 264, y + 322, "Traffic acquisition", { size: 19, weight: 900, fill: "#202124" })}
-    ${text(x + 264, y + 354, "Session default channel group", { size: 12, weight: 900, fill: "#5f6368" })}
-    ${text(x + w.w - 408, y + 354, "Users", { size: 12, weight: 900, fill: "#5f6368" })}
-    ${text(x + w.w - 268, y + 354, "Events", { size: 12, weight: 900, fill: "#5f6368" })}
-    ${text(x + w.w - 126, y + 354, "Conv.", { size: 12, weight: 900, fill: "#5f6368" })}
-    ${[["Organic Search", "8,221", "42,018", "416"], ["Direct", "2,104", "9,812", "72"], ["Referral", "1,084", "4,211", "38"], ["Social", "671", "2,008", "19"], ["Email", "430", "1,772", "14"]].map((row, i) => {
-      const yy = y + 390 + i * 36
-      return `${line(x + 264, yy - 22, x + w.w - 84, yy - 22, { stroke: "#edf0f2", width: 1 })}${text(x + 264, yy, row[0], { size: 14, weight: i === 0 ? 900 : 750, fill: "#202124" })}${text(x + w.w - 408, yy, row[1], { size: 14, weight: 750, fill: "#3c4043" })}${text(x + w.w - 268, yy, row[2], { size: 14, weight: 750, fill: "#3c4043" })}${text(x + w.w - 126, yy, row[3], { size: 14, weight: 900, fill: i === 0 ? "#34a853" : "#3c4043" })}`
+    ${text(chartAreaX + 20, chartAreaY + chartAreaH + 64, "Apr 23", { size: 10, weight: 700, fill: "#80868b" })}
+    ${text(chartAreaX + chartAreaW / 2, chartAreaY + chartAreaH + 64, "May 06", { size: 10, weight: 700, fill: "#80868b", anchor: "middle" })}
+    ${text(chartAreaX + chartAreaW - 24, chartAreaY + chartAreaH + 64, "May 19", { size: 10, weight: 700, fill: "#80868b", anchor: "end" })}
+    ${rect(contentX + contentW - 254, chartAreaY, 254, chartAreaH + 44, { rx: 8, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + contentW - 230, chartAreaY + 28, "Users by channel", { size: 13, weight: 850, fill: "#202124" })}
+    ${bars.map(([label, value, fill], i) => {
+      const yy = chartAreaY + 62 + i * 31
+      return `${text(contentX + contentW - 230, yy, label, { size: 11, weight: 750, fill: "#3c4043" })}${rect(contentX + contentW - 230, yy + 7, 168, 9, { rx: 5, fill: "#eef0f3" })}${rect(contentX + contentW - 230, yy + 7, 168 * value, 9, { rx: 5, fill })}`
+    }).join("")}
+    ${rect(contentX, mainY + 382, contentW, 310, { rx: 8, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(contentX + 22, mainY + 416, "Session default channel group", { size: 12, weight: 900, fill: "#5f6368" })}
+    ${text(contentX + 324, mainY + 416, "Users", { size: 11, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + 422, mainY + 416, "Sessions", { size: 11, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + 548, mainY + 416, "Engaged sessions", { size: 11, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + 708, mainY + 416, "Avg engagement", { size: 11, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + 826, mainY + 416, "Events/session", { size: 11, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + 952, mainY + 416, "Event count", { size: 11, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${text(contentX + contentW - 34, mainY + 416, "Key events", { size: 11, weight: 900, fill: "#5f6368", anchor: "end" })}
+    ${rows.map((row, i) => {
+      const yy = mainY + 452 + i * 38
+      return `${line(contentX + 18, yy - 24, contentX + contentW - 18, yy - 24, { stroke: "#edf0f2", width: 1 })}${text(contentX + 22, yy, `${i + 1}  ${row[0]}`, { size: 12, weight: i === 0 ? 900 : 750, fill: "#202124" })}${text(contentX + 324, yy, row[1], { size: 12, weight: 750, fill: "#3c4043", anchor: "end" })}${text(contentX + 422, yy, row[2], { size: 12, weight: 750, fill: "#3c4043", anchor: "end" })}${text(contentX + 548, yy, row[3], { size: 12, weight: 750, fill: "#3c4043", anchor: "end" })}${text(contentX + 708, yy, row[4], { size: 12, weight: 750, fill: "#3c4043", anchor: "end" })}${text(contentX + 826, yy, row[5], { size: 12, weight: 750, fill: "#3c4043", anchor: "end" })}${text(contentX + 952, yy, row[6], { size: 12, weight: 750, fill: "#3c4043", anchor: "end" })}${text(contentX + contentW - 34, yy, row[7], { size: 12, weight: 900, fill: i === 0 ? "#b06000" : "#3c4043", anchor: "end" })}`
     }).join("")}
   `)
 }
