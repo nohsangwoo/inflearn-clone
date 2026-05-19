@@ -54,11 +54,173 @@ type EnrollmentRequest = {
   approvedAt?: string | null
 }
 
+type CareerCompany = {
+  name: string
+  mark: string
+  bg: string
+  fg: string
+}
+
+type CareerSignal = {
+  companies: CareerCompany[]
+  lead: string
+  body: string
+}
+
+const companyPalette: Record<string, CareerCompany> = {
+  naver: { name: '네이버', mark: 'N', bg: '#03c75a', fg: '#ffffff' },
+  kakao: { name: '카카오', mark: 'K', bg: '#fee500', fg: '#222222' },
+  toss: { name: '토스', mark: 'T', bg: '#3182f6', fg: '#ffffff' },
+  coupang: { name: '쿠팡', mark: 'C', bg: '#e5231b', fg: '#ffffff' },
+  line: { name: '라인', mark: 'LINE', bg: '#06c755', fg: '#ffffff' },
+  danggeun: { name: '당근', mark: 'D', bg: '#ff6f0f', fg: '#ffffff' },
+  baemin: { name: '배달의민족', mark: 'B', bg: '#2ac1bc', fg: '#ffffff' },
+  hoya: { name: '오늘의집', mark: 'O', bg: '#35c5f0', fg: '#ffffff' },
+  cj: { name: 'CJ ENM', mark: 'CJ', bg: '#ef4444', fg: '#ffffff' },
+  hybe: { name: '하이브', mark: 'HY', bg: '#111827', fg: '#ffffff' },
+  watcha: { name: '왓챠', mark: 'W', bg: '#ff0558', fg: '#ffffff' },
+  kakaoent: { name: '카카오엔터', mark: 'KE', bg: '#3a1d1d', fg: '#fee500' },
+  nexon: { name: '넥슨', mark: 'NX', bg: '#0052cc', fg: '#ffffff' },
+  netmarble: { name: '넷마블', mark: 'NM', bg: '#d0021b', fg: '#ffffff' },
+  krafton: { name: '크래프톤', mark: 'K', bg: '#111827', fg: '#ffffff' },
+  smilegate: { name: '스마일게이트', mark: 'SG', bg: '#f97316', fg: '#ffffff' },
+  ncsoft: { name: '엔씨소프트', mark: 'NC', bg: '#334155', fg: '#ffffff' },
+  neowiz: { name: '네오위즈', mark: 'NW', bg: '#7c3aed', fg: '#ffffff' },
+  aws: { name: 'AWS', mark: 'AWS', bg: '#ff9900', fg: '#111827' },
+  google: { name: 'Google', mark: 'G', bg: '#4285f4', fg: '#ffffff' },
+}
+
+const careerSignals: Record<number, CareerSignal> = {
+  101: {
+    companies: ['naver', 'kakao', 'toss', 'coupang', 'line'].map((key) => companyPalette[key]),
+    lead: '네이버·카카오·토스',
+    body: '플랫폼 개발팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  102: {
+    companies: ['naver', 'line', 'cj', 'watcha', 'kakaoent'].map((key) => companyPalette[key]),
+    lead: '네이버·라인·CJ ENM',
+    body: '동영상 플랫폼 직무를 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  103: {
+    companies: ['naver', 'kakao', 'toss', 'danggeun', 'hoya'].map((key) => companyPalette[key]),
+    lead: '네이버·카카오·당근',
+    body: '프로덕트/그로스 팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  104: {
+    companies: ['cj', 'hybe', 'watcha', 'kakaoent', 'naver'].map((key) => companyPalette[key]),
+    lead: 'CJ ENM·하이브·카카오엔터',
+    body: '콘텐츠 제작팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  105: {
+    companies: ['naver', 'google', 'kakao', 'toss', 'coupang'].map((key) => companyPalette[key]),
+    lead: '네이버·Google·토스',
+    body: 'SEO/그로스 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  106: {
+    companies: ['hybe', 'cj', 'kakaoent', 'watcha', 'naver'].map((key) => companyPalette[key]),
+    lead: '하이브·CJ ENM·카카오엔터',
+    body: '글로벌 콘텐츠 운영팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  107: {
+    companies: ['toss', 'kakao', 'coupang', 'baemin', 'danggeun'].map((key) => companyPalette[key]),
+    lead: '토스·카카오·쿠팡',
+    body: '핀테크/플랫폼 운영팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  108: {
+    companies: ['naver', 'kakao', 'toss', 'danggeun', 'hoya'].map((key) => companyPalette[key]),
+    lead: '네이버·카카오·토스',
+    body: '프로덕트 메이커로 성장하려는 수강생도 이 강의를 듣고 있어요.',
+  },
+  201: {
+    companies: ['nexon', 'netmarble', 'krafton', 'smilegate', 'ncsoft'].map((key) => companyPalette[key]),
+    lead: '넥슨·크래프톤·스마일게이트',
+    body: '게임 개발 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  202: {
+    companies: ['nexon', 'netmarble', 'neowiz', 'smilegate', 'krafton'].map((key) => companyPalette[key]),
+    lead: '넷마블·네오위즈·넥슨',
+    body: '모바일 게임 개발 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  203: {
+    companies: ['neowiz', 'nexon', 'netmarble', 'smilegate', 'krafton'].map((key) => companyPalette[key]),
+    lead: '네오위즈·넥슨·스마일게이트',
+    body: '인디/2D 게임 개발 포트폴리오를 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  204: {
+    companies: ['krafton', 'nexon', 'ncsoft', 'netmarble', 'smilegate'].map((key) => companyPalette[key]),
+    lead: '크래프톤·엔씨소프트·넥슨',
+    body: '게임 환경 아트 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  205: {
+    companies: ['nexon', 'krafton', 'ncsoft', 'smilegate', 'netmarble'].map((key) => companyPalette[key]),
+    lead: '넥슨·크래프톤·엔씨소프트',
+    body: '게임 VFX 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+}
+
 function enrollmentLabel(status: EnrollmentRequest['status']) {
   if (status === 'AWAITING_PLATFORM_FEE') return '입금 확인 대기'
   if (status === 'APPROVED') return '승인 완료'
   if (status === 'REJECTED') return '반려'
   return '취소'
+}
+
+function getCareerSignal(detail: Detail): CareerSignal {
+  if (careerSignals[detail.id]) return careerSignals[detail.id]
+  const topics = [
+    detail.category ?? '',
+    detail.title,
+    ...(detail.tags ?? []),
+    ...(detail.relatedTopics ?? []),
+  ].join(' ')
+
+  if (/게임|Unreal|Unity|Godot|Blender|Niagara|VFX/i.test(topics)) {
+    return {
+      companies: ['nexon', 'krafton', 'netmarble', 'smilegate', 'ncsoft'].map((key) => companyPalette[key]),
+      lead: '넥슨·크래프톤·넷마블',
+      body: '게임 업계 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+    }
+  }
+
+  if (/영상|더빙|자막|콘텐츠|HLS|Audio|Video/i.test(topics)) {
+    return {
+      companies: ['cj', 'hybe', 'kakaoent', 'watcha', 'naver'].map((key) => companyPalette[key]),
+      lead: 'CJ ENM·하이브·카카오엔터',
+      body: '콘텐츠/플랫폼 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+    }
+  }
+
+  return {
+    companies: ['naver', 'kakao', 'toss', 'coupang', 'line'].map((key) => companyPalette[key]),
+    lead: '네이버·카카오·토스',
+    body: '플랫폼 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  }
+}
+
+function CareerSignalBanner({ signal }: { signal: CareerSignal }) {
+  return (
+    <section className="rounded-[14px] border bg-card px-4 py-3 md:px-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+        <div className="flex shrink-0 items-center justify-center pl-3">
+          {signal.companies.map((company, index) => (
+            <span
+              key={`${company.name}-${index}`}
+              title={company.name}
+              aria-label={company.name}
+              className="-ml-3 grid size-9 place-items-center rounded-full border-2 border-background text-[10px] font-black shadow-sm first:ml-0 md:size-10 md:text-[11px]"
+              style={{ backgroundColor: company.bg, color: company.fg }}
+            >
+              {company.mark}
+            </span>
+          ))}
+        </div>
+        <p className="min-w-0 text-center text-sm font-semibold leading-6 text-muted-foreground md:text-[16px]">
+          <span className="text-primary">{signal.lead}</span>
+          <span className="text-foreground"> {signal.body}</span>
+        </p>
+      </div>
+    </section>
+  )
 }
 
 function formatDateTime(value?: string | null) {
@@ -183,6 +345,7 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
         }]
       : []
   )
+  const careerSignal = detail ? getCareerSignal(detail) : null
 
   // 액션
   const likeToggle = useMutation({
@@ -332,7 +495,8 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
+      {careerSignal ? <CareerSignalBanner signal={careerSignal} /> : null}
+      <div className="mt-5 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
         <div className="space-y-8">
           <section className="space-y-5">
             <div className="relative aspect-[1200/781] overflow-hidden rounded-[14px] bg-secondary">
