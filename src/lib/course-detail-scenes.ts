@@ -1,8 +1,16 @@
-export type CourseDetailScene = {
+export type CourseDetailSceneImage = {
   title: string
   imageUrl: string
   alt: string
   caption: string
+}
+
+export type CourseDetailScene = {
+  title: string
+  imageUrl?: string
+  alt?: string
+  caption?: string
+  images?: CourseDetailSceneImage[]
 }
 
 const courseDetailScenes: Record<number, CourseDetailScene> = {
@@ -32,9 +40,26 @@ const courseDetailScenes: Record<number, CourseDetailScene> = {
   },
   105: {
     title: "강의 상세 SEO 최적화 화면",
-    imageUrl: "/course-detail-scenes/course-105-workshop.png",
-    alt: "Course SEO operations screen with Google Search Console, Google Tag Manager, and Google Analytics dashboards",
-    caption: "Google Search Console의 검색 노출과 색인 상태, Google Tag Manager의 강의 상세 이벤트 태그, GA4의 유입과 전환 지표를 함께 보며 강의 상세 페이지의 SEO 성과를 점검합니다.",
+    images: [
+      {
+        title: "Google Search Console 성과 확인",
+        imageUrl: "/course-detail-scenes/course-105-search-console.png",
+        alt: "Google Search Console screenshot for a Lingoost course detail page showing search performance, impressions, clicks, sitemap status, and indexed pages",
+        caption: "Search Console에서 강의 상세 페이지의 검색 노출, 클릭, CTR, 평균 순위, 사이트맵 제출과 색인 상태를 확인합니다.",
+      },
+      {
+        title: "Google Tag Manager 이벤트 태그 점검",
+        imageUrl: "/course-detail-scenes/course-105-tag-manager.png",
+        alt: "Google Tag Manager screenshot showing GA4 config and course detail tracking tags for course view, preview image view, and enrollment click",
+        caption: "Tag Manager에서 강의 상세 조회, 프리뷰 이미지 확인, 수강 신청 클릭 같은 이벤트 태그가 올바른 트리거에 연결됐는지 점검합니다.",
+      },
+      {
+        title: "Google Analytics 유입과 전환 분석",
+        imageUrl: "/course-detail-scenes/course-105-analytics.png",
+        alt: "Google Analytics 4 screenshot showing course detail acquisition, organic search traffic, enrollment clicks, and key events",
+        caption: "GA4에서 자연 검색 유입, 강의 상세 조회, 수강 신청 클릭, 스크롤 깊이 같은 핵심 이벤트를 비교해 SEO 성과를 판단합니다.",
+      },
+    ],
   },
   106: {
     title: "AI 더빙과 다국어 QA 화면",

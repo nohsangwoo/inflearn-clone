@@ -132,6 +132,58 @@ const scenes = [
   },
 ]
 
+const course105Screenshots = [
+  {
+    slug: "search-console",
+    accent: "#1a73e8",
+    wallpaper: ["#f8fbff", "#eef4ff", "#ffffff"],
+    window: {
+      type: "gsc",
+      x: 36,
+      y: 58,
+      w: 1528,
+      h: 806,
+      title: "Chrome - Google Search Console",
+      property: "https://www.lingoost.com/",
+      query: "강의 상세 SEO 최적화",
+      clicks: "1.42K",
+      impressions: "38.6K",
+      ctr: "3.7%",
+      position: "8.4",
+    },
+  },
+  {
+    slug: "tag-manager",
+    accent: "#1a73e8",
+    wallpaper: ["#f8fbff", "#eef4ff", "#ffffff"],
+    window: {
+      type: "gtm",
+      x: 36,
+      y: 58,
+      w: 1528,
+      h: 806,
+      title: "Chrome - Google Tag Manager",
+      container: "GTM-LINGOOST",
+      tags: ["GA4 Config", "course_detail_view", "preview_image_view", "enrollment_click"],
+    },
+  },
+  {
+    slug: "analytics",
+    accent: "#f9ab00",
+    wallpaper: ["#fffdf7", "#f8fbff", "#ffffff"],
+    window: {
+      type: "ga4",
+      x: 36,
+      y: 58,
+      w: 1528,
+      h: 806,
+      title: "Chrome - Google Analytics",
+      report: "GA4 · Course detail acquisition",
+      events: [["course_detail_view", "8,924"], ["enrollment_request", "416"], ["preview_image_view", "2,188"], ["scroll_90_percent", "1,052"]],
+    },
+  },
+]
+
 function escapeXml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -479,47 +531,57 @@ function renderAnalytics(w, scene, c) {
 function renderGoogleSearchConsole(w, scene, c) {
   const x = w.x
   const y = w.y + 42
+  const navW = Math.min(210, Math.max(154, Math.round(w.w * 0.16)))
+  const mainX = x + navW + 32
+  const mainW = w.w - navW - 64
+  const cardGap = 16
+  const cardW = (mainW - cardGap * 3) / 4
+  const chartTop = y + 260
+  const chartBottom = y + Math.min(w.h - 118, 550)
+  const chartH = chartBottom - chartTop
   const metrics = [
     ["Total clicks", w.clicks, "#1a73e8"],
     ["Impressions", w.impressions, "#7e57c2"],
     ["Average CTR", w.ctr, "#00897b"],
     ["Position", w.position, "#f9ab00"],
   ]
-  const chartPoints = [
-    [x + 210, y + 302],
-    [x + 272, y + 282],
-    [x + 334, y + 296],
-    [x + 398, y + 254],
-    [x + 462, y + 266],
-    [x + 526, y + 236],
-    [x + 592, y + 248],
-    [x + 662, y + 222],
-  ].map((point) => point.join(",")).join(" ")
+  const chartValues = [0.76, 0.58, 0.68, 0.36, 0.43, 0.2, 0.3, 0.08]
+  const secondaryValues = [0.86, 0.68, 0.78, 0.52, 0.58, 0.38, 0.44, 0.28]
+  const chartPoints = chartValues.map((value, i) => {
+    const px = mainX + (mainW * i) / (chartValues.length - 1)
+    const py = chartTop + chartH * value
+    return `${px},${py}`
+  }).join(" ")
+  const secondaryPoints = secondaryValues.map((value, i) => {
+    const px = mainX + (mainW * i) / (secondaryValues.length - 1)
+    const py = chartTop + chartH * value
+    return `${px},${py}`
+  }).join(" ")
 
   return windowChrome(w, scene, c, `
-    ${rect(x, y, 154, w.h - 42, { rx: 0, fill: "#f8fafd" })}
+    ${rect(x, y, navW, w.h - 42, { rx: 0, fill: "#f8fafd" })}
     ${text(x + 24, y + 40, "Search", { size: 18, weight: 850, fill: "#3c4043" })}
     ${text(x + 24, y + 64, "Console", { size: 18, weight: 850, fill: "#3c4043" })}
     ${["Overview", "Performance", "URL inspection", "Pages", "Sitemaps"].map((item, i) => {
       const active = i === 1
-      return `${active ? rect(x + 16, y + 94 + i * 42, 122, 32, { rx: 16, fill: "#e8f0fe" }) : ""}${text(x + 30, y + 116 + i * 42, item, { size: 13, weight: active ? 850 : 650, fill: active ? "#1a73e8" : "#5f6368" })}`
+      return `${active ? rect(x + 16, y + 94 + i * 42, navW - 32, 32, { rx: 16, fill: "#e8f0fe" }) : ""}${text(x + 30, y + 116 + i * 42, item, { size: 13, weight: active ? 850 : 650, fill: active ? "#1a73e8" : "#5f6368" })}`
     }).join("")}
-    ${rect(x + 180, y + 24, w.w - 210, 36, { rx: 18, fill: "#f1f3f4" })}
-    ${text(x + 204, y + 48, w.property, { size: 14, weight: 700, fill: "#3c4043" })}
-    ${text(x + 180, y + 94, "Performance on Search results", { size: 21, weight: 850, fill: "#202124" })}
-    ${text(x + 180, y + 120, `Query: ${w.query}`, { size: 13, weight: 650, fill: "#5f6368" })}
+    ${rect(mainX, y + 24, mainW, 36, { rx: 18, fill: "#f1f3f4" })}
+    ${text(mainX + 24, y + 48, w.property, { size: 14, weight: 700, fill: "#3c4043" })}
+    ${text(mainX, y + 94, "Performance on Search results", { size: 21, weight: 850, fill: "#202124" })}
+    ${text(mainX, y + 120, `Query: ${w.query}`, { size: 13, weight: 650, fill: "#5f6368" })}
     ${metrics.map(([label, value, fill], i) => {
-      const mx = x + 180 + i * 130
-      return `${rect(mx, y + 144, 116, 72, { rx: 14, fill: i === 0 ? "#e8f0fe" : "#ffffff", stroke: "#dadce0" })}${text(mx + 14, y + 170, label, { size: 11, weight: 800, fill: "#5f6368" })}${text(mx + 14, y + 202, value, { size: 24, weight: 900, fill })}`
+      const mx = mainX + i * (cardW + cardGap)
+      return `${rect(mx, y + 144, cardW, 78, { rx: 14, fill: i === 0 ? "#e8f0fe" : "#ffffff", stroke: "#dadce0" })}${text(mx + 18, y + 172, label, { size: 12, weight: 800, fill: "#5f6368" })}${text(mx + 18, y + 205, value, { size: 25, weight: 900, fill })}`
     }).join("")}
-    ${line(x + 184, y + 320, x + w.w - 36, y + 320, { stroke: "#e0e3e7", width: 1 })}
-    ${line(x + 184, y + 274, x + w.w - 36, y + 274, { stroke: "#e0e3e7", width: 1 })}
-    ${line(x + 184, y + 228, x + w.w - 36, y + 228, { stroke: "#e0e3e7", width: 1 })}
+    ${line(mainX, chartTop + chartH, mainX + mainW, chartTop + chartH, { stroke: "#e0e3e7", width: 1 })}
+    ${line(mainX, chartTop + chartH * 0.66, mainX + mainW, chartTop + chartH * 0.66, { stroke: "#e0e3e7", width: 1 })}
+    ${line(mainX, chartTop + chartH * 0.33, mainX + mainW, chartTop + chartH * 0.33, { stroke: "#e0e3e7", width: 1 })}
     <polyline points="${chartPoints}" fill="none" stroke="#1a73e8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-    <polyline points="${chartPoints.replaceAll(String(y + 302), String(y + 314)).replaceAll(String(y + 282), String(y + 292)).replaceAll(String(y + 296), String(y + 306)).replaceAll(String(y + 254), String(y + 272)).replaceAll(String(y + 266), String(y + 278)).replaceAll(String(y + 236), String(y + 260)).replaceAll(String(y + 248), String(y + 266)).replaceAll(String(y + 222), String(y + 250))}" fill="none" stroke="#7e57c2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.78"/>
-    ${rect(x + 180, y + 320, w.w - 214, 52, { rx: 14, fill: "#ffffff", stroke: "#dadce0" })}
-    ${text(x + 204, y + 352, "Submitted sitemap: /sitemap.xml", { size: 14, weight: 850, fill: "#188038" })}
-    ${text(x + w.w - 236, y + 352, "Indexed pages: 214", { size: 14, weight: 800, fill: "#3c4043" })}
+    <polyline points="${secondaryPoints}" fill="none" stroke="#7e57c2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.78"/>
+    ${rect(mainX, y + w.h - 98, mainW, 52, { rx: 14, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(mainX + 24, y + w.h - 66, "Submitted sitemap: /sitemap.xml", { size: 14, weight: 850, fill: "#188038" })}
+    ${text(mainX + mainW - 224, y + w.h - 66, "Indexed pages: 214", { size: 14, weight: 800, fill: "#3c4043" })}
   `)
 }
 
@@ -549,6 +611,12 @@ function renderGoogleTagManager(w, scene, c) {
       const yy = y + 292 + i * 28
       return `${line(x + 34, yy - 19, x + w.w - 34, yy - 19, { stroke: "#edf0f2", width: 1 })}${text(x + 52, yy, tag, { size: 13, weight: 800, fill: "#202124" })}${text(x + 390, yy, i === 0 ? "All pages" : "Course detail page", { size: 13, weight: 650, fill: "#5f6368" })}${rect(x + w.w - 116, yy - 18, 70, 24, { rx: 12, fill: "#e6f4ea" })}${text(x + w.w - 81, yy - 2, "Live", { size: 11, weight: 900, fill: "#188038", anchor: "middle" })}`
     }).join("")}
+    ${rect(x + 32, y + 420, Math.max(360, w.w * 0.46), 176, { rx: 18, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(x + 58, y + 454, "Tag Assistant preview", { size: 18, weight: 900, fill: "#202124" })}
+    ${["Page View  /ko/course/105", "course_detail_view", "preview_image_view", "enrollment_click"].map((event, i) => `${rect(x + 58, y + 480 + i * 28, 16, 16, { rx: 8, fill: i === 0 ? "#e8f0fe" : "#e6f4ea" })}${text(x + 86, y + 494 + i * 28, event, { size: 13, weight: 750, fill: "#3c4043" })}${text(x + 356, y + 494 + i * 28, i === 0 ? "page load" : "GA4 event", { size: 12, weight: 700, fill: "#5f6368" })}`).join("")}
+    ${rect(x + w.w - 430, y + 420, 364, 176, { rx: 18, fill: "#f8fafd", stroke: "#dadce0" })}
+    ${text(x + w.w - 400, y + 454, "Variables checked", { size: 18, weight: 900, fill: "#202124" })}
+    ${["course_id = 105", "course_category = business", "locale = ko", "member_state = anonymous"].map((item, i) => `${text(x + w.w - 400, y + 490 + i * 28, item, { size: 13, weight: 750, fill: "#3c4043" })}`).join("")}
   `)
 }
 
@@ -588,6 +656,16 @@ function renderGoogleAnalytics(w, scene, c) {
     ${rect(x + w.w - 382, y + 64, 330, 148, { rx: 18, fill: "#ffffff", stroke: "#dadce0" })}
     ${text(x + w.w - 354, y + 96, "Key events", { size: 17, weight: 900, fill: "#202124" })}
     ${(w.events ?? []).map(([event, value], i) => `${text(x + w.w - 354, y + 126 + i * 25, event, { size: 13, weight: 750, fill: "#3c4043" })}${text(x + w.w - 76, y + 126 + i * 25, value, { size: 13, weight: 900, fill: "#202124", anchor: "end" })}`).join("")}
+    ${rect(x + 236, y + 286, w.w - 288, 286, { rx: 18, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(x + 264, y + 322, "Traffic acquisition", { size: 19, weight: 900, fill: "#202124" })}
+    ${text(x + 264, y + 354, "Session default channel group", { size: 12, weight: 900, fill: "#5f6368" })}
+    ${text(x + w.w - 408, y + 354, "Users", { size: 12, weight: 900, fill: "#5f6368" })}
+    ${text(x + w.w - 268, y + 354, "Events", { size: 12, weight: 900, fill: "#5f6368" })}
+    ${text(x + w.w - 126, y + 354, "Conv.", { size: 12, weight: 900, fill: "#5f6368" })}
+    ${[["Organic Search", "8,221", "42,018", "416"], ["Direct", "2,104", "9,812", "72"], ["Referral", "1,084", "4,211", "38"], ["Social", "671", "2,008", "19"], ["Email", "430", "1,772", "14"]].map((row, i) => {
+      const yy = y + 390 + i * 36
+      return `${line(x + 264, yy - 22, x + w.w - 84, yy - 22, { stroke: "#edf0f2", width: 1 })}${text(x + 264, yy, row[0], { size: 14, weight: i === 0 ? 900 : 750, fill: "#202124" })}${text(x + w.w - 408, yy, row[1], { size: 14, weight: 750, fill: "#3c4043" })}${text(x + w.w - 268, yy, row[2], { size: 14, weight: 750, fill: "#3c4043" })}${text(x + w.w - 126, yy, row[3], { size: 14, weight: 900, fill: i === 0 ? "#34a853" : "#3c4043" })}`
+    }).join("")}
   `)
 }
 
@@ -707,6 +785,23 @@ function sceneSvg(scene) {
 </svg>`
 }
 
+function course105ScreenshotSvg(config) {
+  const scene = {
+    id: `105-${config.slug}`,
+    os: "mac",
+    accent: config.accent,
+    wallpaper: config.wallpaper,
+    showRecording: false,
+  }
+  const c = colors(scene)
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+  ${wallpaper(scene)}
+  ${menuBar(scene, c)}
+  ${renderWindow(config.window, scene, c)}
+</svg>`
+}
+
 await fs.mkdir(OUT_DIR, { recursive: true })
 
 for (const scene of scenes.filter((scene) => !only || String(scene.id) === String(only))) {
@@ -718,4 +813,17 @@ for (const scene of scenes.filter((scene) => !only || String(scene.id) === Strin
     .toFile(outputPath)
   const metadata = await sharp(outputPath).metadata()
   console.log(`[done] ${path.relative(ROOT, outputPath)} ${metadata.width}x${metadata.height}`)
+}
+
+if (!only || String(only) === "105") {
+  for (const screenshot of course105Screenshots) {
+    const outputPath = path.join(OUT_DIR, `course-105-${screenshot.slug}.png`)
+    console.log(`[render-screenshot] 105 ${screenshot.slug}`)
+    await sharp(Buffer.from(course105ScreenshotSvg(screenshot)))
+      .resize(WIDTH, HEIGHT, { fit: "cover" })
+      .png({ compressionLevel: 9 })
+      .toFile(outputPath)
+    const metadata = await sharp(outputPath).metadata()
+    console.log(`[done] ${path.relative(ROOT, outputPath)} ${metadata.width}x${metadata.height}`)
+  }
 }

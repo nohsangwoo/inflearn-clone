@@ -173,6 +173,16 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
         '검색 최적화된 강의 상세',
       ]
   const detailScene = detail ? getCourseDetailScene(detail.id) : null
+  const detailSceneImages = detailScene?.images ?? (
+    detailScene?.imageUrl
+      ? [{
+          title: detailScene.title,
+          imageUrl: detailScene.imageUrl,
+          alt: detailScene.alt ?? detailScene.title,
+          caption: detailScene.caption ?? '',
+        }]
+      : []
+  )
 
   // 액션
   const likeToggle = useMutation({
@@ -438,26 +448,32 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
             </section>
           ) : null}
 
-          {detailScene ? (
+          {detailScene && detailSceneImages.length > 0 ? (
             <section className="space-y-4 rounded-[14px] border bg-card p-5">
               <div>
                 <p className="text-sm font-medium text-primary">실전 프로젝트 화면</p>
                 <h2 className="mt-1 text-[21px] font-bold leading-[1.43]">{detailScene.title}</h2>
               </div>
-              <figure className="overflow-hidden rounded-[14px] border bg-background">
-                <div className="relative aspect-video bg-secondary">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={detailScene.imageUrl}
-                    alt={detailScene.alt}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                </div>
-                <figcaption className="border-t bg-background px-4 py-3 text-sm leading-6 text-muted-foreground">
-                  {detailScene.caption}
-                </figcaption>
-              </figure>
+              <div className="space-y-4">
+                {detailSceneImages.map((image) => (
+                  <figure key={image.imageUrl} className="overflow-hidden rounded-[14px] border bg-background">
+                    <div className="relative aspect-video bg-secondary">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={image.imageUrl}
+                        alt={image.alt}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                    <figcaption className="border-t bg-background px-4 py-3 text-sm leading-6 text-muted-foreground">
+                      <span className="font-semibold text-foreground">{image.title}</span>
+                      <span className="mx-2 text-muted-foreground/70">·</span>
+                      {image.caption}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
             </section>
           ) : null}
 
