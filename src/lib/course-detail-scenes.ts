@@ -33,8 +33,8 @@ const courseDetailScenes: Record<number, CourseDetailScene> = {
   105: {
     title: "강의 상세 SEO 최적화 화면",
     imageUrl: "/course-detail-scenes/course-105-workshop.png",
-    alt: "Course SEO screen with metadata editor, sitemap diagram, keyword clusters, and search preview cards",
-    caption: "메타데이터, 태그, 사이트맵, 검색 결과 미리보기를 점검하며 강의 상세 페이지의 노출 가능성을 높입니다.",
+    alt: "Course SEO operations screen with Google Search Console, Google Tag Manager, and Google Analytics dashboards",
+    caption: "Google Search Console의 검색 노출과 색인 상태, Google Tag Manager의 강의 상세 이벤트 태그, GA4의 유입과 전환 지표를 함께 보며 강의 상세 페이지의 SEO 성과를 점검합니다.",
   },
   106: {
     title: "AI 더빙과 다국어 QA 화면",

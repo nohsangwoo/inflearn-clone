@@ -74,15 +74,17 @@ const scenes = [
   {
     id: 105,
     os: "mac",
-    accent: "#10b981",
-    title: "Course Seller SEO Desk",
-    subtitle: "Metadata, sitemap and search preview inspection",
-    wallpaper: ["#f7fff9", "#e7fff4", "#f7f7f7"],
+    accent: "#1a73e8",
+    title: "Course Detail SEO Control Room",
+    subtitle: "Search Console, Tag Manager and GA4 checks for a published course",
+    wallpaper: ["#f8fbff", "#eef4ff", "#fffaf0"],
+    showRecording: false,
+    titleY: 64,
+    subtitleY: 91,
     windows: [
-      { type: "browser", x: 56, y: 102, w: 660, h: 438, title: "Safari - Google preview", heading: "강의 판매자를 위한 SEO 실전 | 링구스트", subheading: "태그, 메타 타이틀, 사이트맵, 검색 의도를 강의 등록 폼에 녹입니다.", chips: ["indexable", "canonical", "schema.org"], layout: "serp" },
-      { type: "form", x: 746, y: 102, w: 780, h: 438, title: "Lingoost Admin - Metadata Editor", fields: ["Meta title", "Meta description", "SEO keywords", "Canonical URL", "OG image"] },
-      { type: "sitemap", x: 86, y: 572, w: 640, h: 236, title: "sitemap.xml route" },
-      { type: "analytics", x: 760, y: 572, w: 696, h: 236, title: "Keyword movement", bars: [["course SEO", 0.72], ["online course", 0.58], ["lecture sales", 0.46], ["sitemap", 0.66]] },
+      { type: "gsc", x: 56, y: 120, w: 730, h: 416, title: "Chrome - Google Search Console", property: "https://www.lingoost.com/", query: "강의 상세 SEO 최적화", pages: ["/ko/course/105", "/ko/course/108", "/ko"], clicks: "1.42K", impressions: "38.6K", ctr: "3.7%", position: "8.4" },
+      { type: "gtm", x: 822, y: 120, w: 690, h: 430, title: "Chrome - Google Tag Manager", container: "GTM-LINGOOST", tags: ["GA4 Config", "course_detail_view", "preview_image_view", "enrollment_click"] },
+      { type: "ga4", x: 118, y: 568, w: 1364, h: 258, title: "Chrome - Google Analytics", report: "GA4 · Course detail acquisition", events: [["course_detail_view", "8,924"], ["enrollment_request", "416"], ["preview_image_view", "2,188"], ["scroll_90_percent", "1,052"]] },
     ],
   },
   {
@@ -474,6 +476,121 @@ function renderAnalytics(w, scene, c) {
   `)
 }
 
+function renderGoogleSearchConsole(w, scene, c) {
+  const x = w.x
+  const y = w.y + 42
+  const metrics = [
+    ["Total clicks", w.clicks, "#1a73e8"],
+    ["Impressions", w.impressions, "#7e57c2"],
+    ["Average CTR", w.ctr, "#00897b"],
+    ["Position", w.position, "#f9ab00"],
+  ]
+  const chartPoints = [
+    [x + 210, y + 302],
+    [x + 272, y + 282],
+    [x + 334, y + 296],
+    [x + 398, y + 254],
+    [x + 462, y + 266],
+    [x + 526, y + 236],
+    [x + 592, y + 248],
+    [x + 662, y + 222],
+  ].map((point) => point.join(",")).join(" ")
+
+  return windowChrome(w, scene, c, `
+    ${rect(x, y, 154, w.h - 42, { rx: 0, fill: "#f8fafd" })}
+    ${text(x + 24, y + 40, "Search", { size: 18, weight: 850, fill: "#3c4043" })}
+    ${text(x + 24, y + 64, "Console", { size: 18, weight: 850, fill: "#3c4043" })}
+    ${["Overview", "Performance", "URL inspection", "Pages", "Sitemaps"].map((item, i) => {
+      const active = i === 1
+      return `${active ? rect(x + 16, y + 94 + i * 42, 122, 32, { rx: 16, fill: "#e8f0fe" }) : ""}${text(x + 30, y + 116 + i * 42, item, { size: 13, weight: active ? 850 : 650, fill: active ? "#1a73e8" : "#5f6368" })}`
+    }).join("")}
+    ${rect(x + 180, y + 24, w.w - 210, 36, { rx: 18, fill: "#f1f3f4" })}
+    ${text(x + 204, y + 48, w.property, { size: 14, weight: 700, fill: "#3c4043" })}
+    ${text(x + 180, y + 94, "Performance on Search results", { size: 21, weight: 850, fill: "#202124" })}
+    ${text(x + 180, y + 120, `Query: ${w.query}`, { size: 13, weight: 650, fill: "#5f6368" })}
+    ${metrics.map(([label, value, fill], i) => {
+      const mx = x + 180 + i * 130
+      return `${rect(mx, y + 144, 116, 72, { rx: 14, fill: i === 0 ? "#e8f0fe" : "#ffffff", stroke: "#dadce0" })}${text(mx + 14, y + 170, label, { size: 11, weight: 800, fill: "#5f6368" })}${text(mx + 14, y + 202, value, { size: 24, weight: 900, fill })}`
+    }).join("")}
+    ${line(x + 184, y + 320, x + w.w - 36, y + 320, { stroke: "#e0e3e7", width: 1 })}
+    ${line(x + 184, y + 274, x + w.w - 36, y + 274, { stroke: "#e0e3e7", width: 1 })}
+    ${line(x + 184, y + 228, x + w.w - 36, y + 228, { stroke: "#e0e3e7", width: 1 })}
+    <polyline points="${chartPoints}" fill="none" stroke="#1a73e8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="${chartPoints.replaceAll(String(y + 302), String(y + 314)).replaceAll(String(y + 282), String(y + 292)).replaceAll(String(y + 296), String(y + 306)).replaceAll(String(y + 254), String(y + 272)).replaceAll(String(y + 266), String(y + 278)).replaceAll(String(y + 236), String(y + 260)).replaceAll(String(y + 248), String(y + 266)).replaceAll(String(y + 222), String(y + 250))}" fill="none" stroke="#7e57c2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.78"/>
+    ${rect(x + 180, y + 320, w.w - 214, 52, { rx: 14, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(x + 204, y + 352, "Submitted sitemap: /sitemap.xml", { size: 14, weight: 850, fill: "#188038" })}
+    ${text(x + w.w - 236, y + 352, "Indexed pages: 214", { size: 14, weight: 800, fill: "#3c4043" })}
+  `)
+}
+
+function renderGoogleTagManager(w, scene, c) {
+  const x = w.x
+  const y = w.y + 42
+  return windowChrome(w, scene, c, `
+    ${rect(x, y, w.w, 58, { rx: 0, fill: "#f8fafd" })}
+    ${text(x + 32, y + 37, "Tag Manager", { size: 20, weight: 850, fill: "#3c4043" })}
+    ${rect(x + w.w - 210, y + 15, 164, 30, { rx: 15, fill: "#e8f0fe" })}
+    ${text(x + w.w - 128, y + 36, w.container, { size: 13, weight: 900, fill: "#1a73e8", anchor: "middle" })}
+    ${text(x + 32, y + 92, "Workspace changes", { size: 20, weight: 850, fill: "#202124" })}
+    ${text(x + 32, y + 118, "Course SEO events are ready to publish.", { size: 13, weight: 650, fill: "#5f6368" })}
+    ${rect(x + 32, y + 142, 178, 78, { rx: 16, fill: "#e8f0fe", stroke: "#d2e3fc" })}
+    ${text(x + 54, y + 172, "Tags", { size: 13, weight: 850, fill: "#1a73e8" })}
+    ${text(x + 54, y + 204, "4 ready", { size: 25, weight: 900, fill: "#202124" })}
+    ${rect(x + 230, y + 142, 178, 78, { rx: 16, fill: "#fff7e0", stroke: "#fde293" })}
+    ${text(x + 252, y + 172, "Triggers", { size: 13, weight: 850, fill: "#b06000" })}
+    ${text(x + 252, y + 204, "3 active", { size: 25, weight: 900, fill: "#202124" })}
+    ${rect(x + 428, y + 142, 196, 78, { rx: 16, fill: "#e6f4ea", stroke: "#ceead6" })}
+    ${text(x + 450, y + 172, "Preview", { size: 13, weight: 850, fill: "#188038" })}
+    ${text(x + 450, y + 204, "Connected", { size: 23, weight: 900, fill: "#202124" })}
+    ${rect(x + 32, y + 242, w.w - 64, 40, { rx: 10, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(x + 52, y + 267, "Name", { size: 12, weight: 900, fill: "#5f6368" })}
+    ${text(x + 390, y + 267, "Trigger", { size: 12, weight: 900, fill: "#5f6368" })}
+    ${(w.tags ?? []).map((tag, i) => {
+      const yy = y + 292 + i * 28
+      return `${line(x + 34, yy - 19, x + w.w - 34, yy - 19, { stroke: "#edf0f2", width: 1 })}${text(x + 52, yy, tag, { size: 13, weight: 800, fill: "#202124" })}${text(x + 390, yy, i === 0 ? "All pages" : "Course detail page", { size: 13, weight: 650, fill: "#5f6368" })}${rect(x + w.w - 116, yy - 18, 70, 24, { rx: 12, fill: "#e6f4ea" })}${text(x + w.w - 81, yy - 2, "Live", { size: 11, weight: 900, fill: "#188038", anchor: "middle" })}`
+    }).join("")}
+  `)
+}
+
+function renderGoogleAnalytics(w, scene, c) {
+  const x = w.x
+  const y = w.y + 42
+  const chart = [
+    [x + 330, y + 174],
+    [x + 452, y + 146],
+    [x + 574, y + 158],
+    [x + 696, y + 108],
+    [x + 818, y + 126],
+    [x + 940, y + 88],
+    [x + 1062, y + 104],
+    [x + 1184, y + 72],
+  ].map((point) => point.join(",")).join(" ")
+  const cards = [
+    ["Users", "12.8K", "#1a73e8"],
+    ["Organic search", "64.2%", "#34a853"],
+    ["Enroll clicks", "416", "#f9ab00"],
+  ]
+
+  return windowChrome(w, scene, c, `
+    ${rect(x, y, 206, w.h - 42, { rx: 0, fill: "#f8fafd" })}
+    ${text(x + 28, y + 38, "Analytics", { size: 21, weight: 850, fill: "#3c4043" })}
+    ${["Reports", "Acquisition", "Engagement", "Conversions"].map((item, i) => `${i === 1 ? rect(x + 18, y + 68 + i * 38, 166, 30, { rx: 15, fill: "#fef7e0" }) : ""}${text(x + 34, y + 89 + i * 38, item, { size: 13, weight: i === 1 ? 850 : 650, fill: i === 1 ? "#b06000" : "#5f6368" })}`).join("")}
+    ${text(x + 236, y + 44, w.report, { size: 22, weight: 900, fill: "#202124" })}
+    ${cards.map(([label, value, fill], i) => {
+      const cx = x + 236 + i * 160
+      return `${rect(cx, y + 70, 138, 72, { rx: 16, fill: "#ffffff", stroke: "#dadce0" })}${text(cx + 18, y + 98, label, { size: 12, weight: 850, fill: "#5f6368" })}${text(cx + 18, y + 130, value, { size: 25, weight: 900, fill })}`
+    }).join("")}
+    ${line(x + 236, y + 198, x + w.w - 420, y + 198, { stroke: "#e0e3e7", width: 1 })}
+    ${line(x + 236, y + 152, x + w.w - 420, y + 152, { stroke: "#e0e3e7", width: 1 })}
+    ${line(x + 236, y + 106, x + w.w - 420, y + 106, { stroke: "#e0e3e7", width: 1 })}
+    <polyline points="${chart}" fill="none" stroke="#f9ab00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="${chart.replaceAll(String(y + 174), String(y + 190)).replaceAll(String(y + 146), String(y + 164)).replaceAll(String(y + 158), String(y + 176)).replaceAll(String(y + 108), String(y + 132)).replaceAll(String(y + 126), String(y + 145)).replaceAll(String(y + 88), String(y + 120)).replaceAll(String(y + 104), String(y + 136)).replaceAll(String(y + 72), String(y + 104))}" fill="none" stroke="#1a73e8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.75"/>
+    ${rect(x + w.w - 382, y + 64, 330, 148, { rx: 18, fill: "#ffffff", stroke: "#dadce0" })}
+    ${text(x + w.w - 354, y + 96, "Key events", { size: 17, weight: 900, fill: "#202124" })}
+    ${(w.events ?? []).map(([event, value], i) => `${text(x + w.w - 354, y + 126 + i * 25, event, { size: 13, weight: 750, fill: "#3c4043" })}${text(x + w.w - 76, y + 126 + i * 25, value, { size: 13, weight: 900, fill: "#202124", anchor: "end" })}`).join("")}
+  `)
+}
+
 function renderAudio(w, scene, c) {
   const x = w.x
   const y = w.y + 42
@@ -542,6 +659,9 @@ function renderWindow(w, scene, c) {
     form: renderForm,
     sitemap: renderSitemap,
     analytics: renderAnalytics,
+    gsc: renderGoogleSearchConsole,
+    gtm: renderGoogleTagManager,
+    ga4: renderGoogleAnalytics,
     audio: renderAudio,
     captions: renderCaptions,
     modal: renderModal,
@@ -579,7 +699,7 @@ function sceneSvg(scene) {
 <svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
   ${wallpaper(scene)}
   ${menuBar(scene, c)}
-  ${recordingBadge(scene)}
+  ${scene.showRecording === false ? "" : recordingBadge(scene)}
   ${text(56, titleY, scene.title, { size: 28, weight: 900, fill: c.ink })}
   ${text(56, subtitleY, scene.subtitle, { size: 17, weight: 650, fill: c.body })}
   ${scene.windows.map((w) => renderWindow(w, scene, c)).join("")}
