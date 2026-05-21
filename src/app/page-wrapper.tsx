@@ -5,7 +5,23 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import axios from "axios"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { BookOpen, Heart, Search, Star, Users } from "lucide-react"
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Code2,
+  Heart,
+  Mail,
+  MonitorPlay,
+  Search,
+  Sparkles,
+  Star,
+  Target,
+  Users,
+  Video,
+} from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -41,6 +57,57 @@ type ApiCourse = {
 }
 
 const categories = ["전체", "웹 개발", "게임 개발", "AI", "미디어", "크리에이터", "비즈니스", "디자인"]
+const PAGE_SIZE = 15
+
+const creatorKeywords = [
+  "강의 플랫폼 제작",
+  "LMS 제작",
+  "강의 판매 사이트",
+  "홈페이지 제작",
+  "HLS 스트리밍",
+  "강의 SEO",
+  "수강신청 관리",
+  "판매자 정산",
+]
+
+const platformProofs = [
+  {
+    icon: MonitorPlay,
+    title: "강의 판매 흐름을 실제 화면으로 증명",
+    body: "목록, 상세, 수강신청, 입금 확인, 수강권한 부여까지 강의 플랫폼 제작 문의자가 바로 확인할 수 있는 레퍼런스입니다.",
+  },
+  {
+    icon: Code2,
+    title: "웹사이트 제작과 LMS 개발을 한 번에",
+    body: "Next.js, Neon DB, Firebase Auth, S3, HLS 영상 수강 구조를 연결해 교육용 홈페이지와 운영 대시보드를 함께 설계합니다.",
+  },
+  {
+    icon: Target,
+    title: "검색 노출까지 고려한 강의 상세",
+    body: "강의 제목, 태그, 커리큘럼, FAQ성 설명, 메타 데이터, sitemap을 강의별로 구성해 SEO 유입을 노립니다.",
+  },
+]
+
+const buildTracks = [
+  ["Discovery", "강의 판매 방식, 수강신청 방식, 정산 흐름, 관리자 권한을 먼저 설계합니다."],
+  ["Build", "수강생 화면, 판매자 대시보드, 최고관리자 승인/정산, 영상 업로드 구조를 구현합니다."],
+  ["Launch", "SEO, sitemap, OG, 검색 콘솔 등록, 배포 도메인, 운영 체크리스트를 정리합니다."],
+]
+
+const seoKeywordDeck = [
+  "럿지",
+  "주식회사럿지",
+  "링구스트",
+  "Lingoost",
+  "LMS",
+  "강의 플랫폼",
+  "강의 플랫폼 제작",
+  "홈페이지 제작",
+  "온라인 교육 플랫폼",
+  "영상 강의 플랫폼",
+  "HLS 강의",
+  "강의 SEO",
+]
 
 function formatPrice(course: ApiCourse) {
   const effective =
@@ -63,14 +130,15 @@ export default function HomePageWrapper() {
   const [keyword, setKeyword] = useState("")
   const [category, setCategory] = useState("전체")
   const [sort, setSort] = useState<"latest" | "best" | "priceAsc">("latest")
+  const [page, setPage] = useState(1)
 
   const { data, isLoading } = useQuery({
-    queryKey: ["lingoost-courses", keyword, category, sort],
+    queryKey: ["lingoost-courses", keyword, category, sort, page],
     queryFn: async () => {
       const { data } = await axios.get("/api/courses", {
         params: {
-          page: 1,
-          pageSize: 20,
+          page,
+          pageSize: PAGE_SIZE,
           sort,
           q: keyword || undefined,
           category: category === "전체" ? undefined : category,
@@ -82,25 +150,17 @@ export default function HomePageWrapper() {
   })
 
   const courses = useMemo(() => {
-    const items = data?.items ?? []
-    if (!keyword && category === "전체") return items
-    return items.filter((course) => {
-      const text = [
-        course.title,
-        course.shortDescription,
-        course.description,
-        course.category,
-        course.level,
-        ...(course.tags ?? []),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-      const matchesKeyword = keyword ? text.includes(keyword.toLowerCase()) : true
-      const matchesCategory = category === "전체" ? true : course.category === category
-      return matchesKeyword && matchesCategory
-    })
-  }, [category, data?.items, keyword])
+    return data?.items ?? []
+  }, [data?.items])
+  const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const visiblePages = useMemo(() => {
+    const start = Math.max(1, Math.min(page - 2, totalPages - 4))
+    const end = Math.min(totalPages, start + 4)
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index)
+  }, [page, totalPages])
+  const resultStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const resultEnd = Math.min(total, page * PAGE_SIZE)
 
   const likeMutation = useMutation<
     { liked: boolean },
@@ -193,7 +253,10 @@ export default function HomePageWrapper() {
               <span className="block text-[14px] font-medium text-foreground">무엇을 배우나요?</span>
               <input
                 value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
+                onChange={(event) => {
+                  setKeyword(event.target.value)
+                  setPage(1)
+                }}
                 placeholder="HLS, Next.js, 강의 기획"
                 className="mt-1 w-full bg-transparent text-[14px] text-muted-foreground outline-none placeholder:text-muted-foreground"
               />
@@ -202,7 +265,10 @@ export default function HomePageWrapper() {
               <span className="block text-[14px] font-medium text-foreground">카테고리</span>
               <select
                 value={category}
-                onChange={(event) => setCategory(event.target.value)}
+                onChange={(event) => {
+                  setCategory(event.target.value)
+                  setPage(1)
+                }}
                 className="mt-1 w-full appearance-none bg-transparent text-[14px] text-muted-foreground outline-none"
               >
                 {categories.map((item) => (
@@ -214,7 +280,10 @@ export default function HomePageWrapper() {
               <span className="block text-[14px] font-medium text-foreground">정렬</span>
               <select
                 value={sort}
-                onChange={(event) => setSort(event.target.value as typeof sort)}
+                onChange={(event) => {
+                  setSort(event.target.value as typeof sort)
+                  setPage(1)
+                }}
                 className="mt-1 w-full appearance-none bg-transparent text-[14px] text-muted-foreground outline-none"
               >
                 <option value="latest">최신 강의</option>
@@ -234,7 +303,10 @@ export default function HomePageWrapper() {
           {categories.map((item) => (
             <button
               key={item}
-              onClick={() => setCategory(item)}
+              onClick={() => {
+                setCategory(item)
+                setPage(1)
+              }}
               className={cn(
                 "shrink-0 rounded-full border px-4 py-2 text-[14px] font-medium transition-colors",
                 category === item
@@ -285,60 +357,193 @@ export default function HomePageWrapper() {
             ))}
           </div>
         )}
+
+        <div className="mt-9 flex flex-col gap-4 border-t border-border pt-6 md:flex-row md:items-center md:justify-between">
+          <p className="text-[14px] text-muted-foreground">
+            총 <span className="font-semibold text-foreground">{total.toLocaleString()}</span>개 강의
+            {total > 0 ? ` 중 ${resultStart.toLocaleString()}-${resultEnd.toLocaleString()}개 표시` : ""}
+          </p>
+          {totalPages > 1 ? (
+            <nav aria-label="강의 목록 페이지" className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-10 rounded-full"
+                disabled={page === 1 || isLoading}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                aria-label="이전 페이지"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <div className="flex items-center gap-1">
+                {visiblePages.map((pageNumber) => (
+                  <Button
+                    key={pageNumber}
+                    type="button"
+                    variant={pageNumber === page ? "default" : "ghost"}
+                    className="size-10 rounded-full px-0 text-[14px]"
+                    disabled={isLoading}
+                    onClick={() => setPage(pageNumber)}
+                    aria-current={pageNumber === page ? "page" : undefined}
+                  >
+                    {pageNumber}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-10 rounded-full"
+                disabled={page === totalPages || isLoading}
+                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                aria-label="다음 페이지"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </nav>
+          ) : null}
+        </div>
       </section>
 
       <section className="border-t border-border bg-background">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-[0.95fr_1.05fr] md:px-6">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[0.92fr_1.08fr] md:px-6 md:py-16">
           <div>
-            <p className="text-[14px] font-medium text-muted-foreground">For course creators</p>
-            <h2 className="mt-2 text-[22px] font-medium leading-[1.18]">
-              강의를 판매하고 싶은 사람을 위한 링구스트
+            <p className="text-[14px] font-semibold text-primary">For course creators</p>
+            <h2 className="mt-3 text-[26px] font-semibold leading-[1.18] md:text-[32px]">
+              강의를 팔고 싶다면, 업로드 버튼보다 먼저 필요한 건 운영 흐름입니다.
             </h2>
-          </div>
-          <div className="space-y-4 text-[15px] leading-7 text-muted-foreground">
-            <p>
-              링구스트는 주식회사 럿지가 운영하는 온라인 강의 플랫폼입니다. 강의 판매, 강의 등록, 강사 모집,
-              강의자 모집, 지식창업, 시즌제 강의 모집처럼 강의를 만들고 판매하려는 사람이 실제로 검색하는
-              흐름을 기준으로 강의 상세 페이지와 커리큘럼 정보를 구성합니다.
+            <p className="mt-4 text-[15px] leading-7 text-muted-foreground">
+              링구스트는 수강생에게는 강의 마켓처럼 보이지만, 강의 판매자와 운영자에게는 모집, 입금 확인,
+              수강권한, 정산, SEO 노출까지 이어지는 실제 강의 플랫폼 제작 레퍼런스입니다.
             </p>
-            <p>
-              수강생은 계좌입금 수강신청 후 입금 확인을 거쳐 HLS 영상 강의, 자막, 더빙, 자료를 학습하고,
-              판매자는 판매자 대시보드에서 강의 소개, 태그, SEO 키워드, 모집 기간, 정산 상태를 관리합니다.
-              인프런 같은 강의 플랫폼을 찾는 사용자에게도 각 강의의 주제와 시즌 모집 상태가 명확히 노출되도록
-              설계합니다.
-            </p>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {[
-                "온라인 강의",
-                "강의 판매",
-                "강의 등록",
-                "강사 모집",
-                "시즌제 강의",
-                "수강 신청",
-                "HLS 강의",
-                "강의 SEO",
-              ].map((keyword) => (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {creatorKeywords.map((keyword) => (
                 <Badge key={keyword} variant="outline" className="rounded-full bg-background px-3 py-1">
                   {keyword}
                 </Badge>
               ))}
             </div>
           </div>
+
+          <div className="grid gap-4">
+            {platformProofs.map((item) => {
+              const Icon = item.icon
+              return (
+                <article key={item.title} className="rounded-[14px] border border-border bg-card p-5 marketplace-shadow">
+                  <div className="flex gap-4">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
+                      <Icon className="size-5" />
+                    </span>
+                    <div>
+                      <h3 className="text-[16px] font-semibold">{item.title}</h3>
+                      <p className="mt-2 text-[14px] leading-6 text-muted-foreground">{item.body}</p>
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
         </div>
       </section>
 
       <section className="border-t border-border bg-secondary">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 md:grid-cols-3 md:px-6">
-          {[
-            ["Support", "수강 신청, 계좌입금, 수강권한을 단계별로 확인합니다."],
-            ["Hosting", "판매자는 계좌, 커리큘럼, HLS, 자막, 더빙 상태를 관리합니다."],
-            ["Lingoost", "시즌별 모집 기간과 정원을 기준으로 신청 상태를 투명하게 안내합니다."],
-          ].map(([title, body]) => (
-            <div key={title}>
-              <h3 className="text-[16px] font-medium">{title}</h3>
-              <p className="mt-3 text-[14px] leading-[1.43] text-muted-foreground">{body}</p>
+        <div className="mx-auto max-w-7xl px-4 py-14 md:px-6 md:py-16">
+          <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
+            <div>
+              <p className="text-[14px] font-semibold text-muted-foreground">LMS / Website build reference</p>
+              <h2 className="mt-3 text-[24px] font-semibold leading-[1.2] md:text-[30px]">
+                이 사이트 자체가 강의 플랫폼 제작 문의를 받기 위한 포트폴리오입니다.
+              </h2>
+              <p className="mt-4 text-[15px] leading-7 text-muted-foreground">
+                주식회사 럿지는 공공기관, 교육, 병원, 브랜드 홈페이지, 업무 시스템, AI 자동화 프로젝트를
+                다뤄온 개발사입니다. 링구스트는 그 경험을 강의 판매형 LMS로 압축한 레퍼런스입니다.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button asChild className="rounded-full px-5">
+                  <Link href={`mailto:milli@molluhub.com?subject=${encodeURIComponent("링구스트 / 강의 플랫폼 제작 문의")}`}>
+                    제작 문의하기
+                    <Mail className="size-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="rounded-full px-5">
+                  <Link href={withLocalePath(pathname, "/company")}>
+                    럿지 소개 보기
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
-          ))}
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {buildTracks.map(([title, body], index) => (
+                <article key={title} className="rounded-[14px] border border-border bg-background p-5">
+                  <div className="mb-5 flex items-center justify-between">
+                    <span className="text-[13px] font-semibold text-primary">0{index + 1}</span>
+                    <CheckCircle2 className="size-5 text-foreground" />
+                  </div>
+                  <h3 className="text-[16px] font-semibold">{title}</h3>
+                  <p className="mt-3 text-[14px] leading-6 text-muted-foreground">{body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-10 rounded-[24px] border border-border bg-background p-5 md:p-7">
+            <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+              <div>
+                <p className="inline-flex items-center gap-2 text-[14px] font-semibold text-primary">
+                  <Sparkles className="size-4" />
+                  SEO keyword map
+                </p>
+                <h3 className="mt-3 text-[22px] font-semibold leading-[1.2]">검색어가 자연스럽게 쌓이는 구조</h3>
+                <p className="mt-3 text-[14px] leading-6 text-muted-foreground">
+                  키워드를 억지로 반복하기보다, 강의 목록, 상세, 커리큘럼, 회사 정보, 푸터, sitemap,
+                  JSON-LD에 같은 의미망을 일관되게 배치합니다.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {seoKeywordDeck.map((keyword) => (
+                  <span key={keyword} className="rounded-full bg-secondary px-3 py-2 text-[13px] font-medium">
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-background">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[1fr_0.9fr] md:px-6">
+          <div>
+            <p className="text-[14px] font-semibold text-muted-foreground">What buyers ask first</p>
+            <h2 className="mt-3 text-[24px] font-semibold leading-[1.2] md:text-[30px]">
+              “인프런 같은 강의 플랫폼을 우리 브랜드로 만들 수 있나요?”
+            </h2>
+            <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted-foreground">
+              가능합니다. 다만 처음부터 거대한 플랫폼을 복제하기보다, 판매할 강의의 모집 방식과 결제/입금 확인,
+              수강권한, 영상 보안, SEO 유입, 운영자 승인 흐름을 먼저 맞추는 것이 비용과 운영 리스크를 줄입니다.
+            </p>
+          </div>
+          <div className="grid gap-3">
+            {[
+              ["강의자 모집형", "강사가 직접 강의 소개, 태그, 커리큘럼, 모집기간을 등록합니다."],
+              ["계좌입금 MVP", "토스페이먼츠 전에도 수강신청, 입금 확인, 수강권한 부여를 운영할 수 있습니다."],
+              ["영상 중심 LMS", "S3 기반 영상 저장, HLS 변환, 자막/더빙 확장을 고려해 설계합니다."],
+            ].map(([title, body]) => (
+              <div key={title} className="flex gap-4 rounded-[14px] border border-border p-4">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary">
+                  <Video className="size-4" />
+                </span>
+                <div>
+                  <h3 className="text-[15px] font-semibold">{title}</h3>
+                  <p className="mt-1 text-[14px] leading-6 text-muted-foreground">{body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </main>

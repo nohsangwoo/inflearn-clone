@@ -4,6 +4,7 @@ import "./globals.css";
 import { headers } from "next/headers";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { generateSeoMetadata } from "@/lib/seo-metadata";
 import { JsonLd } from "@/components/json-ld";
@@ -58,6 +59,7 @@ export default async function RootLayout({
           <main className="min-h-[calc(100dvh-56px-64px)] pb-16 md:pb-0">
             {children}
           </main>
+          <SiteFooter />
           <BottomNavigation />
         </Providers>
       </body>

@@ -1,173 +1,167 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { getTranslation, useLocale } from "@/lib/translations";
-import { Phone, Mail, MapPin, Clock, Youtube, Twitter } from "lucide-react";
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Building2, ExternalLink, Mail, MapPin, Phone, ShieldCheck } from "lucide-react"
+import { brand, withLocalePath } from "@/lib/brand"
+
+const publicHiddenSegments = ["/admin", "/master", "/me", "/course/lecture", "/login"]
+
+const serviceKeywords = [
+  "LMS 제작",
+  "강의 플랫폼 제작",
+  "온라인 강의 플랫폼",
+  "홈페이지 제작",
+  "HLS 영상 강의",
+  "SEO 최적화",
+]
+
+const companyFacts = [
+  ["법인명", brand.legalName],
+  ["대표", brand.ceo],
+  ["사업자등록번호", brand.businessRegistrationNumber],
+  ["D-U-N-S", brand.dunsNumber],
+]
+
+function isHiddenPath(pathname: string) {
+  return publicHiddenSegments.some((segment) => pathname.includes(segment))
+}
 
 export function SiteFooter() {
-  const pathname = usePathname();
-  const locale = useLocale(pathname);
-  const t = getTranslation(locale).footer;
+  const pathname = usePathname()
 
-  const getLocalePath = (path: string) => {
-    if (locale === 'ko') {
-      return path;
-    }
-    return `/${locale}${path}`;
-  };
+  if (isHiddenPath(pathname)) return null
+
+  const contactHref = `mailto:${brand.supportEmail}?subject=${encodeURIComponent("링구스트 / 강의 플랫폼 제작 문의")}`
 
   return (
-    <footer className="border-t mt-10 bg-gray-50 dark:bg-gray-900">
-      <div className="mx-auto max-w-7xl px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Company Info */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{t.company}</h3>
-            <p className="text-sm text-muted-foreground">
-              {t.description}
+    <footer className="border-t border-border bg-background">
+      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6 md:py-16">
+        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.75fr_0.75fr_0.9fr]">
+          <div className="max-w-md">
+            <Link href={withLocalePath(pathname, "/")} className="font-brand text-[24px] font-black tracking-normal">
+              {brand.name}
+            </Link>
+            <p className="mt-4 text-[14px] leading-6 text-muted-foreground">
+              링구스트는 {brand.creator}가 직접 구축하고 운영하는 웹 우선 강의 플랫폼입니다. 강의 판매,
+              시즌제 수강신청, 입금 확인, HLS 영상 수강, 자막/더빙, 판매자 정산, SEO 상세 페이지까지
+              하나의 흐름으로 검증합니다.
             </p>
-            <div className="flex space-x-4">
-              <Link
-                href="https://www.youtube.com/@bknil"
-                target="_blank"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="YouTube"
-              >
-                <Youtube className="h-5 w-5" />
-              </Link>
-              <Link
-                href="https://x.com/bknil_offitial"
-                target="_blank"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5" />
-              </Link>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {serviceKeywords.map((keyword) => (
+                <span
+                  key={keyword}
+                  className="rounded-full border border-border bg-secondary px-3 py-1 text-[12px] font-medium text-foreground"
+                >
+                  {keyword}
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{t.quickLinks}</h3>
-            <ul className="space-y-2">
+          <nav aria-label="Footer navigation">
+            <h2 className="text-[16px] font-semibold">링구스트</h2>
+            <ul className="mt-4 space-y-3 text-[14px] text-muted-foreground">
               <li>
-                <Link
-                  href={getLocalePath("/")}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {t.home}
+                <Link className="transition-colors hover:text-primary" href={withLocalePath(pathname, "/")}>
+                  시즌제 강의 둘러보기
                 </Link>
               </li>
               <li>
-                <Link
-                  href={getLocalePath("/courses")}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {t.courses}
+                <Link className="transition-colors hover:text-primary" href={withLocalePath(pathname, "/admin")}>
+                  강의 판매자 대시보드
                 </Link>
               </li>
               <li>
-                <Link
-                  href={getLocalePath("/roadmaps")}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {t.roadmap}
+                <Link className="transition-colors hover:text-primary" href={withLocalePath(pathname, "/me")}>
+                  수강생 대시보드
                 </Link>
               </li>
               <li>
-                <Link
-                  href={getLocalePath("/company")}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {t.company_info}
+                <Link className="transition-colors hover:text-primary" href={withLocalePath(pathname, "/privacy")}>
+                  개인정보처리방침
+                </Link>
+              </li>
+              <li>
+                <Link className="transition-colors hover:text-primary" href={withLocalePath(pathname, "/terms")}>
+                  이용약관
                 </Link>
               </li>
             </ul>
+          </nav>
+
+          <div>
+            <h2 className="text-[16px] font-semibold">제작 문의</h2>
+            <ul className="mt-4 space-y-3 text-[14px] text-muted-foreground">
+              <li>강의 플랫폼 제작</li>
+              <li>LMS 개발 및 운영 자동화</li>
+              <li>홈페이지 제작 및 SEO 설계</li>
+              <li>영상 강의 / VOD / HLS 시스템</li>
+              <li>강사 모집형 마켓플레이스</li>
+            </ul>
+            <Link
+              href={contactHref}
+              className="mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-[14px] font-semibold text-primary-foreground transition-colors hover:bg-[#e00b41]"
+            >
+              프로젝트 문의
+              <Mail className="size-4" />
+            </Link>
           </div>
 
-          {/* Services */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{t.services}</h3>
-            <ul className="space-y-2">
-              <li className="text-sm text-muted-foreground">{t.lms}</li>
-              <li className="text-sm text-muted-foreground">{t.outsourcing}</li>
-              <li className="text-sm text-muted-foreground">{t.consulting}</li>
-              <li className="text-sm text-muted-foreground">{t.development}</li>
-            </ul>
-          </div>
-
-          {/* Contact Info */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{t.contact}</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start space-x-2">
-                <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">{t.phone}</p>
-                  <p className="text-sm">02-931-9310</p>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">{t.email}</p>
-                  <Link
-                    href="mailto:milli@molluhub.com"
-                    className="text-sm hover:text-primary transition-colors"
-                  >
-                    milli@molluhub.com
-                  </Link>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">{t.address}</p>
-                  <p className="text-sm">{t.addressDetail}</p>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2">
-                <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">{t.businessHours}</p>
-                  <p className="text-sm">{t.businessHoursDetail}</p>
-                </div>
-              </li>
-            </ul>
-          </div>
+          <address className="not-italic">
+            <h2 className="text-[16px] font-semibold">회사 정보</h2>
+            <div className="mt-4 space-y-3 text-[14px] text-muted-foreground">
+              <p className="flex gap-2">
+                <Building2 className="mt-0.5 size-4 shrink-0 text-foreground" />
+                <span>{brand.legalName}</span>
+              </p>
+              <p className="flex gap-2">
+                <MapPin className="mt-0.5 size-4 shrink-0 text-foreground" />
+                <span>{brand.address}</span>
+              </p>
+              <p className="flex gap-2">
+                <Mail className="mt-0.5 size-4 shrink-0 text-foreground" />
+                <Link className="transition-colors hover:text-primary" href={`mailto:${brand.supportEmail}`}>
+                  {brand.supportEmail}
+                </Link>
+              </p>
+              <p className="flex gap-2">
+                <Phone className="mt-0.5 size-4 shrink-0 text-foreground" />
+                <Link className="transition-colors hover:text-primary" href={`tel:${brand.phone.replaceAll("-", "")}`}>
+                  {brand.phone}
+                </Link>
+              </p>
+            </div>
+          </address>
         </div>
 
-        {/* Bottom Section */}
-        <div className="mt-12 pt-8 border-t">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-sm text-muted-foreground">
-              <p>{t.businessNumber}</p>
-              <p>{t.copyright}</p>
+        <div className="mt-10 border-t border-border pt-6">
+          <div className="grid gap-4 text-[13px] text-muted-foreground lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              {companyFacts.map(([label, value]) => (
+                <span key={label}>
+                  <span className="text-foreground">{label}</span> {value}
+                </span>
+              ))}
             </div>
-            <div className="flex space-x-6">
+            <div className="flex flex-wrap items-center gap-4">
               <Link
-                href={getLocalePath("/privacy")}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                href={brand.companyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 transition-colors hover:text-primary"
               >
-                {t.privacy}
+                럿지 회사 소개
+                <ExternalLink className="size-3.5" />
               </Link>
-              <Link
-                href={getLocalePath("/terms")}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                {t.terms}
-              </Link>
-              <Link
-                href="#"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                {t.businessLicense}
-              </Link>
+              <span className="inline-flex items-center gap-1">
+                <ShieldCheck className="size-3.5 text-foreground" />
+                © 2026 {brand.creator}. All rights reserved.
+              </span>
             </div>
           </div>
         </div>
       </div>
     </footer>
-  );
+  )
 }
