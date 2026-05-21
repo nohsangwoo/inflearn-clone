@@ -109,6 +109,66 @@ const courseDetailScenes: Record<number, CourseDetailScene> = {
     alt: "Niagara style game VFX editor with portal particles, parameter curves, graph modules, and effect preview",
     caption: "포털, 타격 스파크, 파티클 파라미터를 조합해 게임 스킬 이펙트와 쇼릴용 VFX 장면을 만듭니다.",
   },
+  206: {
+    title: "멀티플레이어 슈터 네트워크 구현 화면",
+    imageUrl: "/course-detail-scenes/course-206-workshop.png",
+    alt: "Multiplayer shooter editor with replication settings, network profiler, weapon code, lobby preview, and connected players",
+    caption: "Replication, RPC, 세션 로비, 서버 권한 무기 판정을 연결해 실제 온라인 슈터 프로토타입의 동기화 흐름을 구현합니다.",
+  },
+  207: {
+    title: "GAS 기반 액션 전투 시스템 제작 화면",
+    imageUrl: "/course-detail-scenes/course-207-workshop.png",
+    alt: "Action RPG combat editor with ability graph, attributes, cooldown tags, combat log, and boss arena preview",
+    caption: "Attribute, Gameplay Effect, Ability, 태그, 쿨다운을 한 전투 루프로 묶어 확장 가능한 액션 RPG 스킬 구조를 만듭니다.",
+  },
+  208: {
+    title: "Unity Netcode 협동 생존 게임 제작 화면",
+    imageUrl: "/course-detail-scenes/course-208-workshop.png",
+    alt: "Co-op survival game editor with network objects, lobby state, loot inventory, wave spawner, and client previews",
+    caption: "로비, 플레이어 동기화, 아이템 소유권, 웨이브 적 AI를 연결해 2-4인 협동 생존 게임의 핵심 루프를 완성합니다.",
+  },
+  209: {
+    title: "Behavior Tree와 Utility AI 디버깅 화면",
+    imageUrl: "/course-detail-scenes/course-209-workshop.png",
+    alt: "Game AI editor with patrol path, detection cones, behavior tree, blackboard variables, utility score curves, and boss arena",
+    caption: "순찰, 추적, 전투 판단, 보스 패턴을 Behavior Tree와 Utility Score로 나누고 디버그 화면에서 선택 이유를 확인합니다.",
+  },
+  210: {
+    title: "절차적 던전 생성 툴 제작 화면",
+    imageUrl: "/course-detail-scenes/course-210-workshop.png",
+    alt: "Procedural dungeon tool with generated rooms, corridors, grid, seed controls, room templates, spawn rules, and validation panels",
+    caption: "룸 템플릿, 그래프 연결, 스폰 규칙, 생성 실패 표시를 갖춘 레벨 디자이너용 던전 생성 툴을 만듭니다.",
+  },
+  211: {
+    title: "게임 HUD와 인벤토리 UI 구현 화면",
+    imageUrl: "/course-detail-scenes/course-211-workshop.png",
+    alt: "Game UI implementation screen with HUD, inventory overlay, widget hierarchy, input navigation focus map, and accessibility checks",
+    caption: "전투 HUD, 스킬 슬롯, 인벤토리, 패드 내비게이션, 접근성 기준을 실제 플레이 화면 위에서 조정합니다.",
+  },
+  212: {
+    title: "인터랙티브 게임 오디오 구현 화면",
+    imageUrl: "/course-detail-scenes/course-212-workshop.png",
+    alt: "Interactive game audio screen with gameplay viewport, audio event timeline, mixer lanes, footstep surface table, and ambience state graph",
+    caption: "발소리 표면 감지, 전투 피드백, 환경음, 믹싱 상태를 게임 이벤트에 연결해 상황에 반응하는 오디오 시스템을 만듭니다.",
+  },
+  213: {
+    title: "인디게임 출시 QA 운영 화면",
+    imageUrl: "/course-detail-scenes/course-213-workshop.png",
+    alt: "Indie game release operations dashboard with build versions, bug report board, test case matrix, store page preview, and hotfix checklist",
+    caption: "스토어 페이지, 빌드 버전, 테스트 케이스, 버그 리포트, 핫픽스 기준을 한 출시 파이프라인으로 정리합니다.",
+  },
+  214: {
+    title: "Unreal Sequencer 시네마틱 제작 화면",
+    imageUrl: "/course-detail-scenes/course-214-workshop.png",
+    alt: "Game cinematic editor with dramatic viewport, sequencer timeline, camera cut tracks, lighting panels, VFX markers, and render settings",
+    caption: "카메라 컷, 조명, 애니메이션, VFX 타이밍, 렌더 설정을 Sequencer에 묶어 게임 트레일러용 컷신을 제작합니다.",
+  },
+  215: {
+    title: "Roblox Studio UGC 미니게임 제작 화면",
+    imageUrl: "/course-detail-scenes/course-215-workshop.png",
+    alt: "UGC minigame creation screen with blocky obstacle arena, Lua script panel, round timer, reward shop UI, and playtest window",
+    caption: "Lua 스크립트, 라운드 타이머, 보상 상점, DataStore 저장을 연결해 공개 가능한 UGC 미니게임을 완성합니다.",
+  },
 }
 
 export function getCourseDetailScene(id?: number | null) {

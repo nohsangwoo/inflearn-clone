@@ -153,6 +153,106 @@ const courses = [
     mood:
       "spectacular real-time game VFX scene, glowing magic portal, energy particles, combat sparks, stylized sci-fi fantasy spell effect, Niagara-like particle system visualization, dark premium game course thumbnail, no readable text, no official logos",
   },
+  {
+    id: 206,
+    title: "UE5 Multiplayer Shooter",
+    subtitle: "Replication, sessions and server-authoritative combat",
+    label: "ONLINE GAME",
+    discount: "COHORT 29% OFF",
+    palette: ["#0b1020", "#ff385c", "#f7f7f7", "#38bdf8"],
+    mood:
+      "realistic multiplayer shooter development thumbnail, sci-fi arena with two player silhouettes, network node lines, weapon system panels, high-end game editor viewport mood, cinematic but practical, no readable text, no official logos",
+  },
+  {
+    id: 207,
+    title: "GAS Action Combat",
+    subtitle: "Abilities, cooldowns, attributes and boss patterns",
+    label: "COMBAT SYSTEM",
+    discount: "COHORT 23% OFF",
+    palette: ["#17111f", "#ff385c", "#fff7ed", "#a855f7"],
+    mood:
+      "action RPG combat system course thumbnail, heroic character casting abilities, skill cooldown icons as abstract shapes, boss arena, gameplay graph panels, premium Unreal-style lighting without logos or readable text",
+  },
+  {
+    id: 208,
+    title: "Unity Netcode Co-op",
+    subtitle: "Lobby, sync, loot and survival waves",
+    label: "CO-OP SURVIVAL",
+    discount: "EARLY BIRD 25% OFF",
+    palette: ["#13221b", "#ff385c", "#f7f7f7", "#4ade80"],
+    mood:
+      "stylized co-op survival game scene, four player silhouettes in a night forest base, loot crates, wave enemies in distance, Unity-like editor energy without logos, clean premium course thumbnail, no readable text",
+  },
+  {
+    id: 209,
+    title: "Game AI Systems",
+    subtitle: "Behavior trees, utility scores and boss decisions",
+    label: "GAME AI",
+    discount: "SPRING 20% OFF",
+    palette: ["#111827", "#ff385c", "#f8fafc", "#f59e0b"],
+    mood:
+      "game AI course thumbnail, enemy NPC patrol paths, behavior tree nodes as abstract panels, boss decision arena, tactical overlay, realistic game development screen aesthetic, no readable text, no official logos",
+  },
+  {
+    id: 210,
+    title: "Procedural Dungeon Tools",
+    subtitle: "Rooms, graphs, spawns and level design QA",
+    label: "LEVEL TOOLS",
+    discount: "COHORT 23% OFF",
+    palette: ["#101820", "#ff385c", "#f7f7f7", "#14b8a6"],
+    mood:
+      "procedural dungeon generation thumbnail, modular dungeon rooms connected by glowing corridors, grid overlay, level design tool panels, roguelike map preview, polished technical game art, no readable text",
+  },
+  {
+    id: 211,
+    title: "Game UI and HUD Systems",
+    subtitle: "HUD, inventory, input navigation and accessibility",
+    label: "GAME UI",
+    discount: "OPENING 22% OFF",
+    palette: ["#1f1a2e", "#ff385c", "#ffffff", "#60a5fa"],
+    mood:
+      "game UI UX thumbnail, action RPG HUD, inventory grid, skill slots, controller navigation focus states, clean interface design layered over gameplay scene, professional not corporate, no readable text",
+  },
+  {
+    id: 212,
+    title: "Interactive Game Audio",
+    subtitle: "Footsteps, combat feedback, ambience and mix states",
+    label: "GAME AUDIO",
+    discount: "LAUNCH 25% OFF",
+    palette: ["#10151f", "#ff385c", "#f7f7f7", "#facc15"],
+    mood:
+      "interactive game audio thumbnail, waveform lanes, sound event nodes, forest combat scene, footstep surface icons as abstract shapes, audio mixer atmosphere, polished studio-game hybrid, no readable text",
+  },
+  {
+    id: 213,
+    title: "Indie Game Release QA",
+    subtitle: "Store page, demo, bug reports and hotfix rhythm",
+    label: "GAME RELEASE",
+    discount: "SPRING 20% OFF",
+    palette: ["#161616", "#ff385c", "#fff7ed", "#22c55e"],
+    mood:
+      "indie game release operations thumbnail, QA board, build pipeline, store page mockup without readable text, game screenshots wall, launch day control room for indie developers, clean and credible",
+  },
+  {
+    id: 214,
+    title: "Unreal Sequencer Cinematics",
+    subtitle: "Camera, lighting, VFX timing and trailer shots",
+    label: "CINEMATICS",
+    discount: "OPENING 22% OFF",
+    palette: ["#0f172a", "#ff385c", "#f7f7f7", "#f97316"],
+    mood:
+      "game cinematic course thumbnail, dramatic game trailer camera shot, sequencer timeline as abstract strips, character silhouette, volumetric lighting, VFX timing, premium Unreal-style render without logos or text",
+  },
+  {
+    id: 215,
+    title: "Roblox UGC Mini Game",
+    subtitle: "Lua, rounds, rewards and creator launch",
+    label: "UGC GAME",
+    discount: "LAUNCH 29% OFF",
+    palette: ["#162033", "#ff385c", "#ffffff", "#7c3aed"],
+    mood:
+      "friendly UGC minigame creation thumbnail, colorful blocky obstacle arena, round timer shapes, coin reward icons as abstract shapes, creator workspace, playful but polished, no readable text, no official logos",
+  },
 ]
 
 function escapeXml(value) {
@@ -262,12 +362,21 @@ async function generateBackground(course) {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is missing. Use --fallback to generate local placeholder backgrounds.")
   }
+  const statusText = course.discount || "NOW ENROLLING"
   const prompt = [
-    `Create a premium online-course thumbnail background for "${course.title}".`,
+    `Create the final finished 1200x781 Lingoost online-course thumbnail for "${course.title}".`,
+    "This must look like a real premium course cover from a polished 2026 consumer education marketplace, not a generated background.",
     course.mood,
-    "No readable words, no logos, no brand names, no subtitles, no watermark.",
-    "Leave generous darker negative space on the left for title typography.",
-    "Composition should feel like a polished 2026 consumer education marketplace, not a corporate SaaS banner.",
+    "Use sophisticated editorial course-thumbnail typography integrated into the image. Do not leave space for later overlays.",
+    "Visible English text must be limited to these exact phrases:",
+    `LINGOOST`,
+    `${course.label}`,
+    `${course.title}`,
+    `${course.subtitle}`,
+    `${statusText}`,
+    "Do not add any other words, fake UI text, watermarks, brand names, or official logos.",
+    "The layout should be balanced, readable at card size, and visually specific to the course topic.",
+    "Discount/status treatment should be noticeable but tasteful: one strong pill, ribbon, or compact badge, never a noisy sale poster.",
   ].join(" ")
 
   const response = await fetch("https://api.openai.com/v1/images/generations", {
@@ -298,14 +407,9 @@ async function generateBackground(course) {
 }
 
 async function compose(course, backgroundBytes, outputPath) {
-  const background = await sharp(backgroundBytes)
+  await sharp(backgroundBytes)
     .resize(CANVAS_WIDTH, MODEL_HEIGHT, { fit: "cover" })
     .extract({ left: 0, top: 0, width: CANVAS_WIDTH, height: FINAL_HEIGHT })
-    .png()
-    .toBuffer()
-
-  await sharp(background)
-    .composite([{ input: overlaySvg(course), left: 0, top: 0 }])
     .png({ compressionLevel: 9 })
     .toFile(outputPath)
 }

@@ -86,6 +86,8 @@ const companyPalette: Record<string, CareerCompany> = {
   smilegate: { name: '스마일게이트', mark: 'SG', bg: '#f97316', fg: '#ffffff' },
   ncsoft: { name: '엔씨소프트', mark: 'NC', bg: '#334155', fg: '#ffffff' },
   neowiz: { name: '네오위즈', mark: 'NW', bg: '#7c3aed', fg: '#ffffff' },
+  pearlabyss: { name: '펄어비스', mark: 'PA', bg: '#111827', fg: '#ffffff' },
+  devsisters: { name: '데브시스터즈', mark: 'DS', bg: '#ef4444', fg: '#ffffff' },
   aws: { name: 'AWS', mark: 'AWS', bg: '#ff9900', fg: '#111827' },
   google: { name: 'Google', mark: 'G', bg: '#4285f4', fg: '#ffffff' },
 }
@@ -155,6 +157,56 @@ const careerSignals: Record<number, CareerSignal> = {
     companies: ['nexon', 'krafton', 'ncsoft', 'smilegate', 'netmarble'].map((key) => companyPalette[key]),
     lead: '넥슨·크래프톤·엔씨소프트',
     body: '게임 VFX 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  206: {
+    companies: ['krafton', 'nexon', 'ncsoft', 'smilegate', 'pearlabyss'].map((key) => companyPalette[key]),
+    lead: '크래프톤·넥슨·스마일게이트',
+    body: '온라인 게임 서버/클라이언트 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  207: {
+    companies: ['nexon', 'ncsoft', 'pearlabyss', 'krafton', 'netmarble'].map((key) => companyPalette[key]),
+    lead: '넥슨·엔씨소프트·펄어비스',
+    body: '액션 RPG 전투 시스템 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  208: {
+    companies: ['netmarble', 'devsisters', 'nexon', 'neowiz', 'smilegate'].map((key) => companyPalette[key]),
+    lead: '넷마블·데브시스터즈·네오위즈',
+    body: '모바일/협동 게임 개발 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  209: {
+    companies: ['ncsoft', 'krafton', 'nexon', 'pearlabyss', 'smilegate'].map((key) => companyPalette[key]),
+    lead: '엔씨소프트·크래프톤·넥슨',
+    body: '게임 AI/전투 콘텐츠 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  210: {
+    companies: ['neowiz', 'nexon', 'pearlabyss', 'smilegate', 'krafton'].map((key) => companyPalette[key]),
+    lead: '네오위즈·넥슨·펄어비스',
+    body: '레벨 디자인/툴 개발 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  211: {
+    companies: ['nexon', 'netmarble', 'devsisters', 'kakao', 'ncsoft'].map((key) => companyPalette[key]),
+    lead: '넥슨·넷마블·데브시스터즈',
+    body: '게임 UI/UX 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  212: {
+    companies: ['krafton', 'ncsoft', 'pearlabyss', 'nexon', 'smilegate'].map((key) => companyPalette[key]),
+    lead: '크래프톤·엔씨소프트·펄어비스',
+    body: '게임 오디오/사운드 구현 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  213: {
+    companies: ['neowiz', 'devsisters', 'smilegate', 'netmarble', 'nexon'].map((key) => companyPalette[key]),
+    lead: '네오위즈·데브시스터즈·스마일게이트',
+    body: '인디게임 출시/게임 프로덕션 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  214: {
+    companies: ['krafton', 'pearlabyss', 'ncsoft', 'nexon', 'smilegate'].map((key) => companyPalette[key]),
+    lead: '크래프톤·펄어비스·엔씨소프트',
+    body: '게임 시네마틱/트레일러 제작 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  },
+  215: {
+    companies: ['devsisters', 'neowiz', 'nexon', 'kakao', 'netmarble'].map((key) => companyPalette[key]),
+    lead: '데브시스터즈·네오위즈·넥슨',
+    body: 'UGC/캐주얼 게임 제작 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
   },
 }
 

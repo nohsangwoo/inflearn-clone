@@ -39,7 +39,7 @@ const scenes = [
     id: 103,
     title: "AI Course Planning",
     prompt:
-      "a realistic lecture-in-progress screen capture of planning a profitable online course, creator strategy board with curriculum cards, AI assistant draft panel, search intent map, landing page copy outline, clean white workspace with sticky-note colors, laptop and digital whiteboard feeling, no marketing poster, practical workshop scene",
+      "a realistic lecture-in-progress screen capture on a MacBook Pro while planning a profitable online course, no human portrait, no mascot, just a believable desktop workspace: browser window with a Lingoost course editor, spreadsheet-like curriculum planner, search intent map, pricing and cohort calendar panel, AI assistant draft panel with blurred non-readable blocks, clean white workspace, practical operator view, like a real founder is recording a workshop",
   },
   {
     id: 104,
@@ -100,6 +100,66 @@ const scenes = [
     title: "Niagara VFX Mastery",
     prompt:
       "a realistic lecture-in-progress screen capture of real-time game VFX creation, central viewport showing a glowing magic portal, combat sparks and particle trails, side panels with particle graph modules, parameter curves, timeline preview and material nodes, dark premium editor UI with cyan and pink energy, no official logos",
+  },
+  {
+    id: 206,
+    title: "UE5 Multiplayer Shooter",
+    prompt:
+      "a realistic lecture-in-progress screen capture of building a multiplayer shooter in a high-end game editor, main viewport showing two connected player characters in a sci-fi training arena, side panels for replication settings, network profiler, server RPC flow and weapon C++ code as abstract blocks, session lobby preview, no official logos or readable text",
+  },
+  {
+    id: 207,
+    title: "GAS Action Combat",
+    prompt:
+      "a realistic lecture-in-progress screen capture of implementing an action RPG combat system, game viewport with character using a special ability against a boss, panels for ability graph, attributes, cooldown tags, combat log and skill HUD preview, premium game editor UI, no official logos or readable text",
+  },
+  {
+    id: 208,
+    title: "Unity Netcode Co-op",
+    prompt:
+      "a realistic lecture-in-progress screen capture of creating a co-op survival game, editor viewport with four players defending a small base, inspector panels for network objects, lobby state, loot inventory and wave spawner, device/client previews side by side, no official logos or readable text",
+  },
+  {
+    id: 209,
+    title: "Game AI Systems",
+    prompt:
+      "a realistic lecture-in-progress screen capture of game AI development, viewport showing enemy NPC patrol, detection cone, chase path and boss arena, side panels with behavior tree, blackboard variables, utility score curves and debug overlay, practical game AI workshop, no official logos or readable text",
+  },
+  {
+    id: 210,
+    title: "Procedural Dungeon Tools",
+    prompt:
+      "a realistic lecture-in-progress screen capture of procedural dungeon tool development, central editor viewport showing generated dungeon rooms connected by corridors, grid and seed controls, side panels for room templates, spawn rules, graph connectivity and validation errors, level designer tooling context, no readable text",
+  },
+  {
+    id: 211,
+    title: "Game UI and HUD Systems",
+    prompt:
+      "a realistic lecture-in-progress screen capture of game UI and HUD implementation, gameplay viewport with health, stamina, minimap, skill slots and inventory overlay, side panels showing widget hierarchy, input navigation focus map, accessibility contrast checks and controller prompts, no readable text or logos",
+  },
+  {
+    id: 212,
+    title: "Interactive Game Audio",
+    prompt:
+      "a realistic lecture-in-progress screen capture of interactive game audio implementation, gameplay viewport with character walking across different surfaces and combat effects, audio event timeline, mixer lanes, footstep surface table, ambience state graph and waveform panels, no readable text or official logos",
+  },
+  {
+    id: 213,
+    title: "Indie Game Release QA",
+    prompt:
+      "a realistic lecture-in-progress screen capture of indie game release and QA operations, dashboard with build versions, bug report board, test case matrix, store page preview mockup, trailer screenshot selection and hotfix checklist, studio production room feeling, no readable text or official logos",
+  },
+  {
+    id: 214,
+    title: "Unreal Sequencer Cinematics",
+    prompt:
+      "a realistic lecture-in-progress screen capture of creating a game cinematic, central viewport with dramatic character scene and volumetric lighting, sequencer timeline, camera cut tracks, lighting panels, VFX timing markers and movie render queue settings as abstract UI, no official logos or readable text",
+  },
+  {
+    id: 215,
+    title: "Roblox UGC Mini Game",
+    prompt:
+      "a realistic lecture-in-progress screen capture of building a colorful UGC minigame, blocky obstacle arena viewport, Lua script panel as abstract code, round timer system, reward shop UI preview, server/client event panels and playtest window, playful but practical creator workflow, no readable text or official logos",
   },
 ]
 

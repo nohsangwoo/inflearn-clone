@@ -70,7 +70,7 @@ export default function HomePageWrapper() {
       const { data } = await axios.get("/api/courses", {
         params: {
           page: 1,
-          pageSize: 12,
+          pageSize: 20,
           sort,
           q: keyword || undefined,
           category: category === "전체" ? undefined : category,
