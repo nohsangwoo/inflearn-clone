@@ -19,7 +19,7 @@ export async function GET(
     return NextResponse.json({ message: "invalid id" }, { status: 400 })
   }
   const lecture = await db.query.lectures.findFirst({
-    where: and(eq(lectures.id, id), eq(lectures.instructorId, user.id)),
+    where: and(eq(lectures.id, id), eq(lectures.instructorId, user.id), eq(lectures.isSeedData, false)),
   })
   if (!lecture) return NextResponse.json({ message: "not found" }, { status: 404 })
   return NextResponse.json(lecture)
@@ -38,7 +38,7 @@ export async function PATCH(
     return NextResponse.json({ message: "invalid id" }, { status: 400 })
   }
   const owned = await db.query.lectures.findFirst({
-    where: and(eq(lectures.id, id), eq(lectures.instructorId, user.id)),
+    where: and(eq(lectures.id, id), eq(lectures.instructorId, user.id), eq(lectures.isSeedData, false)),
     columns: { id: true, price: true, discountPrice: true },
   })
   if (!owned) return NextResponse.json({ message: "forbidden" }, { status: 403 })

@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server"
 import { and, eq } from "drizzle-orm"
 import { db, enrollmentRequests, lectures, purchases } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
-import { findMockCourse } from "@/lib/mock-courses"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const lectureId = Number(searchParams.get("lectureId") || "")
   if (!Number.isFinite(lectureId)) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
-  const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, lectureId), columns: { id: true } }).catch(() => null)
-  if (!lecture && findMockCourse(lectureId)) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
-  if (!lecture) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
+  const lecture = await db.query.lectures.findFirst({
+    where: eq(lectures.id, lectureId),
+    columns: { id: true, isActive: true, isSeedData: true },
+  }).catch(() => null)
+  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+    return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
+  }
 
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })

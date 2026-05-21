@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
         instructorProfileImageUrl: users.profileImageUrl,
       })
       .from(likes)
-      .leftJoin(lectures, eq(likes.lectureId, lectures.id))
+      .innerJoin(lectures, eq(likes.lectureId, lectures.id))
       .leftJoin(users, eq(lectures.instructorId, users.id))
-      .where(eq(likes.userId, user.id))
+      .where(and(eq(likes.userId, user.id), eq(lectures.isActive, true), eq(lectures.isSeedData, false)))
       .orderBy(desc(likes.createdAt))
 
     return NextResponse.json({
@@ -70,8 +70,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if the lecture exists
-    const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, lectureId) })
-    if (!lecture) {
+    const lecture = await db.query.lectures.findFirst({
+      where: eq(lectures.id, lectureId),
+      columns: { id: true, isActive: true, isSeedData: true },
+    })
+    if (!lecture || !lecture.isActive || lecture.isSeedData) {
       return NextResponse.json({ error: 'Lecture not found' }, { status: 404 })
     }
 

@@ -1,7 +1,9 @@
 "use client"
 
 import axios from "axios"
-import { useMemo, useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Banknote, BookOpen, CircleDollarSign, RadioTower, ReceiptText, Users } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,8 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { getEnrollmentStatusLabel } from "@/lib/enrollment-window"
-import { getMockCoursesWithEnrollmentStatus } from "@/lib/mock-courses"
 
 type Overview = {
   users: number
@@ -67,7 +67,8 @@ function requestStatusMeta(status: EnrollmentStatus) {
 
 export default function MasterDashboardPage() {
   const qc = useQueryClient()
-  const sampleCourses = useMemo(() => getMockCoursesWithEnrollmentStatus(), [])
+  const pathname = usePathname()
+  const localeBase = `/${pathname.split("/").filter(Boolean)[0] || "ko"}`
   const [confirmAction, setConfirmAction] = useState<{
     request: EnrollmentRequest
     status: EnrollmentAction
@@ -307,30 +308,16 @@ export default function MasterDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>관리자 전용 샘플 강의 표시</CardTitle>
+          <CardTitle>강의 관리</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {sampleCourses.slice(0, 4).map((course) => (
-              <div key={course.id} className="rounded-[14px] border bg-background p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <Badge variant="outline">목업</Badge>
-                  <Badge variant="secondary">
-                    {course.enrollmentStatus ? getEnrollmentStatusLabel(course.enrollmentStatus) : "모집 상태 없음"}
-                  </Badge>
-                </div>
-                <div className="mt-3 line-clamp-2 text-sm font-bold">{course.title}</div>
-                <div className="mt-2 text-xs leading-5 text-muted-foreground">
-                  공개 화면에서는 샘플 표시를 노출하지 않습니다.
-                  {typeof course.enrollmentCapacity === "number" ? (
-                    <span className="block">
-                      이번 시즌 {course.enrollmentAppliedCount}/{course.enrollmentCapacity}명 신청
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
+        <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            시드 강의와 실제 입점 강의를 분리해서 확인합니다. 시딩 데이터는 공개 화면, 판매자 스튜디오, sitemap에서 제외되고
+            이 최고관리자 강의 관리 화면에서만 보입니다.
+          </p>
+          <Button asChild className="shrink-0">
+            <Link href={`${localeBase}/master/courses`}>강의 관리 열기</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>

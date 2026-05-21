@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { and, asc, desc, eq, isNull } from "drizzle-orm"
 import { db, lectures, reviews as reviewsTable, users } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
-import { findMockCourse } from "@/lib/mock-courses"
 
 export async function GET(
   req: NextRequest,
@@ -11,9 +10,13 @@ export async function GET(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, id), columns: { id: true } }).catch(() => null)
-  if (!lecture && findMockCourse(id)) return NextResponse.json([])
-  if (!lecture) return NextResponse.json({ message: "lecture not found" }, { status: 404 })
+  const lecture = await db.query.lectures.findFirst({
+    where: eq(lectures.id, id),
+    columns: { id: true, isActive: true, isSeedData: true },
+  }).catch(() => null)
+  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+    return NextResponse.json({ message: "lecture not found" }, { status: 404 })
+  }
   const reviewRows = await db
     .select({
       id: reviewsTable.id,
@@ -60,9 +63,13 @@ export async function POST(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, id), columns: { id: true } }).catch(() => null)
-  if (!lecture && findMockCourse(id)) return NextResponse.json({ message: "리뷰는 수강 승인 후 작성할 수 있습니다." }, { status: 400 })
-  if (!lecture) return NextResponse.json({ message: "lecture not found" }, { status: 404 })
+  const lecture = await db.query.lectures.findFirst({
+    where: eq(lectures.id, id),
+    columns: { id: true, isActive: true, isSeedData: true },
+  }).catch(() => null)
+  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+    return NextResponse.json({ message: "lecture not found" }, { status: 404 })
+  }
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   const body = await req.json().catch(() => ({}))

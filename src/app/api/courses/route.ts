@@ -3,7 +3,6 @@ import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm"
 import { db, enrollmentRequests, lectures, likes, purchases, reviews, users } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { getEnrollmentAvailability } from "@/lib/enrollment-window"
-import { getMockCoursesWithEnrollmentStatus } from "@/lib/mock-courses"
 
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
@@ -14,7 +13,7 @@ export async function GET(req: NextRequest) {
   const category = sp.get("category")?.toLowerCase() || undefined
   const authUser = await getAuthUserFromRequest(req).catch(() => null)
 
-  const conditions = [eq(lectures.isActive, true)]
+  const conditions = [eq(lectures.isActive, true), eq(lectures.isSeedData, false)]
   if (q) {
     conditions.push(
       or(
@@ -104,37 +103,11 @@ export async function GET(req: NextRequest) {
       }),
     })
   } catch {
-    const fallbackItems = getMockCoursesWithEnrollmentStatus()
-      .filter((course) => {
-        const matchesCategory = category ? course.category.toLowerCase() === category : true
-        const haystack = [
-          course.title,
-          course.shortDescription,
-          course.description,
-          course.category,
-          course.level,
-          ...course.tags,
-          ...course.seoKeywords,
-        ].join(" ").toLowerCase()
-        const matchesQuery = q ? haystack.includes(q.toLowerCase()) : true
-        return matchesCategory && matchesQuery
-      })
-      .sort((a, b) => {
-        const aPrice = a.discountPrice ?? a.price
-        const bPrice = b.discountPrice ?? b.price
-        if (sort === "best") return b.purchaseCount - a.purchaseCount || b.createdAt.localeCompare(a.createdAt) || b.id - a.id
-        if (sort === "priceasc") return aPrice - bPrice || a.price - b.price || b.id - a.id
-        if (sort === "pricedesc") return bPrice - aPrice || b.price - a.price || b.id - a.id
-        return b.createdAt.localeCompare(a.createdAt) || b.id - a.id
-      })
-    const pagedItems = fallbackItems
-      .slice((page - 1) * pageSize, page * pageSize)
-      .map((course) => ({ ...course, liked: false }))
     return NextResponse.json({
       page,
       pageSize,
-      total: fallbackItems.length,
-      items: pagedItems,
+      total: 0,
+      items: [],
       degraded: true,
     })
   }

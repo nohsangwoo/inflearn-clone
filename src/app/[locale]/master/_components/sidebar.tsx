@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Banknote, Bell, LayoutDashboard, Send } from 'lucide-react'
+import { Banknote, Bell, BookOpen, LayoutDashboard, Send } from 'lucide-react'
 
 type NavItem = {
   href: string
@@ -44,6 +44,7 @@ export function MasterSidebar() {
   const base = useLocaleBase()
   const navItems: NavItem[] = [
     { href: `${base}/master`, label: '대시보드', icon: LayoutDashboard },
+    { href: `${base}/master/courses`, label: '강의 관리', icon: BookOpen },
     { href: `${base}/master/payouts`, label: '정산 관리', icon: Banknote },
     { href: `${base}/master/fcm`, label: 'FCM 발송', icon: Send },
     { href: `${base}/master/notifications`, label: '발송 이력', icon: Bell },
@@ -63,4 +64,3 @@ export function MasterSidebar() {
 }
 
 export default MasterSidebar
-

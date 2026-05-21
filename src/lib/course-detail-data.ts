@@ -1,8 +1,8 @@
 import { cache } from "react"
 import { and, asc, avg, count, countDistinct, eq, inArray } from "drizzle-orm"
 import { db, curriculumSections, curriculums, enrollmentRequests, lectures, likes, purchases, reviews, users, videos } from "@/db"
+import type { CourseDetailScene } from "@/lib/course-detail-scenes"
 import { getEnrollmentAvailability, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
-import { findMockCourse } from "@/lib/mock-courses"
 
 export type CourseDetail = {
   id: number
@@ -33,6 +33,7 @@ export type CourseDetail = {
   enrollmentAvailable?: boolean
   remainingSeats?: number | null
   imageUrl?: string | null
+  detailScene?: CourseDetailScene | null
   createdAt: string
   instructor: {
     id: number
@@ -44,7 +45,6 @@ export type CourseDetail = {
   reviewCount: number
   avgRating: number
   likeCount: number
-  isMock?: boolean
   previewSectionId: number | null
   previewSectionTitle: string | null
   lastUpdatedAt?: string | null
@@ -74,7 +74,6 @@ function toPublicMediaUrl(value?: string | null) {
 
 export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | null> => {
   if (!Number.isFinite(id)) return null
-  const mockCourse = findMockCourse(id)
 
   const lecture = await db
     .select({
@@ -102,9 +101,11 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
       enrollmentEndAt: lectures.enrollmentEndAt,
       enrollmentCapacity: lectures.enrollmentCapacity,
       imageUrl: lectures.imageUrl,
+      detailScene: lectures.detailScene,
       createdAt: lectures.createdAt,
       updatedAt: lectures.updatedAt,
       isActive: lectures.isActive,
+      isSeedData: lectures.isSeedData,
       instructor: {
         id: users.id,
         email: users.email,
@@ -119,16 +120,7 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
     .then((rows) => rows[0])
     .catch(() => null)
 
-  if (!lecture || !lecture.isActive) {
-    if (!mockCourse) return null
-    const previewSection = mockCourse.sections.find((section) => section.isFreePreview && section.previewVideoUrl)
-    return {
-      ...mockCourse,
-      isMock: true,
-      previewSectionId: previewSection?.id ?? null,
-      previewSectionTitle: previewSection?.title ?? null,
-    }
-  }
+  if (!lecture || !lecture.isActive || lecture.isSeedData) return null
 
   const [ratingAgg, countRow, enrollmentRow, previewSection, sectionRows] = await Promise.all([
     db
@@ -228,6 +220,7 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
     enrollmentAvailable: availability.isAvailable,
     remainingSeats: availability.remainingSeats,
     imageUrl,
+    detailScene: lecture.detailScene ?? null,
     createdAt: lecture.createdAt.toISOString(),
     instructor: {
       id: lecture.instructor?.id ?? 0,

@@ -58,6 +58,9 @@ export async function GET(
       console.log("[API] Lecture not found with ID:", lectureId)
       return NextResponse.json({ error: "Lecture not found" }, { status: 404 })
     }
+    if (lecture.isSeedData && user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Lecture not found" }, { status: 404 })
+    }
     console.log("[API] Found lecture:", lecture.title, "with", lecture.curriculums.length, "curriculums")
 
     // 3. 구매 여부 확인: 판매자 본인과 최고 관리자만 우회합니다.

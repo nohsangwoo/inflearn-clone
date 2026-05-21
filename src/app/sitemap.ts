@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db, lectures } from '@/db';
 import { brand } from '@/lib/brand';
 
@@ -46,7 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const courses = await db
       .select({ id: lectures.id, updatedAt: lectures.updatedAt })
       .from(lectures)
-      .where(eq(lectures.isActive, true))
+      .where(and(eq(lectures.isActive, true), eq(lectures.isSeedData, false)))
       .orderBy(desc(lectures.updatedAt))
       .limit(5000);
 

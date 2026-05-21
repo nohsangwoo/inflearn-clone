@@ -24,7 +24,6 @@ import {
 import HlsPlayerModal from '@/components/video/shaka-player-modal'
 import FreePreviewPlayerModal from '@/components/video/free-preview-player-modal'
 import { getCoursePreviewImage } from '@/lib/course-images'
-import { getCourseDetailScene } from '@/lib/course-detail-scenes'
 import type { CourseDetail as Detail } from '@/lib/course-detail-data'
 import { getEnrollmentStatusLabel } from '@/lib/enrollment-window'
 import { useAuthStore } from '@/lib/stores/auth-store'
@@ -386,7 +385,7 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
         '모바일/데스크톱 수강',
         '검색 최적화된 강의 상세',
       ]
-  const detailScene = detail ? getCourseDetailScene(detail.id) : null
+  const detailScene = detail?.detailScene ?? null
   const detailSceneImages = detailScene?.images ?? (
     detailScene?.imageUrl
       ? [{
@@ -447,7 +446,7 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
     },
     onSettled: () => {
       // Refetch to ensure we have the latest data from server
-      if (!detail?.isMock) queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] })
+      queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] })
     },
     onSuccess: res => setLike(Boolean(res?.liked)),
   })

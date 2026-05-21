@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { and, eq } from "drizzle-orm"
 import { db, lectures, likes } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
-import { findMockCourse } from "@/lib/mock-courses"
 
 export async function GET(
   req: NextRequest,
@@ -11,8 +10,11 @@ export async function GET(
   const { lectureId } = await params
   const id = Number(lectureId)
   if (!Number.isFinite(id)) return NextResponse.json({ message: "invalid id" }, { status: 400 })
-  const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, id), columns: { id: true } }).catch(() => null)
-  if (!lecture && findMockCourse(id)) return NextResponse.json({ liked: false })
+  const lecture = await db.query.lectures.findFirst({
+    where: eq(lectures.id, id),
+    columns: { id: true, isActive: true, isSeedData: true },
+  }).catch(() => null)
+  if (!lecture || !lecture.isActive || lecture.isSeedData) return NextResponse.json({ liked: false })
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ liked: false })
   const liked = await db.query.likes.findFirst({ where: and(eq(likes.lectureId, id), eq(likes.userId, user.id)) })
@@ -30,9 +32,13 @@ export async function POST(
   if (!user) return NextResponse.json({ message: "unauthenticated" }, { status: 401 })
   const body = await req.json().catch(() => ({}))
   const desiredLiked = typeof body?.liked === "boolean" ? body.liked : undefined
-  const lecture = await db.query.lectures.findFirst({ where: eq(lectures.id, id), columns: { id: true } }).catch(() => null)
-  if (!lecture && findMockCourse(id)) return NextResponse.json({ liked: desiredLiked ?? true })
-  if (!lecture) return NextResponse.json({ message: "lecture not found" }, { status: 404 })
+  const lecture = await db.query.lectures.findFirst({
+    where: eq(lectures.id, id),
+    columns: { id: true, isActive: true, isSeedData: true },
+  }).catch(() => null)
+  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+    return NextResponse.json({ message: "lecture not found" }, { status: 404 })
+  }
   const exists = await db.query.likes.findFirst({ where: and(eq(likes.lectureId, id), eq(likes.userId, user.id)) })
   if (exists && desiredLiked !== true) {
     await db.delete(likes).where(eq(likes.id, exists.id))

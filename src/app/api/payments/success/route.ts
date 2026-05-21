@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   if (order.amount !== amount) return NextResponse.json({ message: "amount mismatch" }, { status: 400 })
   const lecture = await db.query.lectures.findFirst({
     where: eq(lectures.id, order.lectureId),
-    columns: { instructorId: true },
+    columns: { instructorId: true, isActive: true, isSeedData: true },
     with: {
       instructor: {
         columns: {
@@ -42,6 +42,9 @@ export async function GET(req: NextRequest) {
       },
     },
   })
+  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+    return NextResponse.json({ message: "lecture not purchasable" }, { status: 400 })
+  }
 
   try {
     const confirmed = (await confirmTossPayment({ paymentKey, orderId, amount })) as TossConfirmResponse

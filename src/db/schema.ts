@@ -104,7 +104,20 @@ export const lectures = pgTable(
     price: integer("price").notNull(),
     discountPrice: integer("discountPrice"),
     isActive: boolean("isActive").notNull().default(false),
+    isSeedData: boolean("isSeedData").notNull().default(false),
     imageUrl: text("imageUrl"),
+    detailScene: jsonb("detailScene").$type<{
+      title: string;
+      imageUrl?: string;
+      alt?: string;
+      caption?: string;
+      images?: Array<{
+        title: string;
+        imageUrl: string;
+        alt: string;
+        caption: string;
+      }>;
+    } | null>(),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
     instructorId: integer("instructorId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
@@ -113,6 +126,7 @@ export const lectures = pgTable(
     uniqueIndex("Lecture_slug_key").on(table.slug),
     index("Lecture_category_idx").on(table.category),
     index("Lecture_createdAt_idx").on(table.createdAt),
+    index("Lecture_isSeedData_idx").on(table.isSeedData),
   ],
 );
 
@@ -432,6 +446,27 @@ export const pushNotifications = pgTable(
     index("PushNotification_type_idx").on(table.type),
     index("PushNotification_status_idx").on(table.status),
     index("PushNotification_createdAt_idx").on(table.createdAt),
+  ],
+);
+
+export const siteSections = pgTable(
+  "SiteSection",
+  {
+    id: text("id").primaryKey().$defaultFn(textId),
+    area: text("area").notNull().default("homepage"),
+    sectionKey: text("sectionKey").notNull(),
+    eyebrow: text("eyebrow"),
+    title: text("title").notNull(),
+    description: text("description"),
+    position: integer("position").notNull().default(0),
+    isEnabled: boolean("isEnabled").notNull().default(true),
+    metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
+  },
+  (table) => [
+    uniqueIndex("SiteSection_area_sectionKey_key").on(table.area, table.sectionKey),
+    index("SiteSection_area_position_idx").on(table.area, table.position),
   ],
 );
 

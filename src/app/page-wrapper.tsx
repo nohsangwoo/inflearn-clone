@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button"
 import { brand, withLocalePath, withLoginRedirectPath } from "@/lib/brand"
 import { getCoursePreviewImage } from "@/lib/course-images"
 import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
+import { defaultHomepageSections, type HomepageSection } from "@/lib/homepage-sections"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils"
 
@@ -148,12 +149,21 @@ export default function HomePageWrapper() {
     },
     retry: false,
   })
+  const { data: homepageSectionData } = useQuery({
+    queryKey: ["homepage-sections"],
+    queryFn: async () => {
+      const { data } = await axios.get("/api/site/home-sections")
+      return data as { sections: HomepageSection[] }
+    },
+    retry: false,
+  })
 
   const courses = useMemo(() => {
     return data?.items ?? []
   }, [data?.items])
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const homepageSections = homepageSectionData?.sections ?? defaultHomepageSections
   const visiblePages = useMemo(() => {
     const start = Math.max(1, Math.min(page - 2, totalPages - 4))
     const end = Math.min(totalPages, start + 4)
@@ -407,17 +417,22 @@ export default function HomePageWrapper() {
         </div>
       </section>
 
+      {homepageSections.map((section) => (
+        <HomepageMarketingSection key={section.sectionKey} section={section} pathname={pathname} />
+      ))}
+    </main>
+  )
+}
+
+function HomepageMarketingSection({ section, pathname }: { section: HomepageSection; pathname: string }) {
+  if (section.sectionKey === "creators") {
+    return (
       <section className="border-t border-border bg-background">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[0.92fr_1.08fr] md:px-6 md:py-16">
           <div>
-            <p className="text-[14px] font-semibold text-primary">For course creators</p>
-            <h2 className="mt-3 text-[26px] font-semibold leading-[1.18] md:text-[32px]">
-              강의를 팔고 싶다면, 업로드 버튼보다 먼저 필요한 건 운영 흐름입니다.
-            </h2>
-            <p className="mt-4 text-[15px] leading-7 text-muted-foreground">
-              링구스트는 수강생에게는 강의 마켓처럼 보이지만, 강의 판매자와 운영자에게는 모집, 입금 확인,
-              수강권한, 정산, SEO 노출까지 이어지는 실제 강의 플랫폼 제작 레퍼런스입니다.
-            </p>
+            <p className="text-[14px] font-semibold text-primary">{section.eyebrow}</p>
+            <h2 className="mt-3 text-[26px] font-semibold leading-[1.18] md:text-[32px]">{section.title}</h2>
+            <p className="mt-4 text-[15px] leading-7 text-muted-foreground">{section.description}</p>
             <div className="mt-6 flex flex-wrap gap-2">
               {creatorKeywords.map((keyword) => (
                 <Badge key={keyword} variant="outline" className="rounded-full bg-background px-3 py-1">
@@ -447,19 +462,18 @@ export default function HomePageWrapper() {
           </div>
         </div>
       </section>
+    )
+  }
 
+  if (section.sectionKey === "build-reference") {
+    return (
       <section className="border-t border-border bg-secondary">
         <div className="mx-auto max-w-7xl px-4 py-14 md:px-6 md:py-16">
           <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
             <div>
-              <p className="text-[14px] font-semibold text-muted-foreground">LMS / Website build reference</p>
-              <h2 className="mt-3 text-[24px] font-semibold leading-[1.2] md:text-[30px]">
-                이 사이트 자체가 강의 플랫폼 제작 문의를 받기 위한 포트폴리오입니다.
-              </h2>
-              <p className="mt-4 text-[15px] leading-7 text-muted-foreground">
-                주식회사 럿지는 공공기관, 교육, 병원, 브랜드 홈페이지, 업무 시스템, AI 자동화 프로젝트를
-                다뤄온 개발사입니다. 링구스트는 그 경험을 강의 판매형 LMS로 압축한 레퍼런스입니다.
-              </p>
+              <p className="text-[14px] font-semibold text-muted-foreground">{section.eyebrow}</p>
+              <h2 className="mt-3 text-[24px] font-semibold leading-[1.2] md:text-[30px]">{section.title}</h2>
+              <p className="mt-4 text-[15px] leading-7 text-muted-foreground">{section.description}</p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button asChild className="rounded-full px-5">
                   <Link href={`mailto:milli@molluhub.com?subject=${encodeURIComponent("링구스트 / 강의 플랫폼 제작 문의")}`}>
@@ -514,39 +528,36 @@ export default function HomePageWrapper() {
           </div>
         </div>
       </section>
+    )
+  }
 
-      <section className="border-t border-border bg-background">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[1fr_0.9fr] md:px-6">
-          <div>
-            <p className="text-[14px] font-semibold text-muted-foreground">What buyers ask first</p>
-            <h2 className="mt-3 text-[24px] font-semibold leading-[1.2] md:text-[30px]">
-              “인프런 같은 강의 플랫폼을 우리 브랜드로 만들 수 있나요?”
-            </h2>
-            <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted-foreground">
-              가능합니다. 다만 처음부터 거대한 플랫폼을 복제하기보다, 판매할 강의의 모집 방식과 결제/입금 확인,
-              수강권한, 영상 보안, SEO 유입, 운영자 승인 흐름을 먼저 맞추는 것이 비용과 운영 리스크를 줄입니다.
-            </p>
-          </div>
-          <div className="grid gap-3">
-            {[
-              ["강의자 모집형", "강사가 직접 강의 소개, 태그, 커리큘럼, 모집기간을 등록합니다."],
-              ["계좌입금 MVP", "토스페이먼츠 전에도 수강신청, 입금 확인, 수강권한 부여를 운영할 수 있습니다."],
-              ["영상 중심 LMS", "S3 기반 영상 저장, HLS 변환, 자막/더빙 확장을 고려해 설계합니다."],
-            ].map(([title, body]) => (
-              <div key={title} className="flex gap-4 rounded-[14px] border border-border p-4">
-                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary">
-                  <Video className="size-4" />
-                </span>
-                <div>
-                  <h3 className="text-[15px] font-semibold">{title}</h3>
-                  <p className="mt-1 text-[14px] leading-6 text-muted-foreground">{body}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+  return (
+    <section className="border-t border-border bg-background">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[1fr_0.9fr] md:px-6">
+        <div>
+          <p className="text-[14px] font-semibold text-muted-foreground">{section.eyebrow}</p>
+          <h2 className="mt-3 text-[24px] font-semibold leading-[1.2] md:text-[30px]">{section.title}</h2>
+          <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted-foreground">{section.description}</p>
         </div>
-      </section>
-    </main>
+        <div className="grid gap-3">
+          {[
+            ["강의자 모집형", "강사가 직접 강의 소개, 태그, 커리큘럼, 모집기간을 등록합니다."],
+            ["계좌입금 MVP", "토스페이먼츠 전에도 수강신청, 입금 확인, 수강권한 부여를 운영할 수 있습니다."],
+            ["영상 중심 LMS", "S3 기반 영상 저장, HLS 변환, 자막/더빙 확장을 고려해 설계합니다."],
+          ].map(([title, body]) => (
+            <div key={title} className="flex gap-4 rounded-[14px] border border-border p-4">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary">
+                <Video className="size-4" />
+              </span>
+              <div>
+                <h3 className="text-[15px] font-semibold">{title}</h3>
+                <p className="mt-1 text-[14px] leading-6 text-muted-foreground">{body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 

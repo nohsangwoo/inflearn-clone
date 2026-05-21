@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { countDistinct, desc, eq } from "drizzle-orm"
+import { and, countDistinct, desc, eq } from "drizzle-orm"
 import { db, lectures, purchases, reviews } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { validateCoursePrice } from "@/lib/course-pricing"
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     .from(lectures)
     .leftJoin(purchases, eq(purchases.lectureId, lectures.id))
     .leftJoin(reviews, eq(reviews.lectureId, lectures.id))
-    .where(eq(lectures.instructorId, user.id))
+    .where(and(eq(lectures.instructorId, user.id), eq(lectures.isSeedData, false)))
     .groupBy(lectures.id)
     .orderBy(desc(lectures.id))
   return NextResponse.json(
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       category: typeof body?.category === "string" ? body.category : "웹 개발",
       level: typeof body?.level === "string" ? body.level : "입문",
       isActive: false,
+      isSeedData: false,
       instructorId: user.id,
     })
     .returning({ id: lectures.id })

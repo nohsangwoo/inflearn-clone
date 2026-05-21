@@ -18,6 +18,8 @@ export async function GET(req: NextRequest) {
           title: true,
           shortDescription: true,
           imageUrl: true,
+          isActive: true,
+          isSeedData: true,
         },
         with: {
           instructor: {
@@ -49,5 +51,7 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  return NextResponse.json({ requests })
+  return NextResponse.json({
+    requests: requests.filter((request) => request.lecture?.isActive && !request.lecture.isSeedData),
+  })
 }

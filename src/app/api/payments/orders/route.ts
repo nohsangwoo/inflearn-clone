@@ -18,9 +18,18 @@ export async function POST(req: NextRequest) {
 
   const lecture = await db.query.lectures.findFirst({
     where: eq(lectures.id, lectureId),
-    columns: { id: true, title: true, price: true, discountPrice: true, isActive: true, instructorId: true, platformFeeRateBps: true },
+    columns: {
+      id: true,
+      title: true,
+      price: true,
+      discountPrice: true,
+      isActive: true,
+      isSeedData: true,
+      instructorId: true,
+      platformFeeRateBps: true,
+    },
   })
-  if (!lecture || !lecture.isActive) {
+  if (!lecture || !lecture.isActive || lecture.isSeedData) {
     return NextResponse.json({ message: "lecture not purchasable" }, { status: 400 })
   }
 

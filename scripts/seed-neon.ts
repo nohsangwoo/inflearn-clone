@@ -16,10 +16,13 @@ import {
   payments,
   purchases,
   reviews,
+  siteSections,
   sql as dbSql,
   users,
   videos,
 } from "../src/db";
+import { getCourseDetailScene } from "../src/lib/course-detail-scenes";
+import { defaultHomepageSections } from "../src/lib/homepage-sections";
 import { getMockCoursesWithEnrollmentStatus } from "../src/lib/mock-courses";
 
 const mockCourses = getMockCoursesWithEnrollmentStatus();
@@ -200,6 +203,35 @@ async function main() {
     }
     const resolvedStudentIds = studentIds as number[];
 
+    await tx
+      .insert(siteSections)
+      .values(
+        defaultHomepageSections.map((section) => ({
+          area: "homepage",
+          sectionKey: section.sectionKey,
+          eyebrow: section.eyebrow,
+          title: section.title,
+          description: section.description,
+          position: section.position,
+          isEnabled: section.isEnabled,
+          metadata: section.metadata ?? null,
+          createdAt: now,
+          updatedAt: now,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [siteSections.area, siteSections.sectionKey],
+        set: {
+          eyebrow: drizzleSql`excluded."eyebrow"`,
+          title: drizzleSql`excluded."title"`,
+          description: drizzleSql`excluded."description"`,
+          position: drizzleSql`excluded."position"`,
+          isEnabled: drizzleSql`excluded."isEnabled"`,
+          metadata: drizzleSql`excluded."metadata"`,
+          updatedAt: now,
+        },
+      });
+
     await tx.insert(lectures).values(
       mockCourses.map((course) => ({
         id: course.id,
@@ -226,8 +258,10 @@ async function main() {
         enrollmentCapacity: course.enrollmentCapacity,
         price: course.price,
         discountPrice: course.discountPrice,
-        isActive: true,
+        isActive: false,
+        isSeedData: true,
         imageUrl: course.imageUrl,
+        detailScene: getCourseDetailScene(course.id),
         createdAt: asDate(course.createdAt) ?? now,
         updatedAt: asDate(course.lastUpdatedAt) ?? now,
         instructorId: teacherIdByLegacyId.get(course.instructor.id) ?? null,
@@ -353,6 +387,7 @@ async function main() {
       likes: likeRows.length,
       reviews: reviewRows.length,
       enrollmentRequests: enrollmentRows.length,
+      homepageSections: defaultHomepageSections.length,
     };
   });
 
