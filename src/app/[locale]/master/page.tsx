@@ -312,8 +312,8 @@ export default function MasterDashboardPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            시드 강의와 실제 입점 강의를 분리해서 확인합니다. 시딩 데이터는 공개 화면, 판매자 스튜디오, sitemap에서 제외되고
-            이 최고관리자 강의 관리 화면에서만 보입니다.
+            시드 강의와 실제 입점 강의를 분리해서 확인합니다. 시딩 데이터 표시는 최고관리자 강의 관리 화면에서만 보이고,
+            공개 화면에서는 정상 강의처럼 노출됩니다.
           </p>
           <Button asChild className="shrink-0">
             <Link href={`${localeBase}/master/courses`}>강의 관리 열기</Link>

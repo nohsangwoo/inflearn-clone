@@ -14,7 +14,7 @@ export async function GET(
     where: eq(lectures.id, id),
     columns: { id: true, isActive: true, isSeedData: true },
   }).catch(() => null)
-  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+  if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "lecture not found" }, { status: 404 })
   }
   const reviewRows = await db
@@ -67,7 +67,7 @@ export async function POST(
     where: eq(lectures.id, id),
     columns: { id: true, isActive: true, isSeedData: true },
   }).catch(() => null)
-  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+  if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "lecture not found" }, { status: 404 })
   }
   const user = await getAuthUserFromRequest(req)

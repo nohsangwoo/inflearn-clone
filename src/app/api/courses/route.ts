@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const category = sp.get("category")?.toLowerCase() || undefined
   const authUser = await getAuthUserFromRequest(req).catch(() => null)
 
-  const conditions = [eq(lectures.isActive, true), eq(lectures.isSeedData, false)]
+  const conditions = [eq(lectures.isActive, true)]
   if (q) {
     conditions.push(
       or(

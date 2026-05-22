@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       },
     },
   })
-  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+  if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "lecture not purchasable" }, { status: 400 })
   }
 

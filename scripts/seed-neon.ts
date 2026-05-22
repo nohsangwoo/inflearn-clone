@@ -258,7 +258,7 @@ async function main() {
         enrollmentCapacity: course.enrollmentCapacity,
         price: course.price,
         discountPrice: course.discountPrice,
-        isActive: false,
+        isActive: true,
         isSeedData: true,
         imageUrl: course.imageUrl,
         detailScene: getCourseDetailScene(course.id),

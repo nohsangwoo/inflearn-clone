@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .from(likes)
       .innerJoin(lectures, eq(likes.lectureId, lectures.id))
       .leftJoin(users, eq(lectures.instructorId, users.id))
-      .where(and(eq(likes.userId, user.id), eq(lectures.isActive, true), eq(lectures.isSeedData, false)))
+      .where(and(eq(likes.userId, user.id), eq(lectures.isActive, true)))
       .orderBy(desc(likes.createdAt))
 
     return NextResponse.json({
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       where: eq(lectures.id, lectureId),
       columns: { id: true, isActive: true, isSeedData: true },
     })
-    if (!lecture || !lecture.isActive || lecture.isSeedData) {
+    if (!lecture || !lecture.isActive) {
       return NextResponse.json({ error: 'Lecture not found' }, { status: 404 })
     }
 

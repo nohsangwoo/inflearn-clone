@@ -133,7 +133,7 @@ export default function MasterCoursesPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const summary = useMemo(() => {
     const seed = courses.filter((course) => course.isSeedData).length
-    const publicCount = courses.filter((course) => !course.isSeedData && course.isActive).length
+    const publicCount = courses.filter((course) => course.isActive).length
     return { seed, publicCount }
   }, [courses])
 
@@ -153,8 +153,8 @@ export default function MasterCoursesPage() {
         <Badge variant="secondary" className="mb-3">최고 관리자</Badge>
         <h1 className="text-[28px] font-bold leading-[1.43]">강의 관리</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-          실제 입점 강의와 시드 강의를 DB 기준으로 분리합니다. 시드 강의는 public API, 판매자 스튜디오, SEO sitemap에서 제외되고
-          이 화면에서만 확인됩니다.
+          실제 입점 강의와 시드 강의를 DB 기준으로 분리합니다. 공개 화면에서는 시드 표시 없이 정상 강의처럼 노출되고,
+          시드 여부는 이 최고관리자 화면에서만 확인됩니다.
         </p>
       </div>
 
@@ -250,9 +250,9 @@ export default function MasterCoursesPage() {
                           {course.isSeedData ? "시드 전용" : course.isActive ? "공개" : "비공개"}
                         </Badge>
                         {course.isSeedData ? (
-                          <Badge variant="destructive" className="gap-1">
+                          <Badge variant="secondary" className="gap-1">
                             <Lock className="size-3" />
-                            공개 차단
+                            관리자 식별
                           </Badge>
                         ) : null}
                         {course.category ? <Badge variant="outline">{course.category}</Badge> : null}
@@ -283,7 +283,7 @@ export default function MasterCoursesPage() {
                         <span>공개</span>
                         <Switch
                           checked={course.isActive}
-                          disabled={course.isSeedData || updateCourse.isPending}
+                          disabled={updateCourse.isPending}
                           onCheckedChange={(checked) => updateCourse.mutate({ id: course.id, isActive: checked })}
                         />
                       </div>
@@ -295,7 +295,7 @@ export default function MasterCoursesPage() {
                           onCheckedChange={(checked) => updateCourse.mutate({ id: course.id, enrollmentOpen: checked })}
                         />
                       </div>
-                      {!course.isSeedData && course.isActive ? (
+                      {course.isActive ? (
                         <Button asChild variant="outline" size="sm" className="w-full">
                           <Link href={`${localeBase}/course/${course.id}`}>
                             <Eye className="size-4" />
@@ -304,7 +304,7 @@ export default function MasterCoursesPage() {
                         </Button>
                       ) : (
                         <div className="rounded-[14px] bg-secondary px-3 py-2 text-xs leading-5 text-muted-foreground">
-                          {course.isSeedData ? "최고관리자 전용 데이터입니다." : "비공개 강의입니다."}
+                          비공개 강의입니다.
                         </div>
                       )}
                     </div>

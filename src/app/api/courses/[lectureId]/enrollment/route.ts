@@ -54,7 +54,7 @@ export async function POST(
     },
   })
 
-  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+  if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "lecture not available" }, { status: 400 })
   }
   if (lecture.instructorId === user.id) {

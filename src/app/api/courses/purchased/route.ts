@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     where: eq(lectures.id, lectureId),
     columns: { id: true, isActive: true, isSeedData: true },
   }).catch(() => null)
-  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+  if (!lecture || !lecture.isActive) {
     return NextResponse.json({ purchased: false, enrollmentRequest: null }, { status: 200 })
   }
 

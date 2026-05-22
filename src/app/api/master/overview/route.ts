@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const [usersRow, lecturesRow, ordersRow, pendingPayoutsRow, hlsPendingRow, pendingEnrollmentRow, approvedEnrollmentRow] = await Promise.all([
     db.select({ value: count() }).from(userTable).where(realUserFilter).then((rows) => rows[0]),
-    db.select({ value: count() }).from(lectureTable).where(eq(lectureTable.isSeedData, false)).then((rows) => rows[0]),
+    db.select({ value: count() }).from(lectureTable).then((rows) => rows[0]),
     db
       .select({ amount: sum(paymentOrders.amount), total: count(paymentOrders.id) })
       .from(paymentOrders)

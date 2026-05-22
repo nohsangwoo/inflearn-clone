@@ -23,14 +23,14 @@ export async function GET(req: NextRequest) {
       .from(purchases)
       .innerJoin(lectures, eq(purchases.lectureId, lectures.id))
       .leftJoin(users, eq(lectures.instructorId, users.id))
-      .where(and(eq(purchases.userId, user.id), eq(lectures.isActive, true), eq(lectures.isSeedData, false)))
+      .where(and(eq(purchases.userId, user.id), eq(lectures.isActive, true)))
       .orderBy(desc(purchases.updatedAt))
       .limit(6),
     db
       .select({ value: count(likes.id) })
       .from(likes)
       .innerJoin(lectures, eq(likes.lectureId, lectures.id))
-      .where(and(eq(likes.userId, user.id), eq(lectures.isActive, true), eq(lectures.isSeedData, false))),
+      .where(and(eq(likes.userId, user.id), eq(lectures.isActive, true))),
     db
       .select({ value: count(pushNotifications.id) })
       .from(pushNotifications)

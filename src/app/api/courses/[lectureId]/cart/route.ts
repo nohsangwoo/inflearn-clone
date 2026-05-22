@@ -14,7 +14,7 @@ export async function GET(
     where: eq(lectures.id, id),
     columns: { id: true, isActive: true, isSeedData: true },
   }).catch(() => null)
-  if (!lecture || !lecture.isActive || lecture.isSeedData) return NextResponse.json({ inCart: false })
+  if (!lecture || !lecture.isActive) return NextResponse.json({ inCart: false })
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ inCart: false })
   const cart = await db.query.carts.findFirst({ where: eq(carts.userId, user.id), columns: { id: true } })
@@ -39,7 +39,7 @@ export async function POST(
     where: eq(lectures.id, id),
     columns: { id: true, isActive: true, isSeedData: true },
   }).catch(() => null)
-  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+  if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "lecture not found" }, { status: 404 })
   }
   const user = await getAuthUserFromRequest(req)

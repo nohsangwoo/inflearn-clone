@@ -14,7 +14,7 @@ export async function GET(
     where: eq(lectures.id, id),
     columns: { id: true, isActive: true, isSeedData: true },
   }).catch(() => null)
-  if (!lecture || !lecture.isActive || lecture.isSeedData) return NextResponse.json({ liked: false })
+  if (!lecture || !lecture.isActive) return NextResponse.json({ liked: false })
   const user = await getAuthUserFromRequest(req)
   if (!user) return NextResponse.json({ liked: false })
   const liked = await db.query.likes.findFirst({ where: and(eq(likes.lectureId, id), eq(likes.userId, user.id)) })
@@ -36,7 +36,7 @@ export async function POST(
     where: eq(lectures.id, id),
     columns: { id: true, isActive: true, isSeedData: true },
   }).catch(() => null)
-  if (!lecture || !lecture.isActive || lecture.isSeedData) {
+  if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "lecture not found" }, { status: 404 })
   }
   const exists = await db.query.likes.findFirst({ where: and(eq(likes.lectureId, id), eq(likes.userId, user.id)) })

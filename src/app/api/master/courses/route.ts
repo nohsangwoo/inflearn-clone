@@ -102,9 +102,6 @@ export async function PATCH(req: NextRequest) {
     columns: { id: true, isSeedData: true },
   })
   if (!current) return NextResponse.json({ message: "course not found" }, { status: 404 })
-  if (current.isSeedData && body?.isActive === true) {
-    return NextResponse.json({ message: "시드 강의는 공개할 수 없습니다. 최고관리자 강의 관리에서만 확인됩니다." }, { status: 400 })
-  }
 
   const updateValues = {
     isActive: typeof body?.isActive === "boolean" ? body.isActive : undefined,

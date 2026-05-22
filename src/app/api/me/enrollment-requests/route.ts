@@ -52,6 +52,6 @@ export async function GET(req: NextRequest) {
   })
 
   return NextResponse.json({
-    requests: requests.filter((request) => request.lecture?.isActive && !request.lecture.isSeedData),
+    requests: requests.filter((request) => request.lecture?.isActive),
   })
 }

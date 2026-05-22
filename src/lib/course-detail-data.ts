@@ -120,7 +120,7 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
     .then((rows) => rows[0])
     .catch(() => null)
 
-  if (!lecture || !lecture.isActive || lecture.isSeedData) return null
+  if (!lecture || !lecture.isActive) return null
 
   const [ratingAgg, countRow, enrollmentRow, previewSection, sectionRows] = await Promise.all([
     db
