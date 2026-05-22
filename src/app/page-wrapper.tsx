@@ -349,9 +349,7 @@ export default function HomePageWrapper() {
         {isLoading ? (
           <div className="rounded-[14px] border border-border bg-card p-8 text-sm text-muted-foreground">강의 목록을 불러오는 중입니다.</div>
         ) : courses.length === 0 ? (
-          <div className="rounded-[14px] border border-border bg-card p-8 text-sm text-muted-foreground">
-            조건에 맞는 강의가 아직 없습니다.
-          </div>
+          <EmptyCourseState pathname={pathname} hasFilter={Boolean(keyword || category !== "전체")} />
         ) : (
           <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {courses.map((course, index) => (
@@ -421,6 +419,53 @@ export default function HomePageWrapper() {
         <HomepageMarketingSection key={section.sectionKey} section={section} pathname={pathname} />
       ))}
     </main>
+  )
+}
+
+function EmptyCourseState({ pathname, hasFilter }: { pathname: string; hasFilter: boolean }) {
+  return (
+    <div className="overflow-hidden rounded-[24px] border border-border bg-card">
+      <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="border-b border-border bg-secondary p-6 md:p-8 lg:border-b-0 lg:border-r">
+          <Badge variant="secondary" className="rounded-full bg-background">
+            {hasFilter ? "검색 결과 없음" : "입점 강의 준비 중"}
+          </Badge>
+          <h3 className="mt-4 text-[24px] font-semibold leading-[1.2]">
+            공개 강의는 실제 입점 승인 이후에만 표시됩니다.
+          </h3>
+          <p className="mt-3 text-[14px] leading-6 text-muted-foreground">
+            링구스트는 목업 강의를 공개하지 않고, 판매자가 등록한 강의가 운영 승인된 뒤에만 목록과 SEO에 노출되도록 설계되어 있습니다.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button asChild className="rounded-full px-5">
+              <Link href={withLoginRedirectPath(pathname, "/admin")}>
+                강의 입점하기
+                <BookOpen className="size-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-full px-5">
+              <Link href="mailto:milli@molluhub.com?subject=%EB%A7%81%EA%B5%AC%EC%8A%A4%ED%8A%B8%20%EA%B0%95%EC%9D%98%20%ED%94%8C%EB%9E%AB%ED%8F%BC%20%EC%A0%9C%EC%9E%91%20%EB%AC%B8%EC%9D%98">
+                제작 문의
+                <Mail className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+        <div className="grid gap-3 p-6 md:grid-cols-3 md:p-8">
+          {[
+            ["DB 바인딩", "강의 목록, 상세, 커리큘럼, 이미지, SEO 데이터를 모두 DB에서 렌더링합니다."],
+            ["승인 후 공개", "판매자 등록 강의는 비공개로 시작하고 운영 승인 뒤 공개 목록에 노출됩니다."],
+            ["운영자 제어", "최고관리자가 강의 공개, 모집, 홈 섹션 순서와 문구를 직접 조정합니다."],
+          ].map(([title, body]) => (
+            <div key={title} className="rounded-[14px] border border-border bg-background p-4">
+              <CheckCircle2 className="size-5 text-primary" />
+              <h4 className="mt-4 text-[15px] font-semibold">{title}</h4>
+              <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 
