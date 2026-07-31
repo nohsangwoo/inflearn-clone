@@ -18,7 +18,6 @@ import {
   Heart,
   Mail,
   MonitorPlay,
-  RadioTower,
   Search,
   Sparkles,
   Star,
@@ -30,35 +29,28 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { withLocalePath, withLoginRedirectPath } from "@/lib/brand"
+import type {
+  PublicCourseCatalogItem,
+  PublicCourseCatalogResult,
+} from "@/lib/course-catalog-data"
 import { getCoursePreviewImage } from "@/lib/course-images"
-import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
+import { getEnrollmentStatusLabel } from "@/lib/enrollment-window"
 import { defaultHomepageSections, type HomepageSection } from "@/lib/homepage-sections"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { cn } from "@/lib/utils"
 
-type ApiCourse = {
-  id: number
-  title: string
-  slug?: string | null
-  shortDescription?: string | null
-  description: string | null
-  category?: string | null
-  level?: string | null
-  tags?: string[]
-  price: number
-  discountPrice?: number | null
-  imageUrl?: string | null
-  createdAt: string
-  purchaseCount?: number
-  reviewCount?: number
-  likeCount?: number
+type ApiCourse = PublicCourseCatalogItem & {
   liked?: boolean
-  avgRating?: number
-  enrollmentStatus?: EnrollmentAvailabilityStatus | null
-  enrollmentCapacity?: number | null
-  enrollmentAppliedCount?: number | null
-  remainingSeats?: number | null
-  instructor?: { nickname?: string | null; email?: string }
+}
+
+type CatalogResponse = Omit<PublicCourseCatalogResult, "items"> & {
+  items: ApiCourse[]
+  degraded?: boolean
+}
+
+type HomePageWrapperProps = {
+  initialCatalog: PublicCourseCatalogResult
+  initialHomepageSections: HomepageSection[]
 }
 
 const categories = ["전체", "웹 개발", "게임 개발", "AI", "미디어", "크리에이터", "비즈니스", "디자인"]
@@ -127,20 +119,27 @@ function getCourseImage(course: ApiCourse) {
   return getCoursePreviewImage(course.imageUrl)
 }
 
-export default function HomePageWrapper() {
+export default function HomePageWrapper({
+  initialCatalog,
+  initialHomepageSections,
+}: HomePageWrapperProps) {
   const pathname = usePathname()
   const router = useRouter()
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.user)
+  const [draftKeyword, setDraftKeyword] = useState("")
   const [keyword, setKeyword] = useState("")
   const [category, setCategory] = useState("전체")
   const [sort, setSort] = useState<"latest" | "best" | "priceAsc">("latest")
   const [page, setPage] = useState(1)
+  const isInitialCatalogView =
+    !keyword && category === "전체" && sort === "latest" && page === 1
 
   const { data, isLoading } = useQuery({
-    queryKey: ["lingoost-courses", keyword, category, sort, page],
-    queryFn: async () => {
+    queryKey: ["lingoost-courses", user?.id ?? "guest", keyword, category, sort, page],
+    queryFn: async ({ signal }) => {
       const { data } = await axios.get("/api/courses", {
+        signal,
         params: {
           page,
           pageSize: PAGE_SIZE,
@@ -149,16 +148,22 @@ export default function HomePageWrapper() {
           category: category === "전체" ? undefined : category,
         },
       })
-      return data as { total: number; items: ApiCourse[]; degraded?: boolean }
+      return data as CatalogResponse
     },
+    initialData: !user && isInitialCatalogView ? initialCatalog : undefined,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
     retry: false,
   })
   const { data: homepageSectionData } = useQuery({
     queryKey: ["homepage-sections"],
-    queryFn: async () => {
-      const { data } = await axios.get("/api/site/home-sections")
+    queryFn: async ({ signal }) => {
+      const { data } = await axios.get("/api/site/home-sections", { signal })
       return data as { sections: HomepageSection[] }
     },
+    initialData: { sections: initialHomepageSections },
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
     retry: false,
   })
 
@@ -256,7 +261,7 @@ export default function HomePageWrapper() {
       <section className="px-3 pt-3 md:px-6 md:pt-6">
         <div className="relative mx-auto max-w-[1500px] overflow-hidden rounded-[26px] bg-[#191517] text-[#fff9f6] md:rounded-[34px]">
           <div className="signal-grid absolute inset-0 opacity-[0.08]" />
-          <div className="relative grid min-h-[620px] lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="relative grid min-h-[620px] lg:grid-cols-[0.88fr_1.12fr]">
             <div className="flex flex-col justify-between px-6 py-10 md:px-10 md:py-12 lg:px-14 lg:py-16">
               <div>
                 <div
@@ -264,21 +269,21 @@ export default function HomePageWrapper() {
                   style={{ "--reveal-index": 0 } as CSSProperties}
                 >
                   <span className="size-2 rounded-full bg-[#ff385c]" />
-                  Curated learning · Season 2026
+                  Project-based learning · Lingoost
                 </div>
                 <h1
                   className="font-brand hero-reveal mt-7 text-[clamp(2.7rem,3.7vw,4.8rem)] font-black leading-[0.98] tracking-[-0.055em]"
                   style={{ "--reveal-index": 1 } as CSSProperties}
                 >
-                  <span className="block">배움의 다음</span>
-                  <span className="block">장면을 재생하세요.</span>
+                  <span className="block">배우고, 완성하고,</span>
+                  <span className="block">다음 기회로.</span>
                 </h1>
                 <p
                   className="hero-reveal mt-7 max-w-[34rem] text-[15px] leading-7 text-[#d9ced1] md:text-base"
                   style={{ "--reveal-index": 2 } as CSSProperties}
                 >
-                  기술, 창작, 비즈니스를 실제 프로젝트로 연결하는 시즌제 강의. 한 번 고르고,
-                  끝까지 완성하는 학습 경험을 만듭니다.
+                  현업 강의자와 정해진 시즌 동안 하나의 결과물을 완성하세요. 모집 일정,
+                  커리큘럼, 수강 방식과 실제 후기를 확인하고 내게 맞는 강의를 선택할 수 있습니다.
                 </p>
                 <div
                   className="hero-reveal mt-8 flex flex-wrap gap-3"
@@ -286,13 +291,13 @@ export default function HomePageWrapper() {
                 >
                   <Button asChild className="rounded-full bg-[#ff385c] px-6 text-[#fff9f6] hover:bg-[#e9284c]">
                     <Link href="#course-catalog">
-                      강의 둘러보기
+                      이번 시즌 강의 보기
                       <ArrowRight className="size-4" />
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="rounded-full border-[#665b5f] bg-transparent px-6 text-[#fff9f6] hover:bg-[#2a2427] hover:text-[#fff9f6]">
                     <Link href={user ? withLocalePath(pathname, "/admin") : withLoginRedirectPath(pathname, "/admin")}>
-                      강의 만들기
+                      강의 개설 안내
                     </Link>
                   </Button>
                 </div>
@@ -303,9 +308,9 @@ export default function HomePageWrapper() {
                 style={{ "--reveal-index": 4 } as CSSProperties}
               >
                 {[
-                  { icon: RadioTower, label: "Adaptive HLS", body: "끊김 없는 재생" },
-                  { icon: Captions, label: "Multi subtitle", body: "자막과 더빙" },
-                  { icon: Users, label: "Cohort season", body: "함께 완주" },
+                  { icon: Target, label: "프로젝트 중심", body: "결과물이 남는 수업" },
+                  { icon: Captions, label: "명확한 커리큘럼", body: "범위와 일정을 먼저 확인" },
+                  { icon: Users, label: "시즌 운영", body: "같은 목표로 함께 완주" },
                 ].map((item) => {
                   const Icon = item.icon
                   return (
@@ -321,64 +326,38 @@ export default function HomePageWrapper() {
               </div>
             </div>
 
-            <div className="relative min-h-[360px] border-t border-[#40373a] p-3 md:min-h-[470px] md:p-5 lg:min-h-0 lg:border-l lg:border-t-0">
-              <div className="grid h-full grid-cols-[1fr_0.38fr] gap-3">
-                <div className="relative min-h-[340px] overflow-hidden rounded-[18px] md:min-h-[430px] md:rounded-[24px]">
-                  <Image
-                    src="/course-previews/course-108.png"
-                    alt="강의 제작 워크스페이스 미리보기"
-                    fill
-                    preload
-                    sizes="(max-width: 1024px) 75vw, 46vw"
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#121012]/80 via-transparent to-[#121012]/15" />
-                  <div className="media-scanline absolute inset-0 opacity-20" />
-                  <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-[#191517]/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] backdrop-blur md:left-6 md:top-6">
-                    <span className="size-1.5 animate-pulse rounded-full bg-[#ff385c]" />
-                    Studio preview
-                  </div>
-                  <div className="absolute inset-x-4 bottom-4 md:inset-x-6 md:bottom-6">
-                    <div className="rounded-[14px] border border-white/15 bg-[#191517]/76 p-4 backdrop-blur-md">
-                      <div className="flex items-center justify-between text-[10px] font-semibold text-[#cfc3c6]">
-                        <span>01 · 공개 강의에서 유료 커리큘럼까지</span>
-                        <span className="font-mono tabular-nums">12:48 / 28:00</span>
-                      </div>
-                      <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/20">
-                        <div className="h-full w-[46%] rounded-full bg-[#ff385c]" />
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[11px] text-[#fff9f6]">
-                          <CirclePlay className="size-4" />
-                          실제 화면으로 배우는 강의 제작
-                        </div>
-                        <span className="hidden rounded-full border border-white/15 px-2 py-1 text-[9px] font-bold md:inline">
-                          KO · EN · JA
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="relative min-h-[390px] border-t border-[#40373a] p-3 md:min-h-[520px] md:p-5 lg:min-h-0 lg:border-l lg:border-t-0">
+              <div className="relative h-full min-h-[365px] overflow-hidden rounded-[20px] md:min-h-[490px] md:rounded-[26px]">
+                <Image
+                  src="/course-detail-scenes/course-108-workshop.png"
+                  alt="강의 등록, 커리큘럼, 모집 일정과 촬영 환경을 함께 관리하는 강의 개설 워크숍"
+                  fill
+                  preload
+                  sizes="(max-width: 1024px) 100vw, 56vw"
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#100d0f]/90 via-[#100d0f]/5 to-[#100d0f]/15" />
+                <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-white/15 bg-[#191517]/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] backdrop-blur md:left-6 md:top-6">
+                  <span className="size-1.5 rounded-full bg-[#ff385c]" />
+                  Course launch workspace
                 </div>
-
-                <div className="grid grid-rows-2 gap-3">
-                  {[
-                    { src: "/course-previews/course-209.png", alt: "게임 AI 강의 미리보기", label: "GAME AI" },
-                    { src: "/course-previews/course-105.png", alt: "SEO 강의 미리보기", label: "SEARCH" },
-                  ].map((item) => (
-                    <div key={item.src} className="relative overflow-hidden rounded-[16px] md:rounded-[22px]">
-                      <Image
-                        src={item.src}
-                        alt={item.alt}
-                        fill
-                        sizes="(max-width: 1024px) 24vw, 18vw"
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-[#121012]/25" />
-                      <span className="absolute bottom-3 left-3 text-[9px] font-extrabold uppercase tracking-[0.15em] text-white md:bottom-4 md:left-4">
-                        {item.label}
-                      </span>
+                <div className="absolute inset-x-4 bottom-4 md:inset-x-6 md:bottom-6">
+                  <div className="max-w-[34rem] rounded-[18px] border border-white/15 bg-[#191517]/82 p-5 shadow-2xl backdrop-blur-md md:p-6">
+                    <div className="flex items-center gap-2 text-[11px] font-semibold text-[#ff9bab]">
+                      <CirclePlay className="size-4" />
+                      첫 강의 출시 워크숍
                     </div>
-                  ))}
+                    <p className="font-brand mt-3 text-[18px] font-extrabold leading-snug text-white md:text-[22px]">
+                      기획부터 공개·운영까지, 실제 흐름으로 배웁니다.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-semibold text-[#d9ced1]">
+                      {["강의 등록", "커리큘럼", "모집 일정", "공개 수업"].map((label) => (
+                        <span key={label} className="rounded-full border border-white/15 px-2.5 py-1">
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -388,17 +367,22 @@ export default function HomePageWrapper() {
 
       <section className="relative z-10 mx-auto -mt-2 max-w-7xl px-4 md:-mt-8 md:px-6">
         <div className="rounded-[20px] border border-border/80 bg-card p-2 shadow-md md:rounded-[24px]">
-          <div className="grid divide-y divide-border/80 md:grid-cols-[1.45fr_0.72fr_0.72fr_auto] md:divide-x md:divide-y-0">
+          <form
+            className="grid divide-y divide-border/80 md:grid-cols-[1.45fr_0.72fr_0.72fr_auto] md:divide-x md:divide-y-0"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault()
+              setKeyword(draftKeyword.trim())
+              setPage(1)
+            }}
+          >
             <label className="flex min-w-0 items-center gap-3 px-4 py-3 md:px-5">
               <Search className="size-5 shrink-0 text-primary" />
               <span className="min-w-0 flex-1">
                 <span className="editorial-label block text-muted-foreground">Search courses</span>
                 <input
-                  value={keyword}
-                  onChange={(event) => {
-                    setKeyword(event.target.value)
-                    setPage(1)
-                  }}
+                  value={draftKeyword}
+                  onChange={(event) => setDraftKeyword(event.target.value)}
                   placeholder="배우고 싶은 기술이나 프로젝트"
                   className="mt-1 w-full bg-transparent text-[15px] font-medium text-foreground outline-none placeholder:text-muted-foreground"
                 />
@@ -435,12 +419,12 @@ export default function HomePageWrapper() {
               </select>
             </label>
             <div className="flex items-center p-2">
-              <Button className="h-12 w-full rounded-[14px] px-5 md:w-auto" aria-label="선택한 조건으로 강의 찾기">
+              <Button type="submit" className="h-12 w-full rounded-[14px] px-5 md:w-auto" aria-label="선택한 조건으로 강의 찾기">
                 강의 찾기
                 <ArrowRight className="size-4" />
               </Button>
             </div>
-          </div>
+          </form>
         </div>
 
         <div className="mt-5 flex items-center gap-4 overflow-x-auto pb-2">
@@ -470,12 +454,12 @@ export default function HomePageWrapper() {
       <section id="course-catalog" className="mx-auto max-w-[1440px] scroll-mt-28 px-4 pb-20 pt-16 md:px-6 md:pt-24">
         <div className="mb-8 flex items-end justify-between gap-6 border-b border-border pb-6">
           <div>
-            <p className="editorial-label text-primary">Open this season</p>
+            <p className="editorial-label text-primary">Current season</p>
             <h2 className="font-brand mt-3 text-[clamp(1.9rem,3.8vw,3.4rem)] font-extrabold leading-[1.06] tracking-[-0.04em]">
-              지금 열리는 강의
+              이번 시즌 강의
             </h2>
             <p className="mt-3 max-w-2xl text-[14px] leading-6 text-muted-foreground">
-              강의자와 직접 연결되고, 한 시즌 동안 결과물을 완성하는 실전형 프로그램입니다.
+              모집 일정과 정원, 커리큘럼과 실제 수강 후기를 비교하고 목표에 맞는 강의를 선택하세요.
             </p>
           </div>
           <Button asChild variant="ghost" className="hidden rounded-full px-4 md:inline-flex">
@@ -501,13 +485,12 @@ export default function HomePageWrapper() {
           <EmptyCourseState pathname={pathname} hasFilter={Boolean(keyword || category !== "전체")} />
         ) : (
           <div className="grid grid-cols-1 gap-x-6 gap-y-11 sm:grid-cols-2 lg:grid-cols-4">
-            {courses.map((course, index) => (
+            {courses.map((course) => (
               <CourseTile
                 key={`${course.id}-${course.title}`}
                 course={course}
                 image={getCourseImage(course)}
                 pathname={pathname}
-                index={index}
                 onToggleLike={handleToggleLike}
                 isLikePending={likeMutation.isPending}
               />
@@ -799,14 +782,12 @@ function CourseTile({
   course,
   image,
   pathname,
-  index,
   onToggleLike,
   isLikePending,
 }: {
   course: ApiCourse
   image: string
   pathname: string
-  index: number
   onToggleLike: (course: ApiCourse) => void
   isLikePending: boolean
 }) {
@@ -815,44 +796,53 @@ function CourseTile({
     typeof course.discountPrice === "number" && course.discountPrice < course.price && course.price > 0
       ? Math.round((1 - course.discountPrice / course.price) * 100)
       : null
+  const hasRating = course.reviewCount > 0 && course.avgRating > 0
+  const isEnrollmentClosed =
+    course.enrollmentStatus === "CLOSED" ||
+    course.enrollmentStatus === "FULL" ||
+    course.enrollmentStatus === "PAUSED"
+  const enrollmentSummary = (() => {
+    const capacity =
+      typeof course.enrollmentCapacity === "number" ? course.enrollmentCapacity : null
+
+    if (course.enrollmentStatus === "FULL") {
+      return capacity ? `정원 ${capacity}명 · 전석 마감` : "이번 시즌 전석 마감"
+    }
+    if (course.enrollmentStatus === "CLOSED") {
+      return capacity ? `이번 시즌 모집 완료 · 정원 ${capacity}명` : "이번 시즌 모집 완료"
+    }
+    if (course.enrollmentStatus === "PAUSED") {
+      return "다음 모집 일정을 준비하고 있어요"
+    }
+    if (course.enrollmentStatus === "NOT_STARTED") {
+      return capacity ? `신청 예정 · 정원 ${capacity}명` : "곧 신청이 시작됩니다"
+    }
+    if (capacity) {
+      const remaining = Math.max(0, Number(course.remainingSeats ?? 0))
+      return `${course.enrollmentAppliedCount}/${capacity}명 신청 · ${remaining}석 남음`
+    }
+    return "현재 수강 신청을 받고 있어요"
+  })()
 
   return (
-    <Link href={courseHref} className="group block min-w-0">
-      <article className="min-w-0">
+    <article className="group relative min-w-0">
+      <Link href={courseHref} className="block min-w-0">
         <div className="relative aspect-[1200/781] overflow-hidden rounded-[18px] bg-secondary">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={image}
             alt={course.title}
-            className="photo-zoom h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.035]"
+            fill
+            sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 25vw"
+            className="photo-zoom object-cover transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.035]"
           />
           <div className="absolute left-3 top-3 rounded-full bg-background px-3 py-1 text-[11px] font-semibold shadow-sm">
-            {course.enrollmentStatus
-              ? getEnrollmentStatusLabel(course.enrollmentStatus)
-              : index < 3 ? "인기 강의" : course.category || "강의"}
+            {getEnrollmentStatusLabel(course.enrollmentStatus)}
           </div>
           {discount ? (
             <div className="absolute bottom-3 right-3 rounded-full bg-primary px-3 py-1 text-[11px] font-bold text-primary-foreground shadow-sm">
               {discount}% OFF
             </div>
           ) : null}
-          <button
-            type="button"
-            aria-label="관심 강의"
-            aria-pressed={Boolean(course.liked)}
-            disabled={isLikePending}
-            onClick={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              onToggleLike(course)
-            }}
-            className={cn(
-              "absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:text-primary disabled:cursor-wait disabled:opacity-70",
-              course.liked && "text-primary",
-            )}
-          >
-            <Heart className={cn("size-5", course.liked && "fill-primary text-primary")} />
-          </button>
         </div>
 
         <div className="pt-4">
@@ -861,19 +851,34 @@ function CourseTile({
               {course.title}
             </h3>
             <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-foreground">
-              <Star className="size-3.5 fill-foreground" />
-              {course.avgRating?.toFixed(2) ?? "4.80"}
+              {hasRating ? (
+                <>
+                  <Star className="size-3.5 fill-foreground" />
+                  {course.avgRating.toFixed(1)}
+                  <span className="font-normal text-muted-foreground">
+                    ({course.reviewCount.toLocaleString()})
+                  </span>
+                </>
+              ) : (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
+                  신규
+                </span>
+              )}
             </span>
           </div>
           <p className="mt-2 line-clamp-2 min-h-10 text-[13px] leading-5 text-muted-foreground">
             {course.shortDescription || course.description || "강의 소개가 곧 업데이트됩니다."}
           </p>
-          {typeof course.enrollmentCapacity === "number" ? (
-            <div className="mt-3 border-l-2 border-primary pl-3 text-[12px] font-medium text-muted-foreground">
-              이번 시즌 {course.enrollmentAppliedCount ?? 0}/{course.enrollmentCapacity}명 신청
-              {typeof course.remainingSeats === "number" ? ` · 잔여 ${course.remainingSeats}석` : ""}
-            </div>
-          ) : null}
+          <div
+            className={cn(
+              "mt-3 border-l-2 pl-3 text-[12px] font-medium",
+              isEnrollmentClosed
+                ? "border-muted-foreground/50 text-muted-foreground"
+                : "border-primary text-foreground",
+            )}
+          >
+            {enrollmentSummary}
+          </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {(course.tags ?? []).slice(0, 2).map((tag) => (
               <Badge key={tag} variant="outline" className="rounded-full border-border px-2 py-0 text-[11px]">
@@ -883,7 +888,7 @@ function CourseTile({
           </div>
           <div className="mt-4 flex items-end justify-between gap-2 border-t border-border/80 pt-3">
             <div className="text-[12px] text-muted-foreground">
-              <div>{course.instructor?.nickname || course.instructor?.email || "링구스트 판매자"}</div>
+              <div>{course.instructor?.nickname || "링구스트 강사"}</div>
               <div className="mt-1 inline-flex items-center gap-1">
                 <Users className="size-3.5" />
                 {course.purchaseCount?.toLocaleString() ?? "0"}명
@@ -895,7 +900,20 @@ function CourseTile({
             </div>
           </div>
         </div>
-      </article>
-    </Link>
+      </Link>
+      <button
+        type="button"
+        aria-label={course.liked ? "관심 강의에서 삭제" : "관심 강의로 저장"}
+        aria-pressed={Boolean(course.liked)}
+        disabled={isLikePending}
+        onClick={() => onToggleLike(course)}
+        className={cn(
+          "absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70",
+          course.liked && "text-primary",
+        )}
+      >
+        <Heart className={cn("size-5", course.liked && "fill-primary text-primary")} />
+      </button>
+    </article>
   )
 }

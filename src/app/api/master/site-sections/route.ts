@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidateTag } from "next/cache"
 import { asc, eq, sql as drizzleSql } from "drizzle-orm"
 import { db, siteSections } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
 import { defaultHomepageSections, type HomepageSection, type HomepageSectionKey } from "@/lib/homepage-sections"
+import { HOMEPAGE_SECTIONS_TAG } from "@/lib/homepage-sections-data"
 
 const editableKeys = new Set(defaultHomepageSections.map((section) => section.sectionKey))
 
@@ -110,6 +112,7 @@ export async function PATCH(req: NextRequest) {
       },
     })
 
+  revalidateTag(HOMEPAGE_SECTIONS_TAG, "max")
   const response = await GET(req)
   return response
 }

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidateTag } from "next/cache"
 import { and, eq } from "drizzle-orm"
 import { db, lectures, likes } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
+import { PUBLIC_COURSE_CATALOG_TAG } from "@/lib/course-catalog-data"
+import { PUBLIC_COURSE_DETAIL_TAG } from "@/lib/course-detail-data"
 
 export async function GET(
   req: NextRequest,
@@ -42,10 +45,14 @@ export async function POST(
   const exists = await db.query.likes.findFirst({ where: and(eq(likes.lectureId, id), eq(likes.userId, user.id)) })
   if (exists && desiredLiked !== true) {
     await db.delete(likes).where(eq(likes.id, exists.id))
+    revalidateTag(PUBLIC_COURSE_CATALOG_TAG, "max")
+    revalidateTag(PUBLIC_COURSE_DETAIL_TAG, "max")
     return NextResponse.json({ liked: false })
   }
   if (exists) return NextResponse.json({ liked: true })
   if (desiredLiked === false) return NextResponse.json({ liked: false })
   const [created] = await db.insert(likes).values({ lectureId: id, userId: user.id }).returning({ id: likes.id })
+  revalidateTag(PUBLIC_COURSE_CATALOG_TAG, "max")
+  revalidateTag(PUBLIC_COURSE_DETAIL_TAG, "max")
   return NextResponse.json({ liked: !!created })
 }

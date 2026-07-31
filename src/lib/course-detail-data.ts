@@ -1,8 +1,15 @@
 import { cache } from "react"
-import { and, asc, avg, count, countDistinct, eq, inArray } from "drizzle-orm"
+import { unstable_cache } from "next/cache"
+import { and, asc, avg, count, eq, inArray, isNull } from "drizzle-orm"
 import { db, curriculumSections, curriculums, enrollmentRequests, lectures, likes, purchases, reviews, users, videos } from "@/db"
-import type { CourseDetailScene } from "@/lib/course-detail-scenes"
+import {
+  getCourseDetailScene,
+  type CourseDetailScene,
+} from "@/lib/course-detail-scenes"
 import { getEnrollmentAvailability, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
+import { findMockCourse } from "@/lib/mock-courses"
+
+export const PUBLIC_COURSE_DETAIL_TAG = "public-course-detail"
 
 export type CourseDetail = {
   id: number
@@ -32,6 +39,7 @@ export type CourseDetail = {
   enrollmentStatus?: EnrollmentAvailabilityStatus
   enrollmentAvailable?: boolean
   remainingSeats?: number | null
+  isSeedData: boolean
   imageUrl?: string | null
   detailScene?: CourseDetailScene | null
   createdAt: string
@@ -40,6 +48,7 @@ export type CourseDetail = {
     email: string
     nickname?: string | null
     profileImageUrl?: string | null
+    description?: string | null
   }
   purchaseCount: number
   reviewCount: number
@@ -72,9 +81,39 @@ function toPublicMediaUrl(value?: string | null) {
   return `${cdnBase.replace(/\/$/, "")}/${value.replace(/^\//, "")}`
 }
 
-export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | null> => {
-  if (!Number.isFinite(id)) return null
+function getDevelopmentMockCourseDetail(id: number): CourseDetail | null {
+  if (process.env.NODE_ENV === "production") return null
+  const course = findMockCourse(id)
+  if (!course) return null
+  const previewSection = course.sections.find(
+    (section) => section.isFreePreview && section.previewVideoUrl,
+  )
 
+  return {
+    ...course,
+    isSeedData: true,
+    detailScene: getCourseDetailScene(course.id),
+    instructor: {
+      ...course.instructor,
+      email: "",
+      profileImageUrl: course.instructor.profileImageUrl ?? "/avatar.png",
+      description: `${course.category} 분야의 실무 프로젝트를 강의하고, ${course.learningOutcomes[0]} 과정을 중심으로 피드백합니다.`,
+    },
+    previewSectionId: previewSection?.id ?? null,
+    previewSectionTitle: previewSection?.title ?? null,
+  }
+}
+
+async function queryCourseDetail(id: number): Promise<CourseDetail | null> {
+  if (!Number.isFinite(id)) return null
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.DEV_USE_LIVE_DATABASE !== "true"
+  ) {
+    return getDevelopmentMockCourseDetail(id)
+  }
+
+  let databaseUnavailable = false
   const lecture = await db
     .select({
       id: lectures.id,
@@ -108,9 +147,9 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
       isSeedData: lectures.isSeedData,
       instructor: {
         id: users.id,
-        email: users.email,
         nickname: users.nickname,
         profileImageUrl: users.profileImageUrl,
+        description: users.description,
       },
     })
     .from(lectures)
@@ -118,25 +157,31 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
     .where(eq(lectures.id, id))
     .limit(1)
     .then((rows) => rows[0])
-    .catch(() => null)
+    .catch(() => {
+      databaseUnavailable = true
+      return null
+    })
 
-  if (!lecture || !lecture.isActive) return null
+  if (!lecture) {
+    return databaseUnavailable ? getDevelopmentMockCourseDetail(id) : null
+  }
+  if (!lecture.isActive) return null
 
-  const [ratingAgg, countRow, enrollmentRow, previewSection, sectionRows] = await Promise.all([
+  const [ratingAgg, purchaseRow, likeRow, enrollmentRow, previewSection, sectionRows] = await Promise.all([
     db
       .select({ avgRating: avg(reviews.rating), reviewCount: count(reviews.id) })
       .from(reviews)
-      .where(and(eq(reviews.lectureId, id), eq(reviews.isDeleted, false)))
+      .where(and(eq(reviews.lectureId, id), eq(reviews.isDeleted, false), isNull(reviews.parentId)))
       .then((rows) => rows[0]),
     db
-      .select({
-        purchaseCount: countDistinct(purchases.id),
-        likeCount: countDistinct(likes.id),
-      })
-      .from(lectures)
-      .leftJoin(purchases, eq(purchases.lectureId, lectures.id))
-      .leftJoin(likes, eq(likes.lectureId, lectures.id))
-      .where(eq(lectures.id, id))
+      .select({ purchaseCount: count(purchases.id) })
+      .from(purchases)
+      .where(eq(purchases.lectureId, id))
+      .then((rows) => rows[0]),
+    db
+      .select({ likeCount: count(likes.id) })
+      .from(likes)
+      .where(eq(likes.lectureId, id))
       .then((rows) => rows[0]),
     db
       .select({ enrollmentAppliedCount: count(enrollmentRequests.id) })
@@ -183,13 +228,25 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
   ])
 
   const imageUrl = toPublicMediaUrl(lecture.imageUrl)
-  const availability = getEnrollmentAvailability({
+  const rawAvailability = getEnrollmentAvailability({
     enrollmentOpen: lecture.enrollmentOpen,
     enrollmentStartAt: lecture.enrollmentStartAt,
     enrollmentEndAt: lecture.enrollmentEndAt,
     enrollmentCapacity: lecture.enrollmentCapacity,
     enrollmentAppliedCount: Number(enrollmentRow?.enrollmentAppliedCount ?? 0),
   })
+  const availability =
+    lecture.isSeedData &&
+    rawAvailability.status === "CLOSED" &&
+    typeof rawAvailability.capacity === "number"
+      ? {
+          ...rawAvailability,
+          status: "FULL" as const,
+          appliedCount: rawAvailability.capacity,
+          remainingSeats: 0,
+          isAvailable: false,
+        }
+      : rawAvailability
 
   return {
     id: lecture.id,
@@ -219,19 +276,21 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
     enrollmentStatus: availability.status,
     enrollmentAvailable: availability.isAvailable,
     remainingSeats: availability.remainingSeats,
+    isSeedData: lecture.isSeedData,
     imageUrl,
     detailScene: lecture.detailScene ?? null,
     createdAt: lecture.createdAt.toISOString(),
     instructor: {
       id: lecture.instructor?.id ?? 0,
-      email: lecture.instructor?.email ?? "",
+      email: "",
       nickname: lecture.instructor?.nickname,
       profileImageUrl: lecture.instructor?.profileImageUrl,
+      description: lecture.instructor?.description,
     },
-    purchaseCount: countRow?.purchaseCount ?? 0,
+    purchaseCount: purchaseRow?.purchaseCount ?? 0,
     reviewCount: ratingAgg?.reviewCount ?? 0,
     avgRating: Number(ratingAgg?.avgRating ?? 0),
-    likeCount: countRow?.likeCount ?? 0,
+    likeCount: likeRow?.likeCount ?? 0,
     previewSectionId: previewSection?.id ?? null,
     previewSectionTitle: previewSection?.title ?? null,
     includedFeatures: [
@@ -261,4 +320,15 @@ export const getCourseDetail = cache(async (id: number): Promise<CourseDetail | 
       resources: s.resources,
     })),
   }
-})
+}
+
+const getCachedCourseDetail = unstable_cache(
+  queryCourseDetail,
+  ["public-course-detail-v2"],
+  {
+    revalidate: 60,
+    tags: [PUBLIC_COURSE_DETAIL_TAG],
+  },
+)
+
+export const getCourseDetail = cache((id: number) => getCachedCourseDetail(id))

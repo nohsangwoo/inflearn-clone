@@ -126,6 +126,7 @@ export const lectures = pgTable(
     uniqueIndex("Lecture_slug_key").on(table.slug),
     index("Lecture_category_idx").on(table.category),
     index("Lecture_createdAt_idx").on(table.createdAt),
+    index("Lecture_active_createdAt_idx").on(table.isActive, table.createdAt),
     index("Lecture_isSeedData_idx").on(table.isSeedData),
   ],
 );
@@ -151,6 +152,13 @@ export const reviews = pgTable(
     })
       .onDelete("set null")
       .onUpdate("cascade"),
+    index("Review_lecture_parent_deleted_createdAt_idx").on(
+      table.lectureId,
+      table.parentId,
+      table.isDeleted,
+      table.createdAt,
+    ),
+    index("Review_user_lecture_idx").on(table.userId, table.lectureId),
   ],
 );
 
@@ -161,13 +169,20 @@ export const carts = pgTable("Cart", {
   userId: integer("userId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
 });
 
-export const likes = pgTable("Like", {
-  id: serial("id").primaryKey(),
-  createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
-  lectureId: integer("lectureId").references(() => lectures.id, { onDelete: "set null", onUpdate: "cascade" }),
-  userId: integer("userId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
-});
+export const likes = pgTable(
+  "Like",
+  {
+    id: serial("id").primaryKey(),
+    createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
+    lectureId: integer("lectureId").references(() => lectures.id, { onDelete: "set null", onUpdate: "cascade" }),
+    userId: integer("userId").references(() => users.id, { onDelete: "set null", onUpdate: "cascade" }),
+  },
+  (table) => [
+    index("Like_lecture_idx").on(table.lectureId),
+    index("Like_user_lecture_idx").on(table.userId, table.lectureId),
+  ],
+);
 
 export const curriculums = pgTable("Curriculum", {
   id: serial("id").primaryKey(),
@@ -272,7 +287,10 @@ export const purchases = pgTable(
     updatedAt: timestamp("updatedAt", { precision: 3, mode: "date" }).notNull().defaultNow().$onUpdate(now),
     createdAt: timestamp("createdAt", { precision: 3, mode: "date" }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("Purchase_userId_lectureId_key").on(table.userId, table.lectureId)],
+  (table) => [
+    uniqueIndex("Purchase_userId_lectureId_key").on(table.userId, table.lectureId),
+    index("Purchase_lecture_idx").on(table.lectureId),
+  ],
 );
 
 export const paymentOrders = pgTable(
@@ -337,6 +355,7 @@ export const enrollmentRequests = pgTable(
     uniqueIndex("EnrollmentRequest_userId_lectureId_key").on(table.userId, table.lectureId),
     uniqueIndex("EnrollmentRequest_paymentOrderId_key").on(table.paymentOrderId),
     index("EnrollmentRequest_status_idx").on(table.status),
+    index("EnrollmentRequest_lecture_status_idx").on(table.lectureId, table.status),
     index("EnrollmentRequest_seller_status_idx").on(table.sellerId, table.status),
     index("EnrollmentRequest_createdAt_idx").on(table.createdAt),
   ],

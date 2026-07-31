@@ -53,21 +53,67 @@ function chunks<T>(items: T[], size = 500) {
 }
 
 function ratingForTargetAverage(targetAverage: number, total: number, index: number) {
-  const fiveStarCount = Math.max(0, Math.min(total, Math.round((targetAverage - 4) * total)));
+  let threeStarCount = total >= 20 ? Math.max(1, Math.round(total * 0.025)) : 0;
+  const targetTotal = Math.round(targetAverage * total);
+  let fiveStarCount = targetTotal - 4 * total + threeStarCount;
+
+  while (threeStarCount > 0 && fiveStarCount > total - threeStarCount) {
+    threeStarCount -= 1;
+    fiveStarCount = targetTotal - 4 * total + threeStarCount;
+  }
+
+  fiveStarCount = Math.max(0, Math.min(total - threeStarCount, fiveStarCount));
+  if (index >= total - threeStarCount) return 3;
   return index < fiveStarCount ? 5 : 4;
 }
 
-const reviewTexts = [
-  "실제 운영 흐름까지 같이 보여줘서 바로 적용할 수 있었습니다.",
-  "커리큘럼이 촘촘하고 예제가 현실적이라 끝까지 따라가기 좋았습니다.",
-  "가격 대비 분량과 자료 구성이 탄탄합니다. 다음 시즌도 기대됩니다.",
-  "막연했던 부분이 신청, 승인, 운영 단위로 정리됐습니다.",
-  "초기 서비스 운영자에게 필요한 판단 기준을 많이 얻었습니다.",
+const reviewOpenings = [
+  "기능을 따라 만드는 데서 끝나지 않고 결과물을 완성하는 순서가 명확했습니다.",
+  "혼자 공부할 때 자주 막히던 지점을 강의가 정확히 짚어줬습니다.",
+  "첫 주에는 낯설었지만 작은 단위로 반복하면서 작업 속도가 눈에 띄게 붙었습니다.",
+  "예제가 과장되지 않고 실제 프로젝트에서 마주치는 문제와 가까워서 좋았습니다.",
+  "기초 설명과 실전 과제의 비율이 좋아 중간에 흐름을 놓치지 않았습니다.",
+  "완성본만 보여주는 강의가 아니라 왜 그렇게 판단했는지까지 설명해 줍니다.",
+  "매 수업의 목표와 제출물이 분명해서 퇴근 후에도 계획대로 따라갈 수 있었습니다.",
+  "이미 알고 있다고 생각했던 기본기를 다시 정리하면서 작업 습관이 많이 달라졌습니다.",
+  "자료와 체크리스트가 잘 정리돼 있어 강의가 끝난 뒤에도 계속 참고하고 있습니다.",
+  "비슷한 강의를 여러 번 들었지만 이번에는 실제로 끝까지 완성했습니다.",
+  "막연한 이론보다 직접 수정하고 비교하는 과정이 많아 기억에 오래 남았습니다.",
+  "처음에는 포트폴리오용으로 시작했는데 현재 업무에도 바로 적용할 수 있었습니다.",
 ];
+
+const reviewClosings = [
+  "최종 결과물과 작업 과정을 함께 정리할 수 있어 포트폴리오 설명도 훨씬 쉬워졌습니다.",
+  "중간 점검 기준이 분명해 혼자 다시 만들어 볼 때도 어디부터 확인해야 할지 알겠습니다.",
+  "분량은 충분하지만 수업 하나가 길지 않아 주중에도 꾸준히 진행하기 좋았습니다.",
+  "제공된 템플릿을 그대로 쓰기보다 제 프로젝트에 맞게 바꾸는 방법까지 배운 점이 특히 좋았습니다.",
+  "다음 프로젝트에서는 처음부터 같은 순서로 작업해 보려고 합니다.",
+  "초보자에게는 조금 어려운 구간도 있지만 복습 지점이 명확해 따라갈 수 있었습니다.",
+  "완성 후 피드백을 반영하는 과정까지 경험해 결과물의 설득력이 좋아졌습니다.",
+  "수강 전보다 문제를 설명하고 해결 방향을 정하는 속도가 빨라졌습니다.",
+];
+
+const studentNames = [
+  "김도윤", "이서윤", "박지후", "최하린", "정민재", "한예린", "윤시우", "임서진",
+  "오준혁", "강채원", "송현우", "문지안", "배유진", "백승민", "신가은", "노태윤",
+  "권소민", "홍지호", "장다인", "유건우", "남세아", "조은호", "서가윤", "황준서",
+];
+
+function buildReviewText(course: (typeof mockCourses)[number], index: number) {
+  const outcome = course.learningOutcomes[index % course.learningOutcomes.length];
+  const opening = reviewOpenings[(index + course.id) % reviewOpenings.length];
+  const closing = reviewClosings[(index * 3 + course.id) % reviewClosings.length];
+  return `${opening} 특히 ‘${outcome}’ 파트에서 작업 기준을 세울 수 있었고, ${closing}`;
+}
 
 async function main() {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is required");
+  }
+  if (process.env.ALLOW_DESTRUCTIVE_SEED !== "I_UNDERSTAND") {
+    throw new Error(
+      "This seed replaces showcase lectures and related records. Set ALLOW_DESTRUCTIVE_SEED=I_UNDERSTAND to continue.",
+    );
   }
 
   const result = await db.transaction(async (tx) => {
@@ -129,7 +175,7 @@ async function main() {
           email: course.instructor.email,
           nickname: course.instructor.nickname,
           profileImageUrl: course.instructor.profileImageUrl ?? "/avatar.png",
-          description: `${course.title} 강사`,
+          description: `${course.category} 분야의 실무 프로젝트를 강의하고, ${course.learningOutcomes[0]} 과정을 중심으로 피드백합니다.`,
           role: "TEACHER" as const,
           firebaseUid: `seed-teacher-${course.instructor.id}`,
           isVerified: true,
@@ -169,7 +215,7 @@ async function main() {
         const n = index + 1;
         return {
           email: `student${String(n).padStart(4, "0")}@seed.lingoost.local`,
-          nickname: `수강생 ${String(n).padStart(3, "0")}`,
+          nickname: studentNames[(n - 1) % studentNames.length],
           role: "STUDENT" as const,
           firebaseUid: `seed-student-${n}`,
           isVerified: true,
@@ -331,7 +377,7 @@ async function main() {
         userId: resolvedStudentIds[(index + courseIndex * 41) % resolvedStudentIds.length],
         lectureId: course.id,
         rating: ratingForTargetAverage(course.avgRating, course.reviewCount, index),
-        content: `${reviewTexts[index % reviewTexts.length]} (${course.title})`,
+        content: buildReviewText(course, index),
         isDeleted: false,
         parentId: null,
         createdAt: addDays(course.createdAt, index % 60),

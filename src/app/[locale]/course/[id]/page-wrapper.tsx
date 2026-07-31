@@ -2,42 +2,48 @@
 
 import { useMemo, useState } from 'react'
 import axios from 'axios'
-import { useParams, useRouter, usePathname } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import Image from 'next/image'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import {
-  Heart,
-  Star,
-  Users,
+  ArrowRight,
   BookOpen,
-  Lock,
+  CalendarDays,
+  Check,
   CheckCircle2,
-  Tags,
   Clock3,
   FileText,
-  MonitorPlay,
+  Heart,
+  Lock,
+  PlayCircle,
+  ShieldCheck,
+  Star,
+  Tags,
+  Users,
 } from 'lucide-react'
-import HlsPlayerModal from '@/components/video/shaka-player-modal'
-import FreePreviewPlayerModal from '@/components/video/free-preview-player-modal'
-import { getCoursePreviewImage } from '@/lib/course-images'
+import { toast } from 'sonner'
+import { CourseAudienceRotator } from '@/components/course/course-audience-rotator'
+import CourseReviews from '@/components/course/course-reviews'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import type { CourseDetail as Detail } from '@/lib/course-detail-data'
+import { getCourseAudienceSignals } from '@/lib/course-audience-signals'
+import { getCoursePreviewImage } from '@/lib/course-images'
 import { getEnrollmentStatusLabel } from '@/lib/enrollment-window'
 import { useAuthStore } from '@/lib/stores/auth-store'
-import { getTranslation, useLocale } from '@/lib/translations'
+import { useLocale } from '@/lib/translations'
 
-type ReviewItem = {
-  id: number
-  content: string
-  rating: number
-  createdAt: string
-  user?: { id: number; nickname?: string | null; email: string }
-  parentId?: number | null
-  replies?: ReviewItem[]
-}
+const HlsPlayerModal = dynamic(() => import('@/components/video/shaka-player-modal'))
+const FreePreviewPlayerModal = dynamic(() => import('@/components/video/free-preview-player-modal'))
 
 type EnrollmentRequest = {
   id: string
@@ -53,436 +59,308 @@ type EnrollmentRequest = {
   approvedAt?: string | null
 }
 
-type CareerCompany = {
-  name: string
-  mark: string
-  bg: string
-  fg: string
+function formatDate(value?: string | null) {
+  if (!value) return '일정 미정'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '일정 미정'
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
 }
 
-type CareerSignal = {
-  companies: CareerCompany[]
-  lead: string
-  body: string
+function formatDuration(totalSeconds?: number | null) {
+  const seconds = Math.max(0, Number(totalSeconds ?? 0))
+  if (!seconds) return '분량 준비 중'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.max(1, Math.round((seconds % 3600) / 60))
+  if (!hours) return `${minutes}분`
+  return minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`
 }
 
-const companyPalette: Record<string, CareerCompany> = {
-  naver: { name: '네이버', mark: 'N', bg: '#03c75a', fg: '#ffffff' },
-  kakao: { name: '카카오', mark: 'K', bg: '#fee500', fg: '#222222' },
-  toss: { name: '토스', mark: 'T', bg: '#3182f6', fg: '#ffffff' },
-  coupang: { name: '쿠팡', mark: 'C', bg: '#e5231b', fg: '#ffffff' },
-  line: { name: '라인', mark: 'LINE', bg: '#06c755', fg: '#ffffff' },
-  danggeun: { name: '당근', mark: 'D', bg: '#ff6f0f', fg: '#ffffff' },
-  baemin: { name: '배달의민족', mark: 'B', bg: '#2ac1bc', fg: '#ffffff' },
-  hoya: { name: '오늘의집', mark: 'O', bg: '#35c5f0', fg: '#ffffff' },
-  cj: { name: 'CJ ENM', mark: 'CJ', bg: '#ef4444', fg: '#ffffff' },
-  hybe: { name: '하이브', mark: 'HY', bg: '#111827', fg: '#ffffff' },
-  watcha: { name: '왓챠', mark: 'W', bg: '#ff0558', fg: '#ffffff' },
-  kakaoent: { name: '카카오엔터', mark: 'KE', bg: '#3a1d1d', fg: '#fee500' },
-  nexon: { name: '넥슨', mark: 'NX', bg: '#0052cc', fg: '#ffffff' },
-  netmarble: { name: '넷마블', mark: 'NM', bg: '#d0021b', fg: '#ffffff' },
-  krafton: { name: '크래프톤', mark: 'K', bg: '#111827', fg: '#ffffff' },
-  smilegate: { name: '스마일게이트', mark: 'SG', bg: '#f97316', fg: '#ffffff' },
-  ncsoft: { name: '엔씨소프트', mark: 'NC', bg: '#334155', fg: '#ffffff' },
-  neowiz: { name: '네오위즈', mark: 'NW', bg: '#7c3aed', fg: '#ffffff' },
-  pearlabyss: { name: '펄어비스', mark: 'PA', bg: '#111827', fg: '#ffffff' },
-  devsisters: { name: '데브시스터즈', mark: 'DS', bg: '#ef4444', fg: '#ffffff' },
-  aws: { name: 'AWS', mark: 'AWS', bg: '#ff9900', fg: '#111827' },
-  google: { name: 'Google', mark: 'G', bg: '#4285f4', fg: '#ffffff' },
-}
-
-const careerSignals: Record<number, CareerSignal> = {
-  101: {
-    companies: ['naver', 'kakao', 'toss', 'coupang', 'line'].map((key) => companyPalette[key]),
-    lead: '네이버·카카오·토스',
-    body: '플랫폼 개발팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  102: {
-    companies: ['naver', 'line', 'cj', 'watcha', 'kakaoent'].map((key) => companyPalette[key]),
-    lead: '네이버·라인·CJ ENM',
-    body: '동영상 플랫폼 직무를 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  103: {
-    companies: ['naver', 'kakao', 'toss', 'danggeun', 'hoya'].map((key) => companyPalette[key]),
-    lead: '네이버·카카오·당근',
-    body: '프로덕트/그로스 팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  104: {
-    companies: ['cj', 'hybe', 'watcha', 'kakaoent', 'naver'].map((key) => companyPalette[key]),
-    lead: 'CJ ENM·하이브·카카오엔터',
-    body: '콘텐츠 제작팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  105: {
-    companies: ['naver', 'google', 'kakao', 'toss', 'coupang'].map((key) => companyPalette[key]),
-    lead: '네이버·Google·토스',
-    body: 'SEO/그로스 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  106: {
-    companies: ['hybe', 'cj', 'kakaoent', 'watcha', 'naver'].map((key) => companyPalette[key]),
-    lead: '하이브·CJ ENM·카카오엔터',
-    body: '글로벌 콘텐츠 운영팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  107: {
-    companies: ['toss', 'kakao', 'coupang', 'baemin', 'danggeun'].map((key) => companyPalette[key]),
-    lead: '토스·카카오·쿠팡',
-    body: '핀테크/플랫폼 운영팀을 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  108: {
-    companies: ['naver', 'kakao', 'toss', 'danggeun', 'hoya'].map((key) => companyPalette[key]),
-    lead: '네이버·카카오·토스',
-    body: '프로덕트 메이커로 성장하려는 수강생도 이 강의를 듣고 있어요.',
-  },
-  201: {
-    companies: ['nexon', 'netmarble', 'krafton', 'smilegate', 'ncsoft'].map((key) => companyPalette[key]),
-    lead: '넥슨·크래프톤·스마일게이트',
-    body: '게임 개발 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  202: {
-    companies: ['nexon', 'netmarble', 'neowiz', 'smilegate', 'krafton'].map((key) => companyPalette[key]),
-    lead: '넷마블·네오위즈·넥슨',
-    body: '모바일 게임 개발 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  203: {
-    companies: ['neowiz', 'nexon', 'netmarble', 'smilegate', 'krafton'].map((key) => companyPalette[key]),
-    lead: '네오위즈·넥슨·스마일게이트',
-    body: '인디/2D 게임 개발 포트폴리오를 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  204: {
-    companies: ['krafton', 'nexon', 'ncsoft', 'netmarble', 'smilegate'].map((key) => companyPalette[key]),
-    lead: '크래프톤·엔씨소프트·넥슨',
-    body: '게임 환경 아트 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  205: {
-    companies: ['nexon', 'krafton', 'ncsoft', 'smilegate', 'netmarble'].map((key) => companyPalette[key]),
-    lead: '넥슨·크래프톤·엔씨소프트',
-    body: '게임 VFX 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  206: {
-    companies: ['krafton', 'nexon', 'ncsoft', 'smilegate', 'pearlabyss'].map((key) => companyPalette[key]),
-    lead: '크래프톤·넥슨·스마일게이트',
-    body: '온라인 게임 서버/클라이언트 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  207: {
-    companies: ['nexon', 'ncsoft', 'pearlabyss', 'krafton', 'netmarble'].map((key) => companyPalette[key]),
-    lead: '넥슨·엔씨소프트·펄어비스',
-    body: '액션 RPG 전투 시스템 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  208: {
-    companies: ['netmarble', 'devsisters', 'nexon', 'neowiz', 'smilegate'].map((key) => companyPalette[key]),
-    lead: '넷마블·데브시스터즈·네오위즈',
-    body: '모바일/협동 게임 개발 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  209: {
-    companies: ['ncsoft', 'krafton', 'nexon', 'pearlabyss', 'smilegate'].map((key) => companyPalette[key]),
-    lead: '엔씨소프트·크래프톤·넥슨',
-    body: '게임 AI/전투 콘텐츠 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  210: {
-    companies: ['neowiz', 'nexon', 'pearlabyss', 'smilegate', 'krafton'].map((key) => companyPalette[key]),
-    lead: '네오위즈·넥슨·펄어비스',
-    body: '레벨 디자인/툴 개발 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  211: {
-    companies: ['nexon', 'netmarble', 'devsisters', 'kakao', 'ncsoft'].map((key) => companyPalette[key]),
-    lead: '넥슨·넷마블·데브시스터즈',
-    body: '게임 UI/UX 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  212: {
-    companies: ['krafton', 'ncsoft', 'pearlabyss', 'nexon', 'smilegate'].map((key) => companyPalette[key]),
-    lead: '크래프톤·엔씨소프트·펄어비스',
-    body: '게임 오디오/사운드 구현 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  213: {
-    companies: ['neowiz', 'devsisters', 'smilegate', 'netmarble', 'nexon'].map((key) => companyPalette[key]),
-    lead: '네오위즈·데브시스터즈·스마일게이트',
-    body: '인디게임 출시/게임 프로덕션 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  214: {
-    companies: ['krafton', 'pearlabyss', 'ncsoft', 'nexon', 'smilegate'].map((key) => companyPalette[key]),
-    lead: '크래프톤·펄어비스·엔씨소프트',
-    body: '게임 시네마틱/트레일러 제작 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-  215: {
-    companies: ['devsisters', 'neowiz', 'nexon', 'kakao', 'netmarble'].map((key) => companyPalette[key]),
-    lead: '데브시스터즈·네오위즈·넥슨',
-    body: 'UGC/캐주얼 게임 제작 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-  },
-}
-
-function enrollmentLabel(status: EnrollmentRequest['status']) {
+function enrollmentRequestLabel(status: EnrollmentRequest['status']) {
   if (status === 'AWAITING_PLATFORM_FEE') return '입금 확인 대기'
   if (status === 'APPROVED') return '승인 완료'
   if (status === 'REJECTED') return '반려'
   return '취소'
 }
 
-function getCareerSignal(detail: Detail): CareerSignal {
-  if (careerSignals[detail.id]) return careerSignals[detail.id]
-  const topics = [
-    detail.category ?? '',
-    detail.title,
-    ...(detail.tags ?? []),
-    ...(detail.relatedTopics ?? []),
-  ].join(' ')
+function enrollmentSummary(detail: Detail) {
+  const capacity = detail.enrollmentCapacity
+  const applied = detail.enrollmentAppliedCount ?? 0
 
-  if (/게임|Unreal|Unity|Godot|Blender|Niagara|VFX/i.test(topics)) {
-    return {
-      companies: ['nexon', 'krafton', 'netmarble', 'smilegate', 'ncsoft'].map((key) => companyPalette[key]),
-      lead: '넥슨·크래프톤·넷마블',
-      body: '게임 업계 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-    }
+  if (detail.enrollmentStatus === 'OPEN') {
+    return typeof detail.remainingSeats === 'number'
+      ? `신청 가능 · 잔여 ${detail.remainingSeats}석`
+      : '현재 신청 가능'
   }
-
-  if (/영상|더빙|자막|콘텐츠|HLS|Audio|Video/i.test(topics)) {
-    return {
-      companies: ['cj', 'hybe', 'kakaoent', 'watcha', 'naver'].map((key) => companyPalette[key]),
-      lead: 'CJ ENM·하이브·카카오엔터',
-      body: '콘텐츠/플랫폼 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
-    }
+  if (detail.enrollmentStatus === 'FULL') {
+    return typeof capacity === 'number' ? `정원 마감 · ${capacity}/${capacity}명` : '정원 마감'
   }
-
-  return {
-    companies: ['naver', 'kakao', 'toss', 'coupang', 'line'].map((key) => companyPalette[key]),
-    lead: '네이버·카카오·토스',
-    body: '플랫폼 직무를 목표로 준비하는 수강생도 이 강의를 듣고 있어요.',
+  if (detail.enrollmentStatus === 'NOT_STARTED') {
+    return `${formatDate(detail.enrollmentStartAt)} 신청 시작`
   }
+  if (detail.enrollmentStatus === 'CLOSED') return '신청 기간이 종료되었습니다'
+  return applied > 0 && typeof capacity === 'number'
+    ? `운영 준비 중 · ${applied}/${capacity}명`
+    : '다음 모집을 준비하고 있습니다'
 }
 
-function CareerSignalBanner({ signal }: { signal: CareerSignal }) {
-  return (
-    <section className="rounded-[14px] border bg-card px-4 py-3 md:px-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
-        <div className="flex shrink-0 items-center justify-center pl-3">
-          {signal.companies.map((company, index) => (
-            <span
-              key={`${company.name}-${index}`}
-              title={company.name}
-              aria-label={company.name}
-              className="-ml-3 grid size-9 place-items-center rounded-full border-2 border-background text-[10px] font-black shadow-sm first:ml-0 md:size-10 md:text-[11px]"
-              style={{ backgroundColor: company.bg, color: company.fg }}
-            >
-              {company.mark}
-            </span>
-          ))}
-        </div>
-        <p className="min-w-0 text-center text-sm font-semibold leading-6 text-muted-foreground md:text-[16px]">
-          <span className="text-primary">{signal.lead}</span>
-          <span className="text-foreground"> {signal.body}</span>
-        </p>
-      </div>
-    </section>
-  )
+function imageNeedsUnoptimized(src: string) {
+  return /^https?:\/\//.test(src)
 }
 
-function formatDateTime(value?: string | null) {
-  if (!value) return '미정'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '미정'
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date)
-}
-
-function formatDuration(totalSeconds?: number | null) {
-  const seconds = Math.max(0, Number(totalSeconds ?? 0))
-  if (!seconds) return '미정'
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.max(1, Math.round((seconds % 3600) / 60))
-  if (!hours) return `${minutes}분`
-  return `${hours}시간 ${minutes}분`
-}
-
-export default function CourseDetailPageWrapper({ initialDetail = null }: { initialDetail?: Detail | null }) {
+export default function CourseDetailPageWrapper({
+  initialDetail = null,
+}: {
+  initialDetail?: Detail | null
+}) {
   const params = useParams<{ id: string }>()
   const lectureId = Number(params?.id)
-  const router = useRouter()
   const pathname = usePathname()
+  const router = useRouter()
   const locale = useLocale(pathname)
-  const t = getTranslation(locale).course
   const queryClient = useQueryClient()
   const user = useAuthStore((state) => state.user)
-  const [like, setLike] = useState(false)
+  const [likeOverride, setLikeOverride] = useState<{
+    lectureId: number
+    value: boolean
+  } | null>(null)
 
   const { data: detail, isLoading } = useQuery({
     queryKey: ['course-detail', lectureId],
     enabled: Number.isFinite(lectureId),
-    queryFn: async () => {
-      const { data } = await axios.get(`/api/courses/${lectureId}`)
+    queryFn: async ({ signal }) => {
+      const { data } = await axios.get(`/api/courses/${lectureId}`, { signal })
       return data as Detail
     },
-    initialData: initialDetail && initialDetail.id === lectureId ? initialDetail : undefined,
+    initialData: initialDetail?.id === lectureId ? initialDetail : undefined,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   })
 
-  // 구매 여부
-  const { data: purchasedRes } = useQuery({
+  const { data: purchasedResponse } = useQuery({
     queryKey: ['course-purchased', lectureId],
-    enabled: Number.isFinite(lectureId),
-    queryFn: async () => {
-      const { data } = await axios.get(`/api/courses/purchased`, { params: { lectureId } })
-      return data as { purchased: boolean; enrollmentRequest: EnrollmentRequest | null }
+    enabled: Boolean(user) && Number.isFinite(lectureId),
+    queryFn: async ({ signal }) => {
+      const { data } = await axios.get('/api/courses/purchased', {
+        params: { lectureId },
+        signal,
+      })
+      return data as {
+        purchased: boolean
+        enrollmentRequest: EnrollmentRequest | null
+      }
     },
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: false,
   })
 
-  const purchased = Boolean(purchasedRes?.purchased)
-  const enrollmentRequest = purchasedRes?.enrollmentRequest ?? null
-  const isEnrollmentPending = enrollmentRequest?.status === 'AWAITING_PLATFORM_FEE'
-  const enrollmentStatus = detail?.enrollmentStatus ?? 'OPEN'
-  const enrollmentAvailable = detail?.enrollmentAvailable ?? true
-
-  // 초기 좋아요 상태
-  useQuery({
+  const { data: likeResponse } = useQuery({
     queryKey: ['course-like', lectureId],
-    enabled: Number.isFinite(lectureId),
-    queryFn: async () => {
-      const { data } = await axios.get(`/api/courses/${lectureId}/like`)
-      setLike(Boolean(data?.liked))
+    enabled: Boolean(user) && Number.isFinite(lectureId),
+    queryFn: async ({ signal }) => {
+      const { data } = await axios.get(`/api/courses/${lectureId}/like`, { signal })
       return data as { liked: boolean }
     },
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 
-  const priceText = useMemo(() => {
-    if (!detail) return ''
-    const hasDiscount =
-      typeof detail.discountPrice === 'number' &&
-      (detail.discountPrice as number) < detail.price
-    const effective = hasDiscount
-      ? (detail.discountPrice as number)
-      : detail.price
-    return effective === 0 ? t.free : `₩${effective.toLocaleString()}` // "무료"
-  }, [detail, t.free])
-  const heroImage = useMemo(() => {
-    if (!detail) return ''
-    return getCoursePreviewImage(detail.imageUrl)
-  }, [detail])
-  const freePreviewSection = useMemo(
-    () => detail?.sections.find((section) => section.isFreePreview && section.previewVideoUrl) ?? null,
+  const liked = likeOverride?.lectureId === lectureId
+    ? likeOverride.value
+    : Boolean(likeResponse?.liked)
+
+  const purchased = Boolean(purchasedResponse?.purchased)
+  const enrollmentRequest = purchasedResponse?.enrollmentRequest ?? null
+  const isEnrollmentPending = enrollmentRequest?.status === 'AWAITING_PLATFORM_FEE'
+
+  const activeSections = useMemo(
+    () => detail?.sections.filter((section) => section.active) ?? [],
     [detail?.sections],
   )
-  const activeSections = detail?.sections.filter((section) => section.active) ?? []
-  const totalDurationSeconds = activeSections.reduce((sum, section) => sum + Number(section.durationSeconds ?? 0), 0)
-  const freePreviewCount = activeSections.filter((section) => section.isFreePreview && section.previewVideoUrl).length
-  const curriculumSummary = `${activeSections.length}개 수업 · 총 ${formatDuration(totalDurationSeconds)}${freePreviewCount > 0 ? ` · 무료 공개 ${freePreviewCount}개` : ''}`
+  const totalDurationSeconds = useMemo(
+    () => activeSections.reduce(
+      (sum, section) => sum + Number(section.durationSeconds ?? 0),
+      0,
+    ),
+    [activeSections],
+  )
+  const freePreviewSection = useMemo(
+    () => activeSections.find(
+      (section) => section.isFreePreview && section.previewVideoUrl,
+    ) ?? null,
+    [activeSections],
+  )
   const curriculumGroups = useMemo(() => {
-    const groups = new Map<string, { title: string; sections: Detail["sections"]; durationSeconds: number }>()
-    for (const section of detail?.sections ?? []) {
-      const title = section.moduleTitle || '커리큘럼'
-      const current = groups.get(title) ?? { title, sections: [], durationSeconds: 0 }
-      current.sections.push(section)
-      current.durationSeconds += Number(section.durationSeconds ?? 0)
-      groups.set(title, current)
+    const groups = new Map<
+      string,
+      { title: string; sections: Detail['sections']; durationSeconds: number }
+    >()
+    for (const section of activeSections) {
+      const groupTitle = section.moduleTitle || '커리큘럼'
+      const group = groups.get(groupTitle) ?? {
+        title: groupTitle,
+        sections: [],
+        durationSeconds: 0,
+      }
+      group.sections.push(section)
+      group.durationSeconds += Number(section.durationSeconds ?? 0)
+      groups.set(groupTitle, group)
     }
     return Array.from(groups.values())
-  }, [detail?.sections])
+  }, [activeSections])
+
+  const detailSceneImages = useMemo(() => {
+    const scene = detail?.detailScene
+    if (!scene) return []
+    if (scene.images?.length) return scene.images
+    if (!scene.imageUrl) return []
+    return [{
+      title: scene.title,
+      imageUrl: scene.imageUrl,
+      alt: scene.alt ?? scene.title,
+      caption: scene.caption ?? '',
+    }]
+  }, [detail?.detailScene])
+
+  const heroImage = detailSceneImages[0]?.imageUrl
+    || getCoursePreviewImage(detail?.imageUrl)
+
+  const audienceSignals = useMemo(
+    () => detail
+      ? getCourseAudienceSignals({
+          id: detail.id,
+          title: detail.title,
+          category: detail.category,
+          tags: detail.tags,
+        })
+      : [],
+    [detail],
+  )
+
   const includedFeatures = detail?.includedFeatures?.length
     ? detail.includedFeatures
     : [
-        `${formatDuration(totalDurationSeconds)} 분량 커리큘럼`,
+        `${formatDuration(totalDurationSeconds)} 커리큘럼`,
         `${activeSections.length}개 수업`,
-        '계좌입금 승인 후 수강',
-        '모바일/데스크톱 수강',
-        '검색 최적화된 강의 상세',
+        '모바일·데스크톱 수강',
+        '수업 자료와 프로젝트 가이드',
       ]
-  const detailScene = detail?.detailScene ?? null
-  const detailSceneImages = detailScene?.images ?? (
-    detailScene?.imageUrl
-      ? [{
-          title: detailScene.title,
-          imageUrl: detailScene.imageUrl,
-          alt: detailScene.alt ?? detailScene.title,
-          caption: detailScene.caption ?? '',
-        }]
-      : []
-  )
-  const careerSignal = detail ? getCareerSignal(detail) : null
 
-  // 액션
+  const effectivePrice = detail
+    ? typeof detail.discountPrice === 'number' && detail.discountPrice < detail.price
+      ? detail.discountPrice
+      : detail.price
+    : 0
+  const priceLabel = effectivePrice === 0
+    ? '무료'
+    : new Intl.NumberFormat('ko-KR', {
+        style: 'currency',
+        currency: 'KRW',
+        maximumFractionDigits: 0,
+      }).format(effectivePrice)
+
   const likeToggle = useMutation({
     mutationFn: async (nextLiked: boolean) => {
-      const { data } = await axios.post(`/api/courses/${lectureId}/like`, { liked: nextLiked })
+      const { data } = await axios.post(`/api/courses/${lectureId}/like`, {
+        liked: nextLiked,
+      })
       return data as { liked: boolean }
     },
     onMutate: async (nextLiked) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['course-detail', lectureId] })
-
-      // Save previous values
-      const previousLike = like
-      const previousDetail = queryClient.getQueryData<Detail>(['course-detail', lectureId])
-
-      // Optimistic update
-      setLike(nextLiked)
-
-      // Update the cached detail with new like count
+      const previousLiked = liked
+      const previousDetail = queryClient.getQueryData<Detail>([
+        'course-detail',
+        lectureId,
+      ])
+      setLikeOverride({ lectureId, value: nextLiked })
       if (previousDetail) {
-        const updatedDetail = {
+        queryClient.setQueryData<Detail>(['course-detail', lectureId], {
           ...previousDetail,
           likeCount: nextLiked
             ? previousDetail.likeCount + 1
-            : Math.max(0, previousDetail.likeCount - 1)
-        }
-        queryClient.setQueryData(['course-detail', lectureId], updatedDetail)
+            : Math.max(0, previousDetail.likeCount - 1),
+        })
       }
-
-      return { previousLike, previousDetail }
+      return { previousLiked, previousDetail }
     },
-    onError: (err, variables, context) => {
-      // Rollback on error
-      if (context) {
-        setLike(context.previousLike)
-        if (context.previousDetail) {
-          queryClient.setQueryData(['course-detail', lectureId], context.previousDetail)
-        }
+    onError: (error, _nextLiked, context) => {
+      setLikeOverride({
+        lectureId,
+        value: context?.previousLiked ?? false,
+      })
+      if (context?.previousDetail) {
+        queryClient.setQueryData(
+          ['course-detail', lectureId],
+          context.previousDetail,
+        )
       }
-      const anyErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string }
-      if (anyErr?.response?.status === 401) {
+      const apiError = error as {
+        response?: { status?: number; data?: { message?: string } }
+      }
+      if (apiError.response?.status === 401) {
         toast.error('로그인 후 관심 강의를 저장할 수 있습니다.')
         router.push(`/${locale}/login`)
         return
       }
-      toast.error(anyErr?.response?.data?.message || anyErr?.message || '관심 강의 저장에 실패했습니다.')
+      toast.error(apiError.response?.data?.message ?? '관심 강의 저장에 실패했습니다.')
     },
-    onSettled: () => {
-      // Refetch to ensure we have the latest data from server
-      queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] })
+    onSuccess: (data) => {
+      setLikeOverride({ lectureId, value: Boolean(data.liked) })
+      queryClient.setQueryData(['course-like', lectureId], data)
     },
-    onSuccess: res => setLike(Boolean(res?.liked)),
   })
-  const handleLikeToggle = () => {
+
+  const enroll = useMutation({
+    mutationFn: async () => {
+      const { data } = await axios.post(`/api/courses/${lectureId}/enrollment`, {})
+      return data as {
+        purchased: boolean
+        message?: string
+        enrollmentRequest?: EnrollmentRequest
+      }
+    },
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['course-purchased', lectureId] }),
+        queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] }),
+      ])
+      if (data.message) toast.success(data.message)
+    },
+    onError: (error) => {
+      const apiError = error as {
+        response?: { status?: number; data?: { message?: string } }
+      }
+      if (apiError.response?.status === 401) {
+        toast.error('로그인 후 수강 신청할 수 있습니다.')
+        router.push(`/${locale}/login`)
+        return
+      }
+      toast.error(
+        apiError.response?.data?.message ?? '수강 신청 중 오류가 발생했습니다.',
+      )
+    },
+  })
+
+  function handleLikeToggle() {
     if (!user) {
       toast.error('로그인 후 관심 강의를 저장할 수 있습니다.')
       router.push(`/${locale}/login`)
       return
     }
-    likeToggle.mutate(!like)
+    likeToggle.mutate(!liked)
   }
-  const enroll = useMutation({
-    mutationFn: async () => {
-      if (!detail) return
-      const { data } = await axios.post(`/api/courses/${detail.id}/enrollment`, {})
-      return data as { purchased: boolean; message?: string; enrollmentRequest?: EnrollmentRequest }
-    },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ['course-purchased', lectureId] })
-      await queryClient.invalidateQueries({ queryKey: ['course-detail', lectureId] })
-      if (data?.message) toast.success(data.message)
-    },
-    onError: (err: unknown) => {
-      const anyErr = err as { response?: { status?: number; data?: { message?: string } }; message?: string }
-      const status = anyErr?.response?.status
-      const message = anyErr?.response?.data?.message || anyErr?.message || '수강 신청 중 오류가 발생했습니다.'
-      console.error('[Enrollment] error', { status, message, err })
-      if (status === 401) {
-        toast.error('로그인 후 수강 신청할 수 있습니다.')
-        router.push(`/${locale}/login`)
-        return
-      }
-      toast.error(message)
-    },
-  })
-  const handleEnroll = () => {
+
+  function handleEnroll() {
+    if (!detail) return
+    if (detail.isSeedData) {
+      toast.info('운영 예시 강의입니다. 실제 공개 강의에서 신청할 수 있습니다.')
+      return
+    }
     if (!user) {
       toast.error('로그인 후 수강 신청할 수 있습니다.')
       router.push(`/${locale}/login`)
@@ -491,580 +369,664 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
     enroll.mutate()
   }
 
-  // 학습하기 버튼 핸들러
-  const handleStartLearning = () => {
+  function handleStartLearning() {
     if (!detail) return
-
-    // 이어학습하기: 마지막으로 본 섹션과 언어 확인
-    const lastSectionId = localStorage.getItem(
-      `course_${detail.id}_lastSection`,
+    const lastSectionId = localStorage.getItem(`course_${detail.id}_lastSection`)
+    const lastLanguage = localStorage.getItem(`course_${detail.id}_lastLanguage`) || 'origin'
+    const savedSection = lastSectionId
+      ? detail.sections.find(
+          (section) => section.id === Number(lastSectionId)
+            && section.hasVideo
+            && section.active,
+        )
+      : null
+    const targetSection = savedSection
+      ?? detail.sections.find((section) => section.hasVideo && section.active)
+    if (!targetSection) {
+      toast.info('재생 가능한 수업을 준비하고 있습니다.')
+      return
+    }
+    router.push(
+      `/${locale}/course/lecture?courseId=${detail.id}&sectionId=${targetSection.id}&subtitleLanguage=${lastLanguage}`,
     )
-    const lastLanguage = localStorage.getItem(
-      `course_${detail.id}_lastLanguage`,
-    )
-
-    let targetSectionId: number | undefined
-    let targetLanguage = 'origin'
-
-    if (lastSectionId) {
-      // 마지막으로 본 섹션이 있으면 그 섹션으로
-      const section = detail.sections.find(
-        s => s.id === parseInt(lastSectionId),
-      )
-      if (section && section.hasVideo && section.active) {
-        targetSectionId = section.id
-      }
-    }
-
-    // 마지막 섹션이 없거나 유효하지 않으면 첫 번째 비디오가 있는 섹션으로
-    if (!targetSectionId) {
-      const firstSection = detail.sections.find(s => s.hasVideo && s.active)
-      targetSectionId = firstSection?.id
-    }
-
-    if (lastLanguage) {
-      targetLanguage = lastLanguage
-    }
-
-    if (targetSectionId) {
-      // 모든 언어에 locale prefix 포함 (한국어도 /ko 사용)
-      const url = `/${locale}/course/lecture?courseId=${detail.id}&sectionId=${targetSectionId}&subtitleLanguage=${targetLanguage}`
-      console.log('[PageWrapper] Navigating to:', url)
-      router.push(url)
-    } else {
-      console.log('[PageWrapper] No targetSectionId found')
-    }
   }
 
   if (isLoading || !detail) {
     return (
-      <div className="mx-auto max-w-[1440px] px-4 py-12 md:px-6">
-        <div className="grid animate-pulse gap-8 lg:grid-cols-[1fr_380px]">
-          <div className="aspect-[1200/781] rounded-[24px] bg-secondary" />
-          <div className="h-80 rounded-[20px] bg-secondary" />
+      <main className="mx-auto max-w-[1280px] px-4 py-8 md:px-6 md:py-12">
+        <div className="grid animate-pulse gap-8 rounded-[28px] border p-6 lg:grid-cols-2 lg:p-10">
+          <div className="space-y-5 py-4">
+            <div className="h-6 w-32 rounded-full bg-secondary" />
+            <div className="h-32 rounded-[18px] bg-secondary" />
+            <div className="h-20 rounded-[18px] bg-secondary" />
+          </div>
+          <div className="aspect-[4/3] rounded-[22px] bg-secondary" />
         </div>
-      </div>
+      </main>
     )
   }
 
+  const enrollmentAvailable = Boolean(detail.enrollmentAvailable) && !detail.isSeedData
+  const enrollmentButtonLabel = detail.isSeedData
+    ? '운영 예시 강의'
+    : isEnrollmentPending
+      ? '입금 확인 대기 중'
+      : enrollmentAvailable
+        ? '수강 신청하기'
+        : getEnrollmentStatusLabel(detail.enrollmentStatus ?? 'PAUSED')
+  const occupancy = typeof detail.enrollmentCapacity === 'number'
+    ? Math.min(
+        100,
+        Math.round(
+          ((detail.enrollmentAppliedCount ?? 0) / detail.enrollmentCapacity) * 100,
+        ),
+      )
+    : 0
+  const freePreviewCount = activeSections.filter(
+    (section) => section.isFreePreview && section.previewVideoUrl,
+  ).length
+  const curriculumSummary = `${activeSections.length}개 수업 · ${formatDuration(totalDurationSeconds)}${
+    freePreviewCount ? ` · 무료 공개 ${freePreviewCount}개` : ''
+  }`
+
   return (
-    <div className="mx-auto max-w-[1440px] px-4 py-8 md:px-6 md:py-12">
-      {careerSignal ? <CareerSignalBanner signal={careerSignal} /> : null}
-      <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start xl:gap-14">
-        <div className="space-y-10">
-          <section className="space-y-7">
-            <div className="relative aspect-[1200/781] overflow-hidden rounded-[22px] bg-secondary md:rounded-[28px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={heroImage}
-                alt={detail.title}
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute left-4 top-4 rounded-full bg-background/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] shadow-sm backdrop-blur md:left-6 md:top-6">
-                {detail.category || '강의'}
+    <main className="pb-40 md:pb-24 lg:pb-0">
+      <div className="mx-auto max-w-[1280px] px-4 py-6 md:px-6 md:py-10">
+        <nav aria-label="경로" className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => router.push(`/${locale}`)}
+            className="rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            강의
+          </button>
+          <span aria-hidden="true">/</span>
+          <span>{detail.category || '전체'}</span>
+        </nav>
+
+        <section className="overflow-hidden rounded-[28px] border border-border/80 bg-card shadow-[0_20px_70px_-48px_rgba(15,23,42,0.6)]">
+          <div className="grid lg:grid-cols-[1.02fr_0.98fr]">
+            <div className="flex flex-col justify-center p-6 md:p-10 lg:p-12">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="rounded-full">{detail.category || '실전 강의'}</Badge>
+                {detail.level ? (
+                  <Badge variant="outline" className="rounded-full">{detail.level}</Badge>
+                ) : null}
+                <Badge variant="outline" className="rounded-full">
+                  {getEnrollmentStatusLabel(detail.enrollmentStatus ?? 'PAUSED')}
+                </Badge>
               </div>
-              <button
-                type="button"
-                aria-label="관심 강의"
-                onClick={handleLikeToggle}
-                disabled={likeToggle.isPending}
-                className="absolute right-4 top-4 grid size-11 place-items-center rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:text-primary disabled:opacity-60 md:right-6 md:top-6"
-              >
-                <Heart className={like ? 'size-5 fill-primary text-primary' : 'size-5'} />
-              </button>
-              {freePreviewSection?.previewVideoUrl ? (
-                <div className="absolute bottom-4 left-4 w-[210px] max-w-[calc(100%-2rem)]">
+
+              <h1 className="font-brand mt-6 max-w-[18ch] text-balance text-[clamp(2.15rem,5vw,4.25rem)] font-extrabold leading-[1.04] tracking-[-0.05em]">
+                {detail.title}
+              </h1>
+              <p className="mt-5 max-w-2xl text-pretty text-[16px] leading-7 text-muted-foreground md:text-[18px]">
+                {detail.shortDescription || detail.description}
+              </p>
+
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
+                <a href="#reviews" className="inline-flex items-center gap-1.5 font-semibold hover:text-primary">
+                  <Star className="size-4 fill-amber-400 text-amber-400" />
+                  {detail.avgRating > 0 ? detail.avgRating.toFixed(2) : '신규'}
+                  <span className="font-normal text-muted-foreground">
+                    후기 {detail.reviewCount.toLocaleString()}개
+                  </span>
+                </a>
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                  <Users className="size-4" />
+                  누적 수강 {detail.purchaseCount.toLocaleString()}명
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                  <Clock3 className="size-4" />
+                  {formatDuration(totalDurationSeconds)}
+                </span>
+              </div>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={handleEnroll}
+                  disabled={!enrollmentAvailable || enroll.isPending || isEnrollmentPending}
+                  className="rounded-full px-7"
+                >
+                  {enrollmentButtonLabel}
+                  {enrollmentAvailable ? <ArrowRight className="size-4" /> : null}
+                </Button>
+                {freePreviewSection?.previewVideoUrl ? (
                   <FreePreviewPlayerModal
                     src={freePreviewSection.previewVideoUrl}
                     title={freePreviewSection.title}
-                    label="무료 공개 보기"
+                    label="무료 수업 미리 보기"
                   />
-                </div>
-              ) : null}
-            </div>
+                ) : (
+                  <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    className="rounded-full px-7"
+                    onClick={() => document.getElementById('curriculum')?.scrollIntoView({
+                      behavior: 'smooth',
+                    })}
+                  >
+                    <PlayCircle className="size-4" />
+                    커리큘럼 보기
+                  </Button>
+                )}
+              </div>
 
-            <div className="space-y-5 border-b border-border pb-8">
-            <div className="flex flex-wrap gap-2">
-              {detail.category ? <Badge variant="secondary">{detail.category}</Badge> : null}
-              {detail.level ? <Badge variant="outline">{detail.level}</Badge> : null}
-              {(detail.tags ?? []).slice(0, 4).map((tag) => (
-                <Badge key={tag} variant="outline" className="bg-background">
-                  <Tags className="size-3" />
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-            <h1 className="font-brand max-w-[22ch] text-[clamp(2rem,4.8vw,4.6rem)] font-extrabold leading-[1.04] tracking-[-0.045em]">
-              {detail.title}
-            </h1>
-            {detail.shortDescription ? (
-              <p className="max-w-3xl text-[16px] leading-7 text-muted-foreground md:text-[18px]">
-                {detail.shortDescription}
-              </p>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <div className="inline-flex items-center gap-1">
-                <Star className="h-4 w-4 fill-foreground text-foreground" />
-                <span className="font-medium text-foreground">
-                  {detail.avgRating?.toFixed(1)}
-                </span>
-                <span>({detail.reviewCount})</span>
-              </div>
-              <div className="inline-flex items-center gap-1">
-                <Users className="h-4 w-4" />
-                <span>{t.students} {detail.purchaseCount.toLocaleString()}</span> {/* "수강생" */}
-              </div>
-              <span className="hidden sm:inline">·</span>
-              <div className="inline-flex items-center gap-2">
-                <Avatar className="size-6">
+              <div className="mt-7 flex items-center gap-3 border-t pt-5">
+                <Avatar className="size-11 border">
                   <AvatarImage
                     src={detail.instructor.profileImageUrl || '/avatar.png'}
-                    alt={detail.instructor.nickname || detail.instructor.email}
+                    alt={detail.instructor.nickname || '강사'}
                   />
-                  <AvatarFallback>AU</AvatarFallback>
+                  <AvatarFallback>
+                    {(detail.instructor.nickname || '강사').slice(0, 1)}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="truncate max-w-[200px]">
-                  {detail.instructor.nickname || detail.instructor.email}
-                </span>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">이 강의를 만든 사람</p>
+                  <p className="truncate font-semibold">
+                    {detail.instructor.nickname || '링구스트 강사'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLikeToggle}
+                  disabled={likeToggle.isPending}
+                  aria-label={liked ? '관심 강의에서 삭제' : '관심 강의로 저장'}
+                  aria-pressed={liked}
+                  className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                >
+                  <Heart className={liked ? 'size-4 fill-primary text-primary' : 'size-4'} />
+                  {detail.likeCount.toLocaleString()}
+                </button>
               </div>
             </div>
-            {detail.description && (
-              <p className="max-w-4xl whitespace-pre-line text-[16px] leading-7 text-muted-foreground">
-                {detail.description}
-              </p>
-            )}
-            </div>
-          </section>
 
-          {(detail.learningOutcomes?.length || detail.targetAudience || detail.requirements) ? (
-            <section className="grid overflow-hidden rounded-[20px] border border-border/80 bg-card md:grid-cols-3 md:divide-x md:divide-border">
-              {detail.learningOutcomes?.length ? (
-                <div className="border-b border-border p-6 md:border-b-0">
-                  <p className="editorial-label text-primary">Outcomes</p>
-                  <h2 className="font-brand mt-3 text-[17px] font-extrabold leading-tight">배우게 되는 것</h2>
-                  <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
-                    {detail.learningOutcomes.slice(0, 5).map((item) => (
-                      <li key={item} className="flex gap-2">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {detail.targetAudience ? (
-                <div className="border-b border-border p-6 md:border-b-0">
-                  <p className="editorial-label text-primary">For whom</p>
-                  <h2 className="font-brand mt-3 text-[17px] font-extrabold leading-tight">추천 대상</h2>
-                  <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.targetAudience}</p>
-                </div>
-              ) : null}
-              {detail.requirements ? (
-                <div className="p-6">
-                  <p className="editorial-label text-primary">Before class</p>
-                  <h2 className="font-brand mt-3 text-[17px] font-extrabold leading-tight">준비물</h2>
-                  <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.requirements}</p>
-                </div>
-              ) : null}
-            </section>
-          ) : null}
-
-          {detailScene && detailSceneImages.length > 0 ? (
-            <section className="space-y-5 rounded-[22px] border border-border/80 bg-card p-5 md:p-7">
-              <div>
-                <p className="editorial-label text-primary">Project scenes</p>
-                <h2 className="font-brand mt-3 text-[26px] font-extrabold leading-tight">{detailScene.title}</h2>
-              </div>
-              <div className="space-y-4">
-                {detailSceneImages.map((image) => (
-                  <figure key={image.imageUrl} className="overflow-hidden rounded-[14px] border bg-background">
-                    <div className="relative aspect-video bg-secondary">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={image.imageUrl}
-                        alt={image.alt}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                    <figcaption className="border-t bg-background px-4 py-3 text-sm leading-6 text-muted-foreground">
-                      <span className="font-semibold text-foreground">{image.title}</span>
-                      <span className="mx-2 text-muted-foreground/70">·</span>
-                      {image.caption}
-                    </figcaption>
-                  </figure>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <section className="space-y-6 rounded-[22px] border border-border/80 bg-card p-5 md:p-7">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="font-brand text-[24px] font-extrabold leading-tight">이 강의는 다음을 포함합니다</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {curriculumSummary}
+            <div className="relative min-h-[320px] overflow-hidden bg-secondary lg:min-h-[600px]">
+              <Image
+                src={heroImage}
+                alt={detailSceneImages[0]?.alt || detail.title}
+                fill
+                preload
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className="object-cover"
+                unoptimized={imageNeedsUnoptimized(heroImage)}
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent p-5 pt-20 text-white md:p-7">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                  완성 프로젝트
+                </p>
+                <p className="mt-2 max-w-xl text-sm font-medium leading-6 md:text-base">
+                  {detailSceneImages[0]?.caption
+                    || detail.learningOutcomes?.[0]
+                    || '배운 내용을 실제 결과물로 완성합니다.'}
                 </p>
               </div>
-              {detail.lastUpdatedAt ? (
-                <span className="text-xs text-muted-foreground">최근 업데이트 {formatDateTime(detail.lastUpdatedAt)}</span>
-              ) : null}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {includedFeatures.slice(0, 6).map((feature, index) => {
-                const Icon = index % 3 === 0 ? MonitorPlay : index % 3 === 1 ? FileText : Clock3
-                return (
-                  <div key={feature} className="flex items-center gap-3 rounded-[14px] border bg-background p-3 text-sm">
-                    <Icon className="size-4 shrink-0 text-primary" />
-                    <span>{feature}</span>
-                  </div>
-                )
-              })}
-            </div>
-            {(detail.relatedTopics ?? detail.tags ?? []).length ? (
-              <div>
-                <h3 className="text-[16px] font-semibold leading-[1.25]">관련 주제</h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(detail.relatedTopics ?? detail.tags ?? []).slice(0, 12).map((topic) => (
-                    <Badge key={topic} variant="outline" className="rounded-full bg-background px-3 py-1">
-                      {topic}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  링구스트는 온라인 강의, 시즌제 강의, 강의 판매, 수강 신청, 계좌입금 승인, HLS 영상 수강처럼
-                  학습자와 강의 판매자가 실제로 검색하는 흐름을 기준으로 강의 상세 정보를 구성합니다.
-                </p>
-              </div>
-            ) : null}
-          </section>
-
-          <div className="space-y-5 rounded-[22px] border border-border/80 bg-card p-5 md:p-7">
-            <div className="flex items-center justify-between">
-              <h2 className="font-brand text-[26px] font-extrabold leading-tight">{t.curriculum}</h2> {/* "커리큘럼" */}
-              <span className="text-sm text-muted-foreground">{curriculumSummary}</span>
-            </div>
-            <div className="space-y-3">
-              {detail.sections.length === 0 ? (
-                <div className="rounded-[14px] border bg-background p-3 text-sm text-muted-foreground">
-                  {t.noCurriculum} {/* "커리큘럼이 아직 없습니다." */}
-                </div>
-              ) : (
-                curriculumGroups.map((group, groupIndex) => (
-                  <div key={group.title} className="overflow-hidden rounded-[14px] border bg-background">
-                    <div className="flex flex-col gap-2 border-b bg-muted/35 p-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-primary">섹션 {groupIndex + 1}</div>
-                        <h3 className="mt-1 text-[20px] font-semibold leading-[1.2]">{group.title}</h3>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {group.sections.length}개 수업 · {formatDuration(group.durationSeconds)}
-                      </div>
-                    </div>
-                    <div className="divide-y">
-                      {group.sections.map((s, lessonIndex) => (
-                        <div key={s.id} className="flex gap-3 p-3">
-                          <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                            {s.hasVideo ? <MonitorPlay className="size-4" /> : <FileText className="size-4" />}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-xs font-medium text-muted-foreground">수업 {lessonIndex + 1}</span>
-                              {s.isFreePreview ? <Badge variant="secondary" className="rounded-full">무료공개</Badge> : null}
-                            </div>
-                            <div className="mt-1 font-medium">{s.title}</div>
-                            {s.description ? <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{s.description}</div> : null}
-                            {s.resources?.length ? (
-                              <div className="mt-2 text-xs text-muted-foreground">자료 {s.resources.length}개 포함</div>
-                            ) : null}
-                            {!s.active && (
-                              <div className="text-xs text-muted-foreground">
-                                {t.private} {/* "비공개" */}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex shrink-0 flex-col items-end justify-center gap-2 text-xs text-muted-foreground">
-                            <span>{formatDuration(s.durationSeconds)}</span>
-                            {s.hasVideo ? (
-                              purchased ? (
-                                <HlsPlayerModal sectionId={s.id} title={s.title} />
-                              ) : s.isFreePreview && s.previewVideoUrl ? (
-                                <FreePreviewPlayerModal src={s.previewVideoUrl} title={s.title} label="미리 보기" variant="link" />
-                              ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                                  <Lock className="size-3" />
-                                  승인 후 공개
-                                </span>
-                              )
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                                영상 등록 전
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              )}
             </div>
           </div>
+        </section>
 
-          {/* 리뷰 영역 (목록 + 작성) */}
-          <Reviews lectureId={detail.id} />
-        </div>
+        <CourseAudienceRotator signals={audienceSignals} className="mt-5" />
 
-        <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-[96px]">
-            <Card className="overflow-hidden border-border/80 shadow-md">
-              <CardContent className="space-y-4 p-5">
-                <p className="editorial-label text-primary">Enrollment</p>
-                <div className="font-brand text-[28px] font-extrabold leading-none tracking-[-0.035em]">{priceText}</div>
-                {typeof detail.discountPrice === 'number' &&
-                  (detail.discountPrice as number) < detail.price && (
-                    <div className="text-xs text-muted-foreground">
-                      {t.originalPrice} ₩{detail.price.toLocaleString()} {/* "정가" */}
-                    </div>
-                  )}
-                <div className="rounded-[14px] border bg-muted/40 p-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-semibold text-foreground">{getEnrollmentStatusLabel(enrollmentStatus)}</span>
-                    {typeof detail.remainingSeats === 'number' ? (
-                      <span className="text-muted-foreground">잔여 {detail.remainingSeats}석</span>
-                    ) : null}
+        <nav
+          aria-label="강의 상세 섹션"
+          className="sticky top-[64px] z-20 mt-6 -mx-4 overflow-x-auto border-y bg-background/95 px-4 backdrop-blur md:mx-0 md:rounded-full md:border"
+        >
+          <div className="flex min-w-max items-center gap-1 py-2 md:px-2">
+            {[
+              ['outcomes', '강의 소개'],
+              ['projects', '결과물'],
+              ['curriculum', '커리큘럼'],
+              ['instructor', '강사'],
+              ['reviews', '후기'],
+              ['faq', '안내'],
+            ].map(([id, label]) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className="rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {label}
+              </a>
+            ))}
+          </div>
+        </nav>
+
+        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start xl:gap-14">
+          <div className="min-w-0 space-y-8">
+            <section
+              id="outcomes"
+              className="scroll-mt-28 rounded-[24px] border border-border/80 bg-card p-5 md:p-8"
+            >
+              <p className="editorial-label text-primary">COURSE OUTCOMES</p>
+              <h2 className="font-brand mt-3 text-balance text-[28px] font-extrabold tracking-[-0.035em] md:text-[36px]">
+                듣고 끝나는 대신, 설명할 수 있는 결과물을 만듭니다
+              </h2>
+              {detail.description ? (
+                <p className="mt-5 whitespace-pre-line text-[15px] leading-7 text-muted-foreground md:text-base">
+                  {detail.description}
+                </p>
+              ) : null}
+
+              <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                {(detail.learningOutcomes ?? []).map((outcome, index) => (
+                  <div
+                    key={outcome}
+                    className="flex gap-3 rounded-[16px] border bg-background p-4"
+                  >
+                    <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                      {index + 1}
+                    </span>
+                    <p className="text-sm font-medium leading-6">{outcome}</p>
                   </div>
-                  <div className="mt-2 text-xs leading-5 text-muted-foreground">
-                    {detail.enrollmentStartAt || detail.enrollmentEndAt ? (
-                      <div>
-                        신청 기간 {formatDateTime(detail.enrollmentStartAt)} - {formatDateTime(detail.enrollmentEndAt)}
+                ))}
+              </div>
+
+              <div className="mt-7 grid gap-4 border-t pt-7 md:grid-cols-2">
+                <div className="rounded-[16px] bg-muted/50 p-5">
+                  <h3 className="flex items-center gap-2 font-bold">
+                    <Users className="size-4 text-primary" />
+                    이런 분께 추천합니다
+                  </h3>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted-foreground">
+                    {detail.targetAudience || '결과물 중심으로 실무 역량을 쌓고 싶은 분'}
+                  </p>
+                </div>
+                <div className="rounded-[16px] bg-muted/50 p-5">
+                  <h3 className="flex items-center gap-2 font-bold">
+                    <CheckCircle2 className="size-4 text-primary" />
+                    시작 전 확인하세요
+                  </h3>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted-foreground">
+                    {detail.requirements || '별도의 선수 지식 없이 시작할 수 있습니다.'}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {detail.detailScene && detailSceneImages.length > 0 ? (
+              <section
+                id="projects"
+                className="scroll-mt-28 overflow-hidden rounded-[24px] border border-border/80 bg-card"
+              >
+                <div className="p-5 md:p-8">
+                  <p className="editorial-label text-primary">PROJECT PREVIEW</p>
+                  <h2 className="font-brand mt-3 text-[28px] font-extrabold tracking-[-0.035em] md:text-[36px]">
+                    {detail.detailScene.title}
+                  </h2>
+                  <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
+                    수업에서 다루는 도구와 작업 흐름을 실제 프로젝트 장면으로 확인하세요.
+                    결과만 복제하는 대신, 각 선택을 설명할 수 있도록 제작 과정을 함께 익힙니다.
+                  </p>
+                </div>
+                <div className="grid gap-px bg-border">
+                  {detailSceneImages.map((image) => (
+                    <figure key={image.imageUrl} className="bg-background">
+                      <div className="relative aspect-video overflow-hidden bg-secondary">
+                        <Image
+                          src={image.imageUrl}
+                          alt={image.alt}
+                          fill
+                          sizes="(max-width: 1024px) 100vw, 760px"
+                          className="object-cover"
+                          unoptimized={imageNeedsUnoptimized(image.imageUrl)}
+                        />
                       </div>
-                    ) : (
-                      <div>상시 신청 가능</div>
-                    )}
-                    {typeof detail.enrollmentCapacity === 'number' ? (
-                      <div>이번 시즌 {detail.enrollmentAppliedCount ?? 0}/{detail.enrollmentCapacity}명 신청</div>
-                    ) : null}
-                    <div>신청 방식: 계좌입금 확인 후 수강권한 부여</div>
+                      <figcaption className="p-5 md:p-6">
+                        <p className="font-bold">{image.title}</p>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {image.caption}
+                        </p>
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section
+              id="curriculum"
+              className="scroll-mt-28 rounded-[24px] border border-border/80 bg-card p-5 md:p-8"
+            >
+              <div className="flex flex-col gap-4 border-b pb-6 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="editorial-label text-primary">CURRICULUM</p>
+                  <h2 className="font-brand mt-3 text-[28px] font-extrabold tracking-[-0.035em] md:text-[36px]">
+                    완성까지 이어지는 커리큘럼
+                  </h2>
+                </div>
+                <p className="text-sm text-muted-foreground">{curriculumSummary}</p>
+              </div>
+
+              {curriculumGroups.length ? (
+                <Accordion
+                  type="multiple"
+                  defaultValue={curriculumGroups.slice(0, 1).map((_, index) => `module-${index}`)}
+                  className="mt-2"
+                >
+                  {curriculumGroups.map((group, groupIndex) => (
+                    <AccordionItem
+                      key={`${group.title}-${groupIndex}`}
+                      value={`module-${groupIndex}`}
+                      className="border-b last:border-b-0"
+                    >
+                      <AccordionTrigger className="py-5 hover:no-underline">
+                        <div className="pr-3 text-left">
+                          <p className="text-xs font-bold text-primary">모듈 {groupIndex + 1}</p>
+                          <h3 className="mt-1 text-base font-bold md:text-lg">{group.title}</h3>
+                          <p className="mt-1 text-xs font-normal text-muted-foreground">
+                            {group.sections.length}개 수업 · {formatDuration(group.durationSeconds)}
+                          </p>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-5">
+                        <ol className="divide-y overflow-hidden rounded-[16px] border bg-background">
+                          {group.sections.map((section, lessonIndex) => (
+                            <li
+                              key={section.id}
+                              className="flex items-start gap-3 p-4"
+                            >
+                              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+                                {lessonIndex + 1}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-semibold leading-6">{section.title}</p>
+                                  {section.isFreePreview ? (
+                                    <Badge variant="secondary" className="rounded-full">
+                                      무료 공개
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                                {section.description ? (
+                                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                    {section.description}
+                                  </p>
+                                ) : null}
+                                <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                                  <span>{formatDuration(section.durationSeconds)}</span>
+                                  {section.resources?.length ? (
+                                    <span>자료 {section.resources.length}개</span>
+                                  ) : null}
+                                </div>
+                              </div>
+                              <div className="shrink-0 self-center">
+                                {section.hasVideo ? (
+                                  purchased ? (
+                                    <HlsPlayerModal sectionId={section.id} title={section.title} />
+                                  ) : section.isFreePreview && section.previewVideoUrl ? (
+                                    <FreePreviewPlayerModal
+                                      src={section.previewVideoUrl}
+                                      title={section.title}
+                                      label="미리 보기"
+                                      variant="link"
+                                    />
+                                  ) : (
+                                    <span
+                                      className="inline-flex size-8 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                                      title="승인 후 공개"
+                                    >
+                                      <Lock className="size-3.5" />
+                                    </span>
+                                  )
+                                ) : (
+                                  <FileText className="size-4 text-muted-foreground" />
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              ) : (
+                <p className="mt-6 rounded-[16px] bg-muted/50 p-5 text-sm text-muted-foreground">
+                  커리큘럼을 준비하고 있습니다.
+                </p>
+              )}
+            </section>
+
+            <section
+              id="instructor"
+              className="scroll-mt-28 rounded-[24px] border border-border/80 bg-card p-5 md:p-8"
+            >
+              <p className="editorial-label text-primary">INSTRUCTOR</p>
+              <div className="mt-5 flex flex-col gap-6 md:flex-row md:items-start">
+                <Avatar className="size-20 border md:size-24">
+                  <AvatarImage
+                    src={detail.instructor.profileImageUrl || '/avatar.png'}
+                    alt={detail.instructor.nickname || '강사'}
+                  />
+                  <AvatarFallback className="text-xl">
+                    {(detail.instructor.nickname || '강사').slice(0, 1)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-primary">{detail.category} 강사</p>
+                  <h2 className="font-brand mt-1 text-[28px] font-extrabold">
+                    {detail.instructor.nickname || '링구스트 강사'}
+                  </h2>
+                  <p className="mt-4 max-w-3xl whitespace-pre-line text-sm leading-7 text-muted-foreground md:text-base">
+                    {detail.instructor.description
+                      || `${detail.category || '해당 분야'}의 핵심 작업 흐름을 결과물 중심으로 안내합니다. 각 수업에서 무엇을 만들고, 어떤 기준으로 점검해야 하는지 구체적으로 설명합니다.`}
+                  </p>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {(detail.tags ?? []).slice(0, 5).map((tag) => (
+                      <Badge key={tag} variant="outline" className="rounded-full">
+                        {tag}
+                      </Badge>
+                    ))}
                   </div>
                 </div>
+              </div>
+            </section>
 
-                <div className="grid gap-2">
-                  {freePreviewSection?.previewVideoUrl ? (
-                    <FreePreviewPlayerModal
-                      src={freePreviewSection.previewVideoUrl}
-                      title={freePreviewSection.title}
-                      label="무료 공개 수업 보기"
-                    />
+            <CourseReviews
+              lectureId={detail.id}
+              isSeedData={detail.isSeedData}
+              loginHref={`/${locale}/login`}
+              className="rounded-[24px] border border-border/80 bg-card p-5 md:p-8"
+            />
+
+            <section
+              id="faq"
+              className="scroll-mt-28 rounded-[24px] border border-border/80 bg-card p-5 md:p-8"
+            >
+              <p className="editorial-label text-primary">BEFORE YOU START</p>
+              <h2 className="font-brand mt-3 text-[28px] font-extrabold tracking-[-0.035em] md:text-[36px]">
+                수강 전 안내
+              </h2>
+              <Accordion type="single" collapsible className="mt-5">
+                <AccordionItem value="access">
+                  <AccordionTrigger>언제부터 수강할 수 있나요?</AccordionTrigger>
+                  <AccordionContent className="text-sm leading-7 text-muted-foreground">
+                    실제 공개 강의는 신청과 결제 확인이 완료되면 내 강의실에서 바로
+                    시작할 수 있습니다. 승인 상태는 계정의 신청 내역에서 확인할 수 있습니다.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="devices">
+                  <AccordionTrigger>어떤 기기에서 볼 수 있나요?</AccordionTrigger>
+                  <AccordionContent className="text-sm leading-7 text-muted-foreground">
+                    최신 브라우저가 설치된 데스크톱과 모바일에서 수강할 수 있습니다.
+                    영상과 제공 자료는 강의별 공개 범위에 따라 제공됩니다.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="policy">
+                  <AccordionTrigger>취소와 환불 기준은 어떻게 확인하나요?</AccordionTrigger>
+                  <AccordionContent className="text-sm leading-7 text-muted-foreground">
+                    신청 전 강의별 안내와 이용약관의 취소·환불 기준을 확인해 주세요.
+                    결제 또는 승인 상태에 따른 문의는 고객 지원을 통해 확인할 수 있습니다.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
+          </div>
+
+          <aside className="lg:sticky lg:top-[136px]">
+            <Card className="overflow-hidden border-border/80 shadow-[0_18px_50px_-34px_rgba(15,23,42,0.7)]">
+              <CardContent className="p-5 md:p-6">
+                {detail.isSeedData ? (
+                  <div className="mb-5 rounded-[14px] border border-primary/20 bg-primary/5 p-3 text-xs leading-5 text-muted-foreground">
+                    <span className="font-bold text-primary">운영 예시 강의</span>
+                    <br />
+                    실제 강의가 공개되면 같은 흐름으로 신청과 수강이 진행됩니다.
+                  </div>
+                ) : null}
+
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  이번 모집
+                </p>
+                <p className="font-brand mt-3 text-[32px] font-extrabold tracking-[-0.04em]">
+                  {priceLabel}
+                </p>
+                {typeof detail.discountPrice === 'number'
+                  && detail.discountPrice < detail.price ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      정가 <span className="line-through">₩{detail.price.toLocaleString()}</span>
+                    </p>
                   ) : null}
-                  {!purchased ? (
-                    <>
-                      <Button
-                        className="w-full"
-                        onClick={handleEnroll}
-                        disabled={!enrollmentAvailable || enroll.isPending || isEnrollmentPending}
-                      >
-                        {isEnrollmentPending ? '입금 확인 대기 중' : enrollmentAvailable ? '수강 신청' : getEnrollmentStatusLabel(enrollmentStatus)}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button className="w-full" variant="secondary" disabled>
-                      구입 완료
-                    </Button>
-                  )}
+
+                <div className="mt-5 rounded-[16px] border bg-muted/35 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-bold">
+                      {getEnrollmentStatusLabel(detail.enrollmentStatus ?? 'PAUSED')}
+                    </span>
+                    {detail.enrollmentStatus === 'OPEN'
+                      && typeof detail.remainingSeats === 'number' ? (
+                        <span className="text-sm font-semibold text-primary">
+                          잔여 {detail.remainingSeats}석
+                        </span>
+                      ) : null}
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {enrollmentSummary(detail)}
+                  </p>
+                  {(detail.enrollmentStatus === 'OPEN'
+                    || detail.enrollmentStatus === 'FULL')
+                    && typeof detail.enrollmentCapacity === 'number' ? (
+                      <div className="mt-4">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-border">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{ width: `${occupancy}%` }}
+                          />
+                        </div>
+                        <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+                          <span>{detail.enrollmentAppliedCount ?? 0}명 신청</span>
+                          <span>정원 {detail.enrollmentCapacity}명</span>
+                        </div>
+                      </div>
+                    ) : null}
                 </div>
+
+                <div className="mt-4 space-y-2 text-xs leading-5 text-muted-foreground">
+                  {detail.enrollmentStartAt || detail.enrollmentEndAt ? (
+                    <p className="flex gap-2">
+                      <CalendarDays className="mt-0.5 size-3.5 shrink-0" />
+                      {formatDate(detail.enrollmentStartAt)} – {formatDate(detail.enrollmentEndAt)}
+                    </p>
+                  ) : null}
+                  <p className="flex gap-2">
+                    <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />
+                    승인 완료 후 내 강의실에서 수강
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  size="lg"
+                  className="mt-5 w-full rounded-full"
+                  onClick={handleEnroll}
+                  disabled={!enrollmentAvailable || enroll.isPending || isEnrollmentPending}
+                >
+                  {enrollmentButtonLabel}
+                </Button>
 
                 {enrollmentRequest ? (
-                  <div className="space-y-2 rounded-[14px] border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
+                  <div className="mt-4 rounded-[14px] border bg-muted/35 p-3 text-xs leading-5 text-muted-foreground">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-foreground">수강 신청 상태</span>
-                      <Badge variant={purchased ? 'secondary' : 'outline'}>{enrollmentLabel(enrollmentRequest.status)}</Badge>
+                      <span className="font-bold text-foreground">신청 상태</span>
+                      <Badge variant="outline">
+                        {enrollmentRequestLabel(enrollmentRequest.status)}
+                      </Badge>
                     </div>
-                    <div>신청 금액 ₩{enrollmentRequest.amount.toLocaleString()}</div>
-                    <div>계좌입금 확인 후 판매자가 수강권한을 열어줍니다.</div>
+                    <p className="mt-2">신청 금액 ₩{enrollmentRequest.amount.toLocaleString()}</p>
                     {!purchased && enrollmentRequest.sellerAccountNumber ? (
-                      <div className="rounded-[14px] border bg-background p-2">
-                        입금 계좌: {enrollmentRequest.sellerBankName} {enrollmentRequest.sellerAccountNumber}
-                        {enrollmentRequest.sellerAccountHolder ? ` (${enrollmentRequest.sellerAccountHolder})` : ''}
-                      </div>
+                      <p className="mt-2 rounded-lg bg-background p-2">
+                        입금 계좌 {enrollmentRequest.sellerBankName}{' '}
+                        {enrollmentRequest.sellerAccountNumber}
+                      </p>
                     ) : null}
                   </div>
                 ) : null}
 
-                <Button
-                  className="w-full"
-                  variant={purchased ? 'default' : 'outline'}
-                  onClick={purchased ? handleStartLearning : undefined}
-                  disabled={!purchased}
-                >
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  {purchased ? t.startLearning : '승인 후 이용 가능합니다'}
-                </Button>
+                {purchased ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="mt-3 w-full rounded-full"
+                    onClick={handleStartLearning}
+                  >
+                    <BookOpen className="size-4" />
+                    이어서 학습하기
+                  </Button>
+                ) : null}
 
-                <Button
-                  variant="ghost"
-                  className="w-full rounded-full"
-                  onClick={handleLikeToggle}
-                  disabled={likeToggle.isPending}
-                >
-                  <Heart
-                    className={`h-4 w-4 mr-2 ${
-                      like ? 'fill-primary text-primary' : ''
-                    }`}
-                  />{' '}
-                  {detail.likeCount.toLocaleString()}{t.peoplesLikes} {/* "명이 좋아함" */}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+                <div className="mt-6 space-y-3 border-t pt-5">
+                  {includedFeatures.slice(0, 5).map((feature) => (
+                    <p key={feature} className="flex gap-2 text-sm">
+                      <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                      {feature}
+                    </p>
+                  ))}
+                </div>
 
-function Reviews({ lectureId }: { lectureId: number }) {
-  const pathname = usePathname()
-  const locale = useLocale(pathname)
-  const t = getTranslation(locale).course
-  const [rating, setRating] = useState(5)
-  const { data: reviews = [], refetch } = useQuery({
-    queryKey: ['course-reviews', lectureId],
-    queryFn: async () => {
-      const { data } = await axios.get(`/api/courses/${lectureId}/reviews`)
-      const raw = data as ReviewItem[]
-      // parentId=null인 항목만 골라내고, 각 항목의 replies에 대댓글 붙이기
-      const roots = raw.filter(
-        r => r.parentId === null || r.parentId === undefined,
-      )
-      const subs = raw.filter(
-        r => r.parentId !== null && r.parentId !== undefined,
-      )
-      roots.forEach(r => {
-        r.replies = subs.filter(s => s.parentId === r.id)
-      })
-      return roots
-    },
-  })
-  const addReview = useMutation({
-    mutationFn: async (p: { content: string; rating: number }) => {
-      await axios.post(`/api/courses/${lectureId}/reviews`, p)
-    },
-    onSuccess: () => refetch(),
-  })
-  const addReply = useMutation({
-    mutationFn: async (p: { parentId: number; content: string }) => {
-      await axios.post(`/api/courses/${lectureId}/reviews`, { ...p, rating: 5 })
-    },
-    onSuccess: () => refetch(),
-  })
-  return (
-    <div className="space-y-4">
-      <h2 className="text-[21px] font-bold leading-[1.43]">{t.reviews} ({reviews.length})</h2> {/* "리뷰" */}
-      <div className="space-y-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="mb-2 text-sm font-medium">{t.writeReview}</div> {/* "리뷰 작성" */}
-            <div className="mb-3 flex gap-1">
-              {[1, 2, 3, 4, 5].map(i => (
-                <button
-                  key={i}
-                  onClick={() => setRating(i)}
-                  className={`text-lg ${
-                    i <= rating ? 'text-foreground' : 'text-muted-foreground'
-                  }`}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
-            <textarea
-              placeholder={t.reviewPlaceholder} // "강의 리뷰를 남겨주세요"
-              className="min-h-24 w-full rounded-lg border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
-              rows={2}
-              onKeyDown={e => {
-                if (e.ctrlKey && e.key === 'Enter') {
-                  const v = (e.target as HTMLTextAreaElement).value
-                  if (v.trim()) {
-                    addReview.mutate({ content: v.trim(), rating })
-                    ;(e.target as HTMLTextAreaElement).value = ''
-                  }
-                }
-              }}
-            />
-            <div className="mt-1 text-xs text-muted-foreground">
-              {t.sendWithCtrlEnter} {/* "Ctrl+Enter로 전송" */}
-            </div>
-          </CardContent>
-        </Card>
-        <div className="space-y-2">
-          {reviews.length === 0 && (
-            <div className="text-sm text-muted-foreground">
-              {t.noReviews} {/* "아직 리뷰가 없습니다." */}
-            </div>
-          )}
-          {reviews.map(
-            rv =>
-              rv && (
-                <div key={rv.id} className="space-y-2 rounded-[14px] border p-4">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="size-6">
-                      <AvatarFallback>
-                        {rv.user?.nickname?.[0] ?? 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-sm font-medium">
-                      {rv.user?.nickname ?? rv.user?.email ?? '익명'}
-                    </div>
-                    <div className="flex gap-0 text-xs">
-                      {[1, 2, 3, 4, 5].map(i => (
-                        <span
-                          key={i}
-                          className={
-                            i <= rv.rating
-                              ? 'text-foreground'
-                              : 'text-muted-foreground'
-                          }
-                        >
-                          ★
-                        </span>
+                {(detail.relatedTopics ?? detail.tags ?? []).length ? (
+                  <div className="mt-6 border-t pt-5">
+                    <p className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                      <Tags className="size-3.5" />
+                      관련 주제
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(detail.relatedTopics ?? detail.tags ?? []).slice(0, 8).map((topic) => (
+                        <Badge key={topic} variant="outline" className="rounded-full">
+                          {topic}
+                        </Badge>
                       ))}
                     </div>
                   </div>
-                  <div className="whitespace-pre-line text-sm">
-                    {rv.content}
-                  </div>
-                  <div className="space-y-2 border-l pl-3">
-                    {(rv.replies ?? []).map(rep => (
-                      <div key={rep.id} className="text-sm text-foreground/90">
-                        <span className="mr-1 text-xs text-muted-foreground">
-                          {t.reply} {/* "답글" */}
-                        </span>
-                        {rep.content}
-                      </div>
-                    ))}
-                    <div className="flex items-center gap-2">
-                      <input
-                        placeholder={t.replyPlaceholder} // "답글 작성"
-                        className="h-10 flex-1 rounded-lg border bg-background px-3 text-xs outline-none focus:border-foreground"
-                        onKeyDown={e => {
-                          const v = (e.target as HTMLInputElement).value
-                          if (e.key === 'Enter' && v.trim()) {
-                            addReply.mutate({
-                              parentId: rv.id,
-                              content: v.trim(),
-                            })
-                            ;(e.target as HTMLInputElement).value = ''
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ),
-          )}
+                ) : null}
+              </CardContent>
+            </Card>
+          </aside>
         </div>
       </div>
-    </div>
+
+      <div
+        data-course-enrollment-bar
+        className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 border-t bg-background/95 p-3 backdrop-blur md:bottom-0 lg:hidden"
+      >
+        <div className="mx-auto flex max-w-xl items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-brand text-lg font-extrabold">{priceLabel}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {enrollmentSummary(detail)}
+            </p>
+          </div>
+          <Button
+            type="button"
+            className="shrink-0 rounded-full"
+            onClick={handleEnroll}
+            disabled={!enrollmentAvailable || enroll.isPending || isEnrollmentPending}
+          >
+            {enrollmentButtonLabel}
+          </Button>
+        </div>
+      </div>
+    </main>
   )
 }

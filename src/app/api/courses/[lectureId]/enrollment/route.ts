@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidateTag } from "next/cache"
 import { and, count, eq, inArray } from "drizzle-orm"
 import { db, enrollmentRequests, lectures, purchases, type EnrollmentStatus } from "@/db"
 import { getAuthUserFromRequest } from "@/lib/auth/get-auth-user"
@@ -8,6 +9,8 @@ import {
   getPlatformFeeRateBps,
 } from "@/lib/enrollments"
 import { getEnrollmentAvailability, getEnrollmentStatusLabel } from "@/lib/enrollment-window"
+import { PUBLIC_COURSE_CATALOG_TAG } from "@/lib/course-catalog-data"
+import { PUBLIC_COURSE_DETAIL_TAG } from "@/lib/course-detail-data"
 
 export async function POST(
   req: NextRequest,
@@ -56,6 +59,15 @@ export async function POST(
 
   if (!lecture || !lecture.isActive) {
     return NextResponse.json({ message: "lecture not available" }, { status: 400 })
+  }
+  if (lecture.isSeedData) {
+    return NextResponse.json(
+      {
+        code: "SEED_COURSE_ENROLLMENT_DISABLED",
+        message: "샘플 강의는 수강 신청을 받을 수 없습니다.",
+      },
+      { status: 409 },
+    )
   }
   if (lecture.instructorId === user.id) {
     return NextResponse.json({ message: "seller cannot enroll in own lecture" }, { status: 400 })
@@ -128,6 +140,8 @@ export async function POST(
 
     return [created]
   })
+  revalidateTag(PUBLIC_COURSE_CATALOG_TAG, "max")
+  revalidateTag(PUBLIC_COURSE_DETAIL_TAG, "max")
 
   return NextResponse.json(
     {

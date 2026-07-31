@@ -14,5 +14,10 @@ export async function GET(
   const detail = await getCourseDetail(id)
   if (!detail) return NextResponse.json({ message: "not found" }, { status: 404 })
 
-  return NextResponse.json(detail)
+  const response = NextResponse.json(detail)
+  response.headers.set(
+    "Cache-Control",
+    "public, s-maxage=60, stale-while-revalidate=300",
+  )
+  return response
 }

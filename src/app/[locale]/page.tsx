@@ -1,6 +1,12 @@
 import { Metadata } from "next";
 import { generateSeoMetadata } from "@/lib/seo-metadata";
 import HomePageWrapper from "../page-wrapper";
+import {
+  getEmptyPublicCourseCatalog,
+  getDevelopmentPublicCourseCatalog,
+  getPublicCourseCatalog,
+} from "@/lib/course-catalog-data";
+import { getHomepageSections } from "@/lib/homepage-sections-data";
 
 type Props = {
   params: Promise<{ locale: string }>
@@ -17,6 +23,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
 }
 
-export default function HomePage() {
-  return <HomePageWrapper />;
+export default async function HomePage() {
+  const initialCatalogInput = {
+    page: 1,
+    pageSize: 15,
+    sort: "latest",
+  };
+  const [initialCatalog, initialHomepageSections] = await Promise.all([
+    getPublicCourseCatalog(initialCatalogInput).catch(() =>
+      process.env.NODE_ENV === "production"
+        ? getEmptyPublicCourseCatalog(initialCatalogInput)
+        : getDevelopmentPublicCourseCatalog(initialCatalogInput),
+    ),
+    getHomepageSections(),
+  ]);
+
+  return (
+    <HomePageWrapper
+      initialCatalog={initialCatalog}
+      initialHomepageSections={initialHomepageSections}
+    />
+  );
 }

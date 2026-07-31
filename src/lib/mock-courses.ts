@@ -1893,19 +1893,86 @@ export const mockCourses: MockCourse[] = [
   ...additionalGameCourses,
 ]
 
-export function findMockCourse(id: number) {
-  const source = mockCourses.find((item) => item.id === id)
-  if (!source) return null
-  const course = withDerivedMockStats(source)
-  const availability = getEnrollmentAvailability(course)
+function isoDateFromNow(now: Date, days: number) {
+  const value = new Date(now)
+  value.setUTCDate(value.getUTCDate() + days)
+  value.setUTCHours(14, 59, 59, 0)
+  return value.toISOString()
+}
+
+function withOperationalEnrollmentWindow<T extends (typeof mockCourses)[number]>(
+  course: T,
+  now: Date,
+) {
+  if (!course.enrollmentOpen || typeof course.enrollmentCapacity !== "number") {
+    return course
+  }
+
+  const index = mockCourses.findIndex((item) => item.id === course.id)
+  const phase = Math.max(0, index) % 6
+  const capacity = course.enrollmentCapacity
+
+  if (phase <= 2) {
+    const occupancyRate = [0.72, 0.84, 0.93][phase]
+    return {
+      ...course,
+      enrollmentStartAt: isoDateFromNow(now, -10 - phase * 2),
+      enrollmentEndAt: isoDateFromNow(now, 12 + phase * 5),
+      enrollmentAppliedCount: Math.max(1, Math.round(capacity * occupancyRate)),
+    }
+  }
+
+  if (phase === 3) {
+    return {
+      ...course,
+      enrollmentStartAt: isoDateFromNow(now, -18),
+      enrollmentEndAt: isoDateFromNow(now, 9),
+      enrollmentAppliedCount: capacity,
+    }
+  }
+
+  if (phase === 4) {
+    return {
+      ...course,
+      enrollmentStartAt: isoDateFromNow(now, 5),
+      enrollmentEndAt: isoDateFromNow(now, 32),
+      enrollmentAppliedCount: 0,
+    }
+  }
+
   return {
     ...course,
+    enrollmentStartAt: isoDateFromNow(now, -42),
+    enrollmentEndAt: isoDateFromNow(now, -4),
+    enrollmentAppliedCount: capacity,
+  }
+}
+
+export function findMockCourse(id: number, now = new Date()) {
+  const source = mockCourses.find((item) => item.id === id)
+  if (!source) return null
+  const course = withOperationalEnrollmentWindow(withDerivedMockStats(source), now)
+  const rawAvailability = getEnrollmentAvailability(course, now)
+  const availability =
+    rawAvailability.status === "CLOSED" &&
+    typeof rawAvailability.capacity === "number" &&
+    rawAvailability.appliedCount >= rawAvailability.capacity
+      ? {
+          ...rawAvailability,
+          status: "FULL" as const,
+          remainingSeats: 0,
+          isAvailable: false,
+        }
+      : rawAvailability
+  return {
+    ...course,
+    enrollmentAppliedCount: availability.appliedCount,
     enrollmentStatus: availability.status,
     enrollmentAvailable: availability.isAvailable,
     remainingSeats: availability.remainingSeats,
   }
 }
 
-export function getMockCoursesWithEnrollmentStatus() {
-  return mockCourses.map((course) => findMockCourse(course.id)!)
+export function getMockCoursesWithEnrollmentStatus(now = new Date()) {
+  return mockCourses.map((course) => findMockCourse(course.id, now)!)
 }
