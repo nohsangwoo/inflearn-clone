@@ -25,8 +25,8 @@ export function BottomNavigation() {
   }
 
   return (
-    <nav data-bottom-navigation className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 backdrop-blur md:hidden">
-      <div className="grid h-16 grid-cols-3">
+    <nav data-bottom-navigation className="fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+      <div className="grid h-16 grid-cols-3 px-3">
         {navItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
@@ -39,11 +39,11 @@ export function BottomNavigation() {
               href={href}
               prefetch={false}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
+                "relative flex min-h-11 flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors",
                 active ? "text-primary" : "text-muted-foreground",
               )}
             >
-              {active ? <span className="absolute top-0 h-0.5 w-12 rounded-b bg-primary" /> : null}
+              {active ? <span className="absolute top-0 h-0.5 w-8 rounded-b bg-primary" /> : null}
               <Icon className="size-5" />
               {item.label}
             </Link>

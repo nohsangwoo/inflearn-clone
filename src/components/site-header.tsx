@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, GraduationCap, LogOut, Menu, PlayCircle, ShieldCheck, Sparkles, User, Video } from "lucide-react"
+import { ArrowUpRight, BarChart3, GraduationCap, LogOut, Menu, ShieldCheck, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,9 +20,9 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 
 const navItems = [
-  { href: "/", label: "강의", icon: PlayCircle, isNew: false, requiresAuth: false },
-  { href: "/admin", label: "스튜디오", icon: Video, isNew: true, requiresAuth: true },
-  { href: "/me", label: "학습", icon: Sparkles, isNew: true, requiresAuth: true },
+  { href: "/", label: "강의 탐색", isNew: false, requiresAuth: false },
+  { href: "/admin", label: "크리에이터 스튜디오", isNew: true, requiresAuth: true },
+  { href: "/me", label: "내 학습", isNew: false, requiresAuth: true },
 ]
 
 export function SiteHeader() {
@@ -44,27 +44,38 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
-      <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="flex h-20 items-center justify-between gap-4 md:grid md:grid-cols-[1fr_auto_1fr]">
-          <Link href={withLocalePath(pathname, "/")} className="flex min-w-0 shrink-0 items-center gap-2" prefetch={false}>
+    <>
+      <Link
+        href="#main-content"
+        className="fixed left-4 top-3 z-[100] -translate-y-20 rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background transition-transform focus:translate-y-0"
+      >
+        본문으로 이동
+      </Link>
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-xl">
+        <div className="mx-auto max-w-[1500px] px-4 md:px-6">
+          <div className="flex h-[72px] items-center justify-between gap-4 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+          <Link href={withLocalePath(pathname, "/")} className="flex min-w-0 shrink-0 items-center gap-3" prefetch={false}>
             <Image
               src="/logo.png?v=lingoost-20260515"
               alt={`${brand.name} logo`}
-              width={36}
-              height={36}
-              className="size-9 shrink-0 rounded-[8px]"
+              width={38}
+              height={38}
+              className="size-[38px] shrink-0 rounded-[10px]"
               priority
               unoptimized
             />
-            <span className="font-brand truncate text-[19px] font-extrabold text-primary">
-              {brand.name}
+            <span className="min-w-0">
+              <span className="font-brand block truncate text-[18px] font-extrabold leading-none text-foreground">
+                {brand.name}
+              </span>
+              <span className="mt-1.5 hidden text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:block">
+                Learning studio
+              </span>
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex">
+          <nav className="hidden h-full items-center gap-8 lg:flex" aria-label="주요 메뉴">
             {navItems.map((item) => {
-              const Icon = item.icon
               const localizedHref = withLocalePath(pathname, item.href)
               const href = item.requiresAuth ? protectedHref(item.href) : localizedHref
               const active =
@@ -77,36 +88,36 @@ export function SiteHeader() {
                   href={href}
                   prefetch={false}
                   className={cn(
-                    "relative inline-flex h-16 flex-col items-center justify-center gap-1 text-sm font-semibold transition-colors",
+                    "relative inline-flex h-full items-center gap-2 text-[13px] font-semibold transition-colors",
                     active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <span className="relative grid size-8 place-items-center">
-                    <Icon className="size-6" strokeWidth={1.8} />
-                    {item.isNew ? (
-                      <span className="absolute -right-4 -top-1 rounded-full bg-primary px-1.5 py-0.5 text-[8px] font-bold leading-none text-primary-foreground">
-                        NEW
-                      </span>
-                    ) : null}
-                  </span>
                   <span>{item.label}</span>
-                  {active ? <span className="absolute bottom-0 h-0.5 w-8 rounded-full bg-foreground" /> : null}
+                  {item.isNew ? (
+                    <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[8px] font-extrabold tracking-[0.12em] text-primary">
+                      NEW
+                    </span>
+                  ) : null}
+                  {active ? <span className="absolute inset-x-0 bottom-0 h-0.5 bg-foreground" /> : null}
                 </Link>
               )
             })}
           </nav>
 
           <div className="flex items-center justify-end gap-2">
-            <Button asChild variant="ghost" size="sm" className="hidden rounded-full px-4 font-semibold lg:inline-flex">
+            <Button asChild variant="ghost" size="sm" className="hidden rounded-full px-4 font-semibold sm:inline-flex">
               <Link href={protectedHref("/admin")} prefetch={false}>
                 강의 판매하기
+                <ArrowUpRight className="size-3.5" />
               </Link>
             </Button>
-            <LanguageSwitcher />
+            <div className="hidden md:block">
+              <LanguageSwitcher />
+            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-11 rounded-full border-border px-3">
+                <Button variant="outline" aria-label="사용자 메뉴" className="h-11 rounded-full border-border bg-card px-3 shadow-2xs">
                   <Menu className="size-4" />
                   {user ? (
                     <Avatar className="size-7">
@@ -172,6 +183,7 @@ export function SiteHeader() {
           </div>
         </div>
       </div>
-    </header>
+      </header>
+    </>
   )
 }

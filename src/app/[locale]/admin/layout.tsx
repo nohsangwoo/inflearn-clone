@@ -19,8 +19,8 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="md:hidden sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="min-h-screen bg-secondary/45">
+      <div className="sticky top-[72px] z-30 border-b border-border/80 bg-background/92 backdrop-blur-xl md:hidden">
         <div className="flex items-center gap-4 px-4 h-14">
           <AdminMobileSidebar />
           <h1 className="font-semibold text-lg">강의 제공자</h1>
@@ -30,8 +30,8 @@ export default async function AdminLayout({
       <div className="flex">
         <AdminSidebar />
 
-        <main className="flex-1 min-w-0">
-          <div className="container max-w-6xl px-4 md:px-6 py-6">
+        <main className="min-w-0 flex-1">
+          <div className="container max-w-7xl px-4 py-8 md:px-8 md:py-10">
             {children}
           </div>
         </main>

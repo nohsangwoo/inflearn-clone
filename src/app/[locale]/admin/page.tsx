@@ -114,12 +114,12 @@ export default function AdminDashboardPage() {
   const enrollmentRequests = pendingEnrollments?.requests ?? []
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-8">
+      <div className="flex flex-col gap-5 border-b border-border pb-7 md:flex-row md:items-end md:justify-between">
         <div>
-          <Badge variant="secondary" className="mb-3">판매자 스튜디오</Badge>
-          <h1 className="text-[28px] font-bold leading-[1.43]">오늘의 강의 운영</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="editorial-label text-primary">Creator studio</p>
+          <h1 className="font-brand mt-3 text-[clamp(2rem,4vw,3.4rem)] font-extrabold leading-none tracking-[-0.045em]">오늘의 강의 운영</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             강의 판매, 수강생, HLS 처리, 더빙 상태와 정산 예정액을 한 곳에서 확인합니다.
           </p>
         </div>
@@ -131,7 +131,7 @@ export default function AdminDashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid overflow-hidden rounded-[18px] border border-border/80 bg-card shadow-2xs sm:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-border">
         {[
           { title: "누적 입금 승인", value: money(summary.grossRevenue), icon: CircleDollarSign, help: "승인 완료 수강 신청 기준" },
           { title: "정산 예상", value: money(summary.estimatedPayout), icon: BadgeCheck, help: "운영 정산 정책 기준" },
@@ -140,16 +140,14 @@ export default function AdminDashboardPage() {
         ].map((item) => {
           const Icon = item.icon
           return (
-            <Card key={item.title}>
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-sm text-muted-foreground">{item.title}</CardTitle>
-                <Icon className="size-5 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-[22px] font-semibold leading-[1.18]">{item.value}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{item.help}</div>
-              </CardContent>
-            </Card>
+            <div key={item.title} className="border-b border-border p-5 last:border-b-0 xl:border-b-0 xl:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[12px] font-semibold text-muted-foreground">{item.title}</div>
+                <Icon className="size-[18px] text-primary" />
+              </div>
+              <div className="font-brand mt-5 text-[25px] font-extrabold leading-none tracking-[-0.035em]">{item.value}</div>
+              <div className="mt-2 text-[11px] text-muted-foreground">{item.help}</div>
+            </div>
           )
         })}
       </div>

@@ -28,14 +28,14 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
     <Link
       href={withLocalePath(pathname, item.href)}
       className={cn(
-        "flex items-center gap-3 rounded-md px-4 py-3 text-sm transition-colors",
+        "flex min-h-11 items-center gap-3 rounded-xl px-3.5 py-2.5 text-[13px] font-semibold transition-colors",
         isActive
-          ? "bg-secondary text-secondary-foreground"
-          : "text-muted-foreground hover:bg-secondary/50 hover:text-secondary-foreground"
+          ? "bg-[#ff385c] text-white"
+          : "text-[#aa9ea2] hover:bg-white/7 hover:text-white"
       )}
       aria-current={isActive ? "page" : undefined}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className="size-[18px]" />
       <span>{item.label}</span>
     </Link>
   )
@@ -46,11 +46,12 @@ export function MeSidebar() {
   const cleanPath = pathname.replace(/^\/(ko|en|ja|vi|ru|zh|zh-CN|zh-TW|fr|de|es|pt|it|id|th|hi|ar|tr|pl|uk)/, "") || "/"
 
   return (
-    <aside className="hidden md:block w-72 shrink-0 border-r bg-background">
-      <div className="h-16 flex items-center px-5 font-semibold text-lg border-b">
-        내 계정
+    <aside className="sticky top-[72px] hidden h-[calc(100dvh-72px)] w-64 shrink-0 border-r border-[#3b3236] bg-[#1b1719] text-white md:block">
+      <div className="border-b border-[#3b3236] px-5 py-6">
+        <p className="editorial-label text-[#ff8da1]">Learner space</p>
+        <div className="font-brand mt-2 text-lg font-extrabold">내 학습</div>
       </div>
-      <nav className="flex flex-col gap-2 px-3 py-4">
+      <nav className="flex flex-col gap-1 px-3 py-4">
         {navItems.map((item) => (
           <NavLink key={item.href} item={item} isActive={cleanPath === item.href} />
         ))}

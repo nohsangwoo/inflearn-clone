@@ -538,26 +538,29 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
 
   if (isLoading || !detail) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="text-sm text-muted-foreground">{t.loading}</div> {/* "불러오는 중..." */}
+      <div className="mx-auto max-w-[1440px] px-4 py-12 md:px-6">
+        <div className="grid animate-pulse gap-8 lg:grid-cols-[1fr_380px]">
+          <div className="aspect-[1200/781] rounded-[24px] bg-secondary" />
+          <div className="h-80 rounded-[20px] bg-secondary" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
+    <div className="mx-auto max-w-[1440px] px-4 py-8 md:px-6 md:py-12">
       {careerSignal ? <CareerSignalBanner signal={careerSignal} /> : null}
-      <div className="mt-5 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
-        <div className="space-y-8">
-          <section className="space-y-5">
-            <div className="relative aspect-[1200/781] overflow-hidden rounded-[14px] bg-secondary">
+      <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start xl:gap-14">
+        <div className="space-y-10">
+          <section className="space-y-7">
+            <div className="relative aspect-[1200/781] overflow-hidden rounded-[22px] bg-secondary md:rounded-[28px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={heroImage}
                 alt={detail.title}
                 className="h-full w-full object-cover"
               />
-              <div className="absolute left-4 top-4 rounded-full bg-background px-3 py-1 text-[11px] font-semibold shadow-sm">
+              <div className="absolute left-4 top-4 rounded-full bg-background/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] shadow-sm backdrop-blur md:left-6 md:top-6">
                 {detail.category || '강의'}
               </div>
               <button
@@ -565,7 +568,7 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
                 aria-label="관심 강의"
                 onClick={handleLikeToggle}
                 disabled={likeToggle.isPending}
-                className="absolute right-4 top-4 grid size-10 place-items-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:text-primary disabled:opacity-60"
+                className="absolute right-4 top-4 grid size-11 place-items-center rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur transition-colors hover:text-primary disabled:opacity-60 md:right-6 md:top-6"
               >
                 <Heart className={like ? 'size-5 fill-primary text-primary' : 'size-5'} />
               </button>
@@ -580,7 +583,7 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
               ) : null}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5 border-b border-border pb-8">
             <div className="flex flex-wrap gap-2">
               {detail.category ? <Badge variant="secondary">{detail.category}</Badge> : null}
               {detail.level ? <Badge variant="outline">{detail.level}</Badge> : null}
@@ -591,11 +594,11 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
                 </Badge>
               ))}
             </div>
-            <h1 className="text-[22px] font-medium leading-[1.18] md:text-[28px] md:font-bold md:leading-[1.43]">
+            <h1 className="font-brand max-w-[22ch] text-[clamp(2rem,4.8vw,4.6rem)] font-extrabold leading-[1.04] tracking-[-0.045em]">
               {detail.title}
             </h1>
             {detail.shortDescription ? (
-              <p className="max-w-3xl text-[16px] leading-6 text-muted-foreground">
+              <p className="max-w-3xl text-[16px] leading-7 text-muted-foreground md:text-[18px]">
                 {detail.shortDescription}
               </p>
             ) : null}
@@ -634,10 +637,11 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
           </section>
 
           {(detail.learningOutcomes?.length || detail.targetAudience || detail.requirements) ? (
-            <section className="grid gap-4 md:grid-cols-3">
+            <section className="grid overflow-hidden rounded-[20px] border border-border/80 bg-card md:grid-cols-3 md:divide-x md:divide-border">
               {detail.learningOutcomes?.length ? (
-                <div className="rounded-[14px] border bg-card p-5">
-                  <h2 className="text-[16px] font-semibold leading-[1.25]">배우게 되는 것</h2>
+                <div className="border-b border-border p-6 md:border-b-0">
+                  <p className="editorial-label text-primary">Outcomes</p>
+                  <h2 className="font-brand mt-3 text-[17px] font-extrabold leading-tight">배우게 되는 것</h2>
                   <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
                     {detail.learningOutcomes.slice(0, 5).map((item) => (
                       <li key={item} className="flex gap-2">
@@ -649,14 +653,16 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
                 </div>
               ) : null}
               {detail.targetAudience ? (
-                <div className="rounded-[14px] border bg-card p-5">
-                  <h2 className="text-[16px] font-semibold leading-[1.25]">추천 대상</h2>
+                <div className="border-b border-border p-6 md:border-b-0">
+                  <p className="editorial-label text-primary">For whom</p>
+                  <h2 className="font-brand mt-3 text-[17px] font-extrabold leading-tight">추천 대상</h2>
                   <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.targetAudience}</p>
                 </div>
               ) : null}
               {detail.requirements ? (
-                <div className="rounded-[14px] border bg-card p-5">
-                  <h2 className="text-[16px] font-semibold leading-[1.25]">준비물</h2>
+                <div className="p-6">
+                  <p className="editorial-label text-primary">Before class</p>
+                  <h2 className="font-brand mt-3 text-[17px] font-extrabold leading-tight">준비물</h2>
                   <p className="mt-4 whitespace-pre-line text-sm leading-7 text-muted-foreground">{detail.requirements}</p>
                 </div>
               ) : null}
@@ -664,10 +670,10 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
           ) : null}
 
           {detailScene && detailSceneImages.length > 0 ? (
-            <section className="space-y-4 rounded-[14px] border bg-card p-5">
+            <section className="space-y-5 rounded-[22px] border border-border/80 bg-card p-5 md:p-7">
               <div>
-                <p className="text-sm font-medium text-primary">실전 프로젝트 화면</p>
-                <h2 className="mt-1 text-[21px] font-bold leading-[1.43]">{detailScene.title}</h2>
+                <p className="editorial-label text-primary">Project scenes</p>
+                <h2 className="font-brand mt-3 text-[26px] font-extrabold leading-tight">{detailScene.title}</h2>
               </div>
               <div className="space-y-4">
                 {detailSceneImages.map((image) => (
@@ -692,10 +698,10 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
             </section>
           ) : null}
 
-          <section className="space-y-5 rounded-[14px] border bg-card p-5">
+          <section className="space-y-6 rounded-[22px] border border-border/80 bg-card p-5 md:p-7">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-[21px] font-bold leading-[1.43]">이 강의는 다음을 포함합니다</h2>
+                <h2 className="font-brand text-[24px] font-extrabold leading-tight">이 강의는 다음을 포함합니다</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {curriculumSummary}
                 </p>
@@ -733,9 +739,9 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
             ) : null}
           </section>
 
-          <div className="space-y-3 rounded-[14px] border bg-card p-5">
+          <div className="space-y-5 rounded-[22px] border border-border/80 bg-card p-5 md:p-7">
             <div className="flex items-center justify-between">
-              <h2 className="text-[21px] font-bold leading-[1.43]">{t.curriculum}</h2> {/* "커리큘럼" */}
+              <h2 className="font-brand text-[26px] font-extrabold leading-tight">{t.curriculum}</h2> {/* "커리큘럼" */}
               <span className="text-sm text-muted-foreground">{curriculumSummary}</span>
             </div>
             <div className="space-y-3">
@@ -810,10 +816,11 @@ export default function CourseDetailPageWrapper({ initialDetail = null }: { init
         </div>
 
         <div className="lg:col-span-1">
-          <div className="lg:sticky lg:top-24">
-            <Card>
+          <div className="lg:sticky lg:top-[96px]">
+            <Card className="overflow-hidden border-border/80 shadow-md">
               <CardContent className="space-y-4 p-5">
-                <div className="text-[21px] font-bold leading-[1.43]">{priceText}</div>
+                <p className="editorial-label text-primary">Enrollment</p>
+                <div className="font-brand text-[28px] font-extrabold leading-none tracking-[-0.035em]">{priceText}</div>
                 {typeof detail.discountPrice === 'number' &&
                   (detail.discountPrice as number) < detail.price && (
                     <div className="text-xs text-muted-foreground">

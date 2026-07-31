@@ -42,7 +42,7 @@ export default async function RootLayout({
         <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
         <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content={brand.name} />
@@ -56,9 +56,9 @@ export default async function RootLayout({
           <JsonLd type="website" locale={locale as 'ko' | 'en' | 'ja' | 'zh'} />
           <WebViewBridgeInitializer />
           <SiteHeader />
-          <main className="min-h-[calc(100dvh-56px-64px)] pb-16 md:pb-0">
+          <div id="main-content" className="min-h-[calc(100dvh-72px-64px)] pb-16 md:pb-0">
             {children}
-          </main>
+          </div>
           <SiteFooter />
           <BottomNavigation />
         </Providers>

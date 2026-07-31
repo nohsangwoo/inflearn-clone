@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import Image from "next/image"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Apple } from "lucide-react"
@@ -213,17 +214,42 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[calc(100dvh-56px)] flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-sm">
-        <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{mode === "login" ? t.login : t.signup}</h1> {/* "로그인" : "회원가입" */}
-          <p className="text-sm text-muted-foreground">{t.subtitle}</p> {/* "계속하려면 아래 방법 중 하나를 선택하세요" */}
+    <div className="grid min-h-[calc(100dvh-72px)] bg-background p-3 lg:grid-cols-[1.08fr_0.92fr]">
+      <div className="relative hidden min-h-[720px] overflow-hidden rounded-[28px] bg-[#191517] lg:block">
+        <Image
+          src="/course-detail-scenes/course-108-workshop.png"
+          alt="링구스트 강의 제작 워크스페이스"
+          fill
+          preload
+          sizes="54vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#171315] via-[#171315]/20 to-[#171315]/20" />
+        <div className="media-scanline absolute inset-0 opacity-20" />
+        <div className="absolute inset-x-10 bottom-10 text-[#fff9f6]">
+          <p className="editorial-label text-[#ff8da1]">Continue your scene</p>
+          <h2 className="font-brand mt-4 max-w-[11ch] text-[clamp(2.8rem,5vw,5.8rem)] font-black leading-[0.96] tracking-[-0.055em]">
+            배우던 장면으로 돌아오세요.
+          </h2>
+          <div className="mt-8 flex items-center gap-3 border-t border-white/20 pt-5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#d2c6ca]">
+            <span className="size-2 rounded-full bg-[#ff385c]" />
+            Progress is securely synced
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center px-3 py-10 sm:px-8">
+        <div className="w-full max-w-[430px] rounded-[24px] border border-border/80 bg-card p-6 shadow-sm sm:p-9">
+        <div className="space-y-3 text-left">
+          <p className="editorial-label text-primary">{mode === "login" ? "Welcome back" : "Create your account"}</p>
+          <h1 className="font-brand text-[32px] font-extrabold tracking-[-0.04em]">{mode === "login" ? t.login : t.signup}</h1> {/* "로그인" : "회원가입" */}
+          <p className="text-sm leading-6 text-muted-foreground">{t.subtitle}</p> {/* "계속하려면 아래 방법 중 하나를 선택하세요" */}
         </div>
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-8 grid gap-3 sm:grid-cols-2">
           <Button
             variant="outline"
-            className="w-full justify-center"
+            className="w-full justify-center bg-card"
             onClick={() => handleOAuth("google")}
             disabled={isLoading}
           >
@@ -232,7 +258,7 @@ export default function LoginPage() {
           </Button>
           <Button
             variant="outline"
-            className="w-full justify-center"
+            className="w-full justify-center bg-card"
             onClick={() => handleOAuth("apple")}
             disabled={isLoading}
           >
@@ -256,7 +282,7 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-12 w-full rounded-xl border border-input bg-card px-4 py-2 text-sm outline-none transition-colors focus-visible:border-ring"
               placeholder={t.emailPlaceholder} // "you@example.com"
               disabled={isLoading}
             />
@@ -269,7 +295,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-12 w-full rounded-xl border border-input bg-card px-4 py-2 text-sm outline-none transition-colors focus-visible:border-ring"
               placeholder={t.passwordPlaceholder} // "********"
               disabled={isLoading}
             />
@@ -283,14 +309,14 @@ export default function LoginPage() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-12 w-full rounded-xl border border-input bg-card px-4 py-2 text-sm outline-none transition-colors focus-visible:border-ring"
                 placeholder={t.passwordPlaceholder} // "********"
                 disabled={isLoading}
               />
             </div>
           )}
           {error && (
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="rounded-xl bg-destructive/8 px-4 py-3 text-sm leading-6 text-destructive">{error}</p>
           )}
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (mode === "login" ? t.loggingIn : t.signingUp) : (mode === "login" ? t.loginButton : t.signupButton)} {/* "로그인 중..." : "회원가입 중..." : "이메일로 로그인" : "이메일로 회원가입" */}
@@ -322,6 +348,7 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-xs text-muted-foreground leading-relaxed">
           {t.agreement} {/* "로그인 시 서비스 약관 및 개인정보 처리방침에 동의한 것으로 간주됩니다." */}
         </p>
+        </div>
       </div>
     </div>
   )

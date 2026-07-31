@@ -1,6 +1,5 @@
 "use client"
 
-import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "sonner"
 import { useEffect, useState } from "react"
 import { useAuthStore } from "@/lib/stores/auth-store"
@@ -14,16 +13,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
     initialize()
   }, [initialize])
   return (
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
-        <Toaster position="top-center" richColors duration={3000} />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
+      <Toaster position="top-center" richColors duration={3000} />
+    </QueryClientProvider>
   )
 }
 
 export default Providers
-
 

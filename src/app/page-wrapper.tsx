@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, type CSSProperties } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import axios from "axios"
@@ -8,13 +9,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowRight,
   BookOpen,
+  Captions,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CirclePlay,
   Code2,
   Heart,
   Mail,
   MonitorPlay,
+  RadioTower,
   Search,
   Sparkles,
   Star,
@@ -25,7 +29,7 @@ import {
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { brand, withLocalePath, withLoginRedirectPath } from "@/lib/brand"
+import { withLocalePath, withLoginRedirectPath } from "@/lib/brand"
 import { getCoursePreviewImage } from "@/lib/course-images"
 import { getEnrollmentStatusLabel, type EnrollmentAvailabilityStatus } from "@/lib/enrollment-window"
 import { defaultHomepageSections, type HomepageSection } from "@/lib/homepage-sections"
@@ -248,110 +252,255 @@ export default function HomePageWrapper() {
   }
 
   return (
-    <main className="bg-background text-foreground">
-      <section className="mx-auto max-w-7xl px-4 pb-8 pt-8 md:px-6 md:pb-10">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="text-[14px] font-medium text-muted-foreground">강의 판매자와 수강생을 잇는 웹 우선 마켓</p>
-          <h1 className="mt-3 text-[28px] font-bold leading-[1.43] md:text-[32px]">
-            {brand.name}에서 다음 강의를 찾아보세요
-          </h1>
-        </div>
+    <main className="overflow-hidden bg-background text-foreground">
+      <section className="px-3 pt-3 md:px-6 md:pt-6">
+        <div className="relative mx-auto max-w-[1500px] overflow-hidden rounded-[26px] bg-[#191517] text-[#fff9f6] md:rounded-[34px]">
+          <div className="signal-grid absolute inset-0 opacity-[0.08]" />
+          <div className="relative grid min-h-[620px] lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="flex flex-col justify-between px-6 py-10 md:px-10 md:py-12 lg:px-14 lg:py-16">
+              <div>
+                <div
+                  className="editorial-label hero-reveal flex items-center gap-2 text-[#ff9bab]"
+                  style={{ "--reveal-index": 0 } as CSSProperties}
+                >
+                  <span className="size-2 rounded-full bg-[#ff385c]" />
+                  Curated learning · Season 2026
+                </div>
+                <h1
+                  className="font-brand hero-reveal mt-7 text-[clamp(2.7rem,3.7vw,4.8rem)] font-black leading-[0.98] tracking-[-0.055em]"
+                  style={{ "--reveal-index": 1 } as CSSProperties}
+                >
+                  <span className="block">배움의 다음</span>
+                  <span className="block">장면을 재생하세요.</span>
+                </h1>
+                <p
+                  className="hero-reveal mt-7 max-w-[34rem] text-[15px] leading-7 text-[#d9ced1] md:text-base"
+                  style={{ "--reveal-index": 2 } as CSSProperties}
+                >
+                  기술, 창작, 비즈니스를 실제 프로젝트로 연결하는 시즌제 강의. 한 번 고르고,
+                  끝까지 완성하는 학습 경험을 만듭니다.
+                </p>
+                <div
+                  className="hero-reveal mt-8 flex flex-wrap gap-3"
+                  style={{ "--reveal-index": 3 } as CSSProperties}
+                >
+                  <Button asChild className="rounded-full bg-[#ff385c] px-6 text-[#fff9f6] hover:bg-[#e9284c]">
+                    <Link href="#course-catalog">
+                      강의 둘러보기
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="rounded-full border-[#665b5f] bg-transparent px-6 text-[#fff9f6] hover:bg-[#2a2427] hover:text-[#fff9f6]">
+                    <Link href={user ? withLocalePath(pathname, "/admin") : withLoginRedirectPath(pathname, "/admin")}>
+                      강의 만들기
+                    </Link>
+                  </Button>
+                </div>
+              </div>
 
-        <div className="mx-auto mt-8 max-w-4xl rounded-full border border-border bg-background p-2 marketplace-shadow">
-          <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-[1.2fr_0.8fr_0.8fr_56px] md:divide-x md:divide-y-0">
-            <label className="px-5 py-3">
-              <span className="block text-[14px] font-medium text-foreground">무엇을 배우나요?</span>
-              <input
-                value={keyword}
-                onChange={(event) => {
-                  setKeyword(event.target.value)
-                  setPage(1)
-                }}
-                placeholder="HLS, Next.js, 강의 기획"
-                className="mt-1 w-full bg-transparent text-[14px] text-muted-foreground outline-none placeholder:text-muted-foreground"
-              />
+              <div
+                className="hero-reveal mt-12 grid grid-cols-3 border-t border-[#40373a] pt-5"
+                style={{ "--reveal-index": 4 } as CSSProperties}
+              >
+                {[
+                  { icon: RadioTower, label: "Adaptive HLS", body: "끊김 없는 재생" },
+                  { icon: Captions, label: "Multi subtitle", body: "자막과 더빙" },
+                  { icon: Users, label: "Cohort season", body: "함께 완주" },
+                ].map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <div key={item.label} className="border-l border-[#40373a] px-3 first:border-l-0 first:pl-0 md:px-5">
+                      <Icon className="size-4 text-[#ff718b]" />
+                      <div className="mt-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#fff9f6]">
+                        {item.label}
+                      </div>
+                      <div className="mt-1 text-[11px] text-[#9f9296]">{item.body}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="relative min-h-[360px] border-t border-[#40373a] p-3 md:min-h-[470px] md:p-5 lg:min-h-0 lg:border-l lg:border-t-0">
+              <div className="grid h-full grid-cols-[1fr_0.38fr] gap-3">
+                <div className="relative min-h-[340px] overflow-hidden rounded-[18px] md:min-h-[430px] md:rounded-[24px]">
+                  <Image
+                    src="/course-previews/course-108.png"
+                    alt="강의 제작 워크스페이스 미리보기"
+                    fill
+                    preload
+                    sizes="(max-width: 1024px) 75vw, 46vw"
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#121012]/80 via-transparent to-[#121012]/15" />
+                  <div className="media-scanline absolute inset-0 opacity-20" />
+                  <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-[#191517]/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] backdrop-blur md:left-6 md:top-6">
+                    <span className="size-1.5 animate-pulse rounded-full bg-[#ff385c]" />
+                    Studio preview
+                  </div>
+                  <div className="absolute inset-x-4 bottom-4 md:inset-x-6 md:bottom-6">
+                    <div className="rounded-[14px] border border-white/15 bg-[#191517]/76 p-4 backdrop-blur-md">
+                      <div className="flex items-center justify-between text-[10px] font-semibold text-[#cfc3c6]">
+                        <span>01 · 공개 강의에서 유료 커리큘럼까지</span>
+                        <span className="font-mono tabular-nums">12:48 / 28:00</span>
+                      </div>
+                      <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/20">
+                        <div className="h-full w-[46%] rounded-full bg-[#ff385c]" />
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[11px] text-[#fff9f6]">
+                          <CirclePlay className="size-4" />
+                          실제 화면으로 배우는 강의 제작
+                        </div>
+                        <span className="hidden rounded-full border border-white/15 px-2 py-1 text-[9px] font-bold md:inline">
+                          KO · EN · JA
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-rows-2 gap-3">
+                  {[
+                    { src: "/course-previews/course-209.png", alt: "게임 AI 강의 미리보기", label: "GAME AI" },
+                    { src: "/course-previews/course-105.png", alt: "SEO 강의 미리보기", label: "SEARCH" },
+                  ].map((item) => (
+                    <div key={item.src} className="relative overflow-hidden rounded-[16px] md:rounded-[22px]">
+                      <Image
+                        src={item.src}
+                        alt={item.alt}
+                        fill
+                        sizes="(max-width: 1024px) 24vw, 18vw"
+                        className="object-cover"
+                      />
+                      <div className="absolute inset-0 bg-[#121012]/25" />
+                      <span className="absolute bottom-3 left-3 text-[9px] font-extrabold uppercase tracking-[0.15em] text-white md:bottom-4 md:left-4">
+                        {item.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative z-10 mx-auto -mt-2 max-w-7xl px-4 md:-mt-8 md:px-6">
+        <div className="rounded-[20px] border border-border/80 bg-card p-2 shadow-md md:rounded-[24px]">
+          <div className="grid divide-y divide-border/80 md:grid-cols-[1.45fr_0.72fr_0.72fr_auto] md:divide-x md:divide-y-0">
+            <label className="flex min-w-0 items-center gap-3 px-4 py-3 md:px-5">
+              <Search className="size-5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">
+                <span className="editorial-label block text-muted-foreground">Search courses</span>
+                <input
+                  value={keyword}
+                  onChange={(event) => {
+                    setKeyword(event.target.value)
+                    setPage(1)
+                  }}
+                  placeholder="배우고 싶은 기술이나 프로젝트"
+                  className="mt-1 w-full bg-transparent text-[15px] font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                />
+              </span>
             </label>
-            <label className="px-5 py-3">
-              <span className="block text-[14px] font-medium text-foreground">카테고리</span>
+            <label className="px-4 py-3 md:px-5">
+              <span className="editorial-label block text-muted-foreground">Category</span>
               <select
                 value={category}
                 onChange={(event) => {
                   setCategory(event.target.value)
                   setPage(1)
                 }}
-                className="mt-1 w-full appearance-none bg-transparent text-[14px] text-muted-foreground outline-none"
+                className="mt-1 w-full appearance-none bg-transparent text-[14px] font-semibold text-foreground outline-none"
               >
                 {categories.map((item) => (
                   <option key={item}>{item}</option>
                 ))}
               </select>
             </label>
-            <label className="px-5 py-3">
-              <span className="block text-[14px] font-medium text-foreground">정렬</span>
+            <label className="px-4 py-3 md:px-5">
+              <span className="editorial-label block text-muted-foreground">Order</span>
               <select
                 value={sort}
                 onChange={(event) => {
                   setSort(event.target.value as typeof sort)
                   setPage(1)
                 }}
-                className="mt-1 w-full appearance-none bg-transparent text-[14px] text-muted-foreground outline-none"
+                className="mt-1 w-full appearance-none bg-transparent text-[14px] font-semibold text-foreground outline-none"
               >
                 <option value="latest">최신 강의</option>
                 <option value="best">인기 강의</option>
                 <option value="priceAsc">낮은 가격</option>
               </select>
             </label>
-            <div className="flex items-center justify-center p-2">
-              <Button size="icon" className="size-12 rounded-full" aria-label="검색">
-                <Search className="size-5" />
+            <div className="flex items-center p-2">
+              <Button className="h-12 w-full rounded-[14px] px-5 md:w-auto" aria-label="선택한 조건으로 강의 찾기">
+                강의 찾기
+                <ArrowRight className="size-4" />
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 flex gap-2 overflow-x-auto pb-2">
-          {categories.map((item) => (
-            <button
-              key={item}
-              onClick={() => {
-                setCategory(item)
-                setPage(1)
-              }}
-              className={cn(
-                "shrink-0 rounded-full border px-4 py-2 text-[14px] font-medium transition-colors",
-                category === item
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-background text-muted-foreground hover:border-foreground hover:text-foreground",
-              )}
-            >
-              {item}
-            </button>
-          ))}
+        <div className="mt-5 flex items-center gap-4 overflow-x-auto pb-2">
+          <span className="editorial-label hidden shrink-0 text-muted-foreground md:block">Browse by topic</span>
+          <div className="flex gap-2">
+            {categories.map((item) => (
+              <button
+                key={item}
+                onClick={() => {
+                  setCategory(item)
+                  setPage(1)
+                }}
+                className={cn(
+                  "min-h-11 shrink-0 rounded-full border px-4 py-2 text-[13px] font-semibold transition-[background-color,color,border-color] duration-150",
+                  category === item
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-card text-muted-foreground hover:border-foreground hover:text-foreground",
+                )}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1440px] px-4 pb-16 md:px-6">
-        <div className="mb-5 flex items-end justify-between gap-4">
+      <section id="course-catalog" className="mx-auto max-w-[1440px] scroll-mt-28 px-4 pb-20 pt-16 md:px-6 md:pt-24">
+        <div className="mb-8 flex items-end justify-between gap-6 border-b border-border pb-6">
           <div>
-            <h2 className="text-[22px] font-medium leading-[1.18]">시즌제 강의 둘러보기</h2>
-            <p className="mt-2 text-[14px] leading-[1.43] text-muted-foreground">
-              계좌 입금 확인 후 판매자가 수강권한을 열어주는 시즌제 강의입니다.
+            <p className="editorial-label text-primary">Open this season</p>
+            <h2 className="font-brand mt-3 text-[clamp(1.9rem,3.8vw,3.4rem)] font-extrabold leading-[1.06] tracking-[-0.04em]">
+              지금 열리는 강의
+            </h2>
+            <p className="mt-3 max-w-2xl text-[14px] leading-6 text-muted-foreground">
+              강의자와 직접 연결되고, 한 시즌 동안 결과물을 완성하는 실전형 프로그램입니다.
             </p>
           </div>
           <Button asChild variant="ghost" className="hidden rounded-full px-4 md:inline-flex">
             <Link href={user ? withLocalePath(pathname, "/admin") : withLoginRedirectPath(pathname, "/admin")}>
-              강의 올리기
+              강의 제안하기
               <BookOpen className="size-4" />
             </Link>
           </Button>
         </div>
 
         {isLoading ? (
-          <div className="rounded-[14px] border border-border bg-card p-8 text-sm text-muted-foreground">강의 목록을 불러오는 중입니다.</div>
+          <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4" aria-label="강의 목록을 불러오는 중">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="aspect-[1200/781] rounded-[18px] bg-secondary" />
+                <div className="mt-4 h-4 w-3/4 rounded-full bg-secondary" />
+                <div className="mt-3 h-3 w-full rounded-full bg-secondary" />
+                <div className="mt-2 h-3 w-2/3 rounded-full bg-secondary" />
+              </div>
+            ))}
+          </div>
         ) : courses.length === 0 ? (
           <EmptyCourseState pathname={pathname} hasFilter={Boolean(keyword || category !== "전체")} />
         ) : (
-          <div className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-11 sm:grid-cols-2 lg:grid-cols-4">
             {courses.map((course, index) => (
               <CourseTile
                 key={`${course.id}-${course.title}`}
@@ -366,10 +515,10 @@ export default function HomePageWrapper() {
           </div>
         )}
 
-        <div className="mt-9 flex flex-col gap-4 border-t border-border pt-6 md:flex-row md:items-center md:justify-between">
-          <p className="text-[14px] text-muted-foreground">
-            총 <span className="font-semibold text-foreground">{total.toLocaleString()}</span>개 강의
-            {total > 0 ? ` 중 ${resultStart.toLocaleString()}-${resultEnd.toLocaleString()}개 표시` : ""}
+        <div className="mt-10 flex flex-col gap-4 border-t border-border pt-6 md:flex-row md:items-center md:justify-between">
+          <p className="text-[13px] text-muted-foreground">
+            <span className="font-semibold text-foreground">{total.toLocaleString()}개</span>의 공개 강의
+            {total > 0 ? ` · ${resultStart.toLocaleString()}–${resultEnd.toLocaleString()} 표시` : ""}
           </p>
           {totalPages > 1 ? (
             <nav aria-label="강의 목록 페이지" className="flex items-center gap-2">
@@ -424,45 +573,73 @@ export default function HomePageWrapper() {
 
 function EmptyCourseState({ pathname, hasFilter }: { pathname: string; hasFilter: boolean }) {
   return (
-    <div className="overflow-hidden rounded-[24px] border border-border bg-card">
-      <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="border-b border-border bg-secondary p-6 md:p-8 lg:border-b-0 lg:border-r">
-          <Badge variant="secondary" className="rounded-full bg-background">
-            {hasFilter ? "검색 결과 없음" : "입점 강의 준비 중"}
-          </Badge>
-          <h3 className="mt-4 text-[24px] font-semibold leading-[1.2]">
-            공개 강의는 실제 입점 승인 이후에만 표시됩니다.
-          </h3>
-          <p className="mt-3 text-[14px] leading-6 text-muted-foreground">
-            링구스트는 목업 강의를 공개하지 않고, 판매자가 등록한 강의가 운영 승인된 뒤에만 목록과 SEO에 노출되도록 설계되어 있습니다.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
+    <div className="overflow-hidden rounded-[26px] border border-border bg-card">
+      <div className="grid min-h-[440px] lg:grid-cols-[0.82fr_1.18fr]">
+        <div className="flex flex-col justify-between border-b border-border p-7 md:p-10 lg:border-b-0 lg:border-r">
+          <div>
+            <p className="editorial-label text-primary">
+              {hasFilter ? "No matching course" : "Next season loading"}
+            </p>
+            <h3 className="font-brand mt-5 max-w-[11ch] text-[clamp(2rem,4vw,4rem)] font-extrabold leading-[1.03] tracking-[-0.045em]">
+              {hasFilter ? "조건에 맞는 강의를 찾지 못했어요." : "첫 공개 시즌을 선별하고 있습니다."}
+            </h3>
+            <p className="mt-5 max-w-lg text-[14px] leading-7 text-muted-foreground">
+              {hasFilter
+                ? "검색어를 줄이거나 전체 카테고리에서 다시 살펴보세요. 공개 승인된 강의만 검색 결과에 표시됩니다."
+                : "판매자가 등록한 강의는 운영 검수와 모집 준비를 마친 뒤 공개됩니다. 그동안 다음 시즌의 첫 강의를 제안해 주세요."}
+            </p>
+          </div>
+          <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild className="rounded-full px-5">
-              <Link href={withLoginRedirectPath(pathname, "/admin")}>
-                강의 입점하기
-                <BookOpen className="size-4" />
+              <Link href={hasFilter ? withLocalePath(pathname, "/") : withLoginRedirectPath(pathname, "/admin")}>
+                {hasFilter ? "전체 강의 보기" : "강의 제안하기"}
+                <ArrowRight className="size-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" className="rounded-full px-5">
               <Link href="mailto:milli@molluhub.com?subject=%EB%A7%81%EA%B5%AC%EC%8A%A4%ED%8A%B8%20%EA%B0%95%EC%9D%98%20%ED%94%8C%EB%9E%AB%ED%8F%BC%20%EC%A0%9C%EC%9E%91%20%EB%AC%B8%EC%9D%98">
-                제작 문의
-                <Mail className="size-4" />
+                플랫폼 제작 문의
               </Link>
             </Button>
           </div>
         </div>
-        <div className="grid gap-3 p-6 md:grid-cols-3 md:p-8">
-          {[
-            ["DB 바인딩", "강의 목록, 상세, 커리큘럼, 이미지, SEO 데이터를 모두 DB에서 렌더링합니다."],
-            ["승인 후 공개", "판매자 등록 강의는 비공개로 시작하고 운영 승인 뒤 공개 목록에 노출됩니다."],
-            ["운영자 제어", "최고관리자가 강의 공개, 모집, 홈 섹션 순서와 문구를 직접 조정합니다."],
-          ].map(([title, body]) => (
-            <div key={title} className="rounded-[14px] border border-border bg-background p-4">
-              <CheckCircle2 className="size-5 text-primary" />
-              <h4 className="mt-4 text-[15px] font-semibold">{title}</h4>
-              <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{body}</p>
+
+        <div className="relative min-h-[360px] bg-[#201b1e] p-4 md:p-6">
+          <div className="signal-grid absolute inset-0 opacity-10" />
+          <div className="relative grid h-full grid-cols-[1.2fr_0.8fr] gap-3">
+            <div className="relative overflow-hidden rounded-[18px]">
+              <Image
+                src="/course-previews/course-209.png"
+                alt="준비 중인 게임 AI 강의 비공개 미리보기"
+                fill
+                sizes="(max-width: 1024px) 60vw, 32vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#161214]/75 via-transparent to-transparent" />
+              <div className="absolute inset-x-4 bottom-4 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+                <span>Private slate 01</span>
+                <span>Review</span>
+              </div>
             </div>
-          ))}
+            <div className="grid grid-rows-2 gap-3">
+              {[
+                ["/course-previews/course-105.png", "SEO 강의 비공개 미리보기", "02"],
+                ["/course-previews/course-108.png", "강의 제작 비공개 미리보기", "03"],
+              ].map(([src, alt, number]) => (
+                <div key={src} className="relative overflow-hidden rounded-[16px]">
+                  <Image src={src} alt={alt} fill sizes="(max-width: 1024px) 38vw, 20vw" className="object-cover" />
+                  <div className="absolute inset-0 bg-[#171315]/25" />
+                  <span className="absolute bottom-3 left-3 text-[9px] font-bold tracking-[0.12em] text-white">
+                    PRIVATE · {number}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="absolute right-7 top-7 flex items-center gap-2 rounded-full border border-white/15 bg-[#171315]/70 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
+            <span className="size-1.5 rounded-full bg-[#ff385c]" />
+            Studio queue
+          </div>
         </div>
       </div>
     </div>
@@ -472,35 +649,38 @@ function EmptyCourseState({ pathname, hasFilter }: { pathname: string; hasFilter
 function HomepageMarketingSection({ section, pathname }: { section: HomepageSection; pathname: string }) {
   if (section.sectionKey === "creators") {
     return (
-      <section className="border-t border-border bg-background">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[0.92fr_1.08fr] md:px-6 md:py-16">
-          <div>
-            <p className="text-[14px] font-semibold text-primary">{section.eyebrow}</p>
-            <h2 className="mt-3 text-[26px] font-semibold leading-[1.18] md:text-[32px]">{section.title}</h2>
-            <p className="mt-4 text-[15px] leading-7 text-muted-foreground">{section.description}</p>
-            <div className="mt-6 flex flex-wrap gap-2">
+      <section className="border-t border-border bg-[#f2efec]">
+        <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-20 md:px-6 lg:grid-cols-[0.88fr_1.12fr] lg:py-28">
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <div className="flex items-center gap-4">
+              <span className="font-brand text-[64px] font-black leading-none text-primary/20">01</span>
+              <p className="editorial-label text-primary">{section.eyebrow}</p>
+            </div>
+            <h2 className="font-brand mt-6 max-w-[14ch] text-[clamp(2rem,4vw,4.2rem)] font-extrabold leading-[1.04] tracking-[-0.045em]">
+              {section.title}
+            </h2>
+            <p className="mt-6 max-w-xl text-[15px] leading-7 text-muted-foreground">{section.description}</p>
+            <div className="mt-8 flex max-w-xl flex-wrap gap-x-4 gap-y-2">
               {creatorKeywords.map((keyword) => (
-                <Badge key={keyword} variant="outline" className="rounded-full bg-background px-3 py-1">
+                <span key={keyword} className="text-[12px] font-semibold text-muted-foreground">
+                  <span className="mr-2 text-primary">/</span>
                   {keyword}
-                </Badge>
+                </span>
               ))}
             </div>
           </div>
 
-          <div className="grid gap-4">
-            {platformProofs.map((item) => {
+          <div className="border-t border-foreground">
+            {platformProofs.map((item, index) => {
               const Icon = item.icon
               return (
-                <article key={item.title} className="rounded-[14px] border border-border bg-card p-5 marketplace-shadow">
-                  <div className="flex gap-4">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
-                      <Icon className="size-5" />
-                    </span>
-                    <div>
-                      <h3 className="text-[16px] font-semibold">{item.title}</h3>
-                      <p className="mt-2 text-[14px] leading-6 text-muted-foreground">{item.body}</p>
-                    </div>
+                <article key={item.title} className="grid gap-6 border-b border-border py-8 md:grid-cols-[72px_1fr_auto] md:items-start md:py-10">
+                  <span className="font-mono text-[12px] font-semibold tabular-nums text-primary">0{index + 1}</span>
+                  <div>
+                    <h3 className="font-brand text-[20px] font-extrabold leading-tight md:text-[24px]">{item.title}</h3>
+                    <p className="mt-3 max-w-2xl text-[14px] leading-7 text-muted-foreground">{item.body}</p>
                   </div>
+                  <Icon className="hidden size-6 text-foreground md:block" strokeWidth={1.6} />
                 </article>
               )
             })}
@@ -512,21 +692,27 @@ function HomepageMarketingSection({ section, pathname }: { section: HomepageSect
 
   if (section.sectionKey === "build-reference") {
     return (
-      <section className="border-t border-border bg-secondary">
-        <div className="mx-auto max-w-7xl px-4 py-14 md:px-6 md:py-16">
-          <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
+      <section className="relative overflow-hidden bg-[#1b1719] text-[#fff9f6]">
+        <div className="signal-grid absolute inset-0 opacity-[0.06]" />
+        <div className="relative mx-auto max-w-[1440px] px-4 py-20 md:px-6 lg:py-28">
+          <div className="grid gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-end">
             <div>
-              <p className="text-[14px] font-semibold text-muted-foreground">{section.eyebrow}</p>
-              <h2 className="mt-3 text-[24px] font-semibold leading-[1.2] md:text-[30px]">{section.title}</h2>
-              <p className="mt-4 text-[15px] leading-7 text-muted-foreground">{section.description}</p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild className="rounded-full px-5">
+              <div className="flex items-center gap-4">
+                <span className="font-brand text-[64px] font-black leading-none text-[#ff385c]/30">02</span>
+                <p className="editorial-label text-[#ff8da1]">{section.eyebrow}</p>
+              </div>
+              <h2 className="font-brand mt-6 max-w-[14ch] text-[clamp(2rem,4vw,4.2rem)] font-extrabold leading-[1.04] tracking-[-0.045em]">
+                {section.title}
+              </h2>
+              <p className="mt-6 max-w-xl text-[15px] leading-7 text-[#b9adb1]">{section.description}</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button asChild className="rounded-full bg-[#ff385c] px-5 text-white hover:bg-[#e9284c]">
                   <Link href={`mailto:milli@molluhub.com?subject=${encodeURIComponent("링구스트 / 강의 플랫폼 제작 문의")}`}>
                     제작 문의하기
                     <Mail className="size-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="rounded-full px-5">
+                <Button asChild variant="outline" className="rounded-full border-[#665b5f] bg-transparent px-5 text-[#fff9f6] hover:bg-[#2a2427] hover:text-[#fff9f6]">
                   <Link href={withLocalePath(pathname, "/company")}>
                     럿지 소개 보기
                     <ArrowRight className="size-4" />
@@ -535,36 +721,33 @@ function HomepageMarketingSection({ section, pathname }: { section: HomepageSect
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="border-t border-[#51474b]">
               {buildTracks.map(([title, body], index) => (
-                <article key={title} className="rounded-[14px] border border-border bg-background p-5">
-                  <div className="mb-5 flex items-center justify-between">
-                    <span className="text-[13px] font-semibold text-primary">0{index + 1}</span>
-                    <CheckCircle2 className="size-5 text-foreground" />
+                <article key={title} className="grid gap-4 border-b border-[#51474b] py-7 md:grid-cols-[52px_130px_1fr] md:items-start">
+                  <span className="font-mono text-[11px] font-semibold text-[#ff718b]">0{index + 1}</span>
+                  <h3 className="font-brand text-[18px] font-extrabold">{title}</h3>
+                  <div className="flex gap-3">
+                    <CheckCircle2 className="mt-1 size-4 shrink-0 text-[#ff718b]" />
+                    <p className="text-[13px] leading-6 text-[#b9adb1]">{body}</p>
                   </div>
-                  <h3 className="text-[16px] font-semibold">{title}</h3>
-                  <p className="mt-3 text-[14px] leading-6 text-muted-foreground">{body}</p>
                 </article>
               ))}
             </div>
           </div>
 
-          <div className="mt-10 rounded-[24px] border border-border bg-background p-5 md:p-7">
-            <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+          <div className="mt-14 border-y border-[#51474b] py-6">
+            <div className="grid gap-6 lg:grid-cols-[0.66fr_1.34fr] lg:items-center">
               <div>
-                <p className="inline-flex items-center gap-2 text-[14px] font-semibold text-primary">
+                <p className="editorial-label inline-flex items-center gap-2 text-[#ff8da1]">
                   <Sparkles className="size-4" />
-                  SEO keyword map
+                  Search signal map
                 </p>
-                <h3 className="mt-3 text-[22px] font-semibold leading-[1.2]">검색어가 자연스럽게 쌓이는 구조</h3>
-                <p className="mt-3 text-[14px] leading-6 text-muted-foreground">
-                  키워드를 억지로 반복하기보다, 강의 목록, 상세, 커리큘럼, 회사 정보, 푸터, sitemap,
-                  JSON-LD에 같은 의미망을 일관되게 배치합니다.
-                </p>
+                <h3 className="font-brand mt-3 text-[20px] font-extrabold leading-tight">검색어가 자연스럽게 쌓이는 구조</h3>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-x-5 gap-y-3">
                 {seoKeywordDeck.map((keyword) => (
-                  <span key={keyword} className="rounded-full bg-secondary px-3 py-2 text-[13px] font-medium">
+                  <span key={keyword} className="text-[12px] font-semibold text-[#b9adb1]">
+                    <span className="mr-2 text-[#ff718b]">+</span>
                     {keyword}
                   </span>
                 ))}
@@ -578,25 +761,31 @@ function HomepageMarketingSection({ section, pathname }: { section: HomepageSect
 
   return (
     <section className="border-t border-border bg-background">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 md:grid-cols-[1fr_0.9fr] md:px-6">
+      <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-20 md:px-6 lg:grid-cols-[1fr_0.9fr] lg:py-28">
         <div>
-          <p className="text-[14px] font-semibold text-muted-foreground">{section.eyebrow}</p>
-          <h2 className="mt-3 text-[24px] font-semibold leading-[1.2] md:text-[30px]">{section.title}</h2>
-          <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted-foreground">{section.description}</p>
+          <div className="flex items-center gap-4">
+            <span className="font-brand text-[64px] font-black leading-none text-primary/20">03</span>
+            <p className="editorial-label text-primary">{section.eyebrow}</p>
+          </div>
+          <h2 className="font-brand mt-6 max-w-[15ch] text-[clamp(2rem,4vw,4rem)] font-extrabold leading-[1.05] tracking-[-0.045em]">
+            {section.title}
+          </h2>
+          <p className="mt-6 max-w-2xl text-[15px] leading-7 text-muted-foreground">{section.description}</p>
         </div>
-        <div className="grid gap-3">
+        <div className="border-t border-foreground">
           {[
             ["강의자 모집형", "강사가 직접 강의 소개, 태그, 커리큘럼, 모집기간을 등록합니다."],
             ["계좌입금 MVP", "토스페이먼츠 전에도 수강신청, 입금 확인, 수강권한 부여를 운영할 수 있습니다."],
             ["영상 중심 LMS", "S3 기반 영상 저장, HLS 변환, 자막/더빙 확장을 고려해 설계합니다."],
-          ].map(([title, body]) => (
-            <div key={title} className="flex gap-4 rounded-[14px] border border-border p-4">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary">
-                <Video className="size-4" />
-              </span>
+          ].map(([title, body], index) => (
+            <div key={title} className="grid gap-4 border-b border-border py-7 md:grid-cols-[44px_1fr]">
+              <span className="font-mono text-[11px] font-semibold text-primary">0{index + 1}</span>
               <div>
-                <h3 className="text-[15px] font-semibold">{title}</h3>
-                <p className="mt-1 text-[14px] leading-6 text-muted-foreground">{body}</p>
+                <div className="flex items-center gap-3">
+                  <Video className="size-4 text-primary" />
+                  <h3 className="font-brand text-[18px] font-extrabold">{title}</h3>
+                </div>
+                <p className="mt-3 text-[14px] leading-7 text-muted-foreground">{body}</p>
               </div>
             </div>
           ))}
@@ -630,12 +819,12 @@ function CourseTile({
   return (
     <Link href={courseHref} className="group block min-w-0">
       <article className="min-w-0">
-        <div className="relative aspect-[1200/781] overflow-hidden rounded-[14px] bg-secondary">
+        <div className="relative aspect-[1200/781] overflow-hidden rounded-[18px] bg-secondary">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={image}
             alt={course.title}
-            className="photo-zoom h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="photo-zoom h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.035]"
           />
           <div className="absolute left-3 top-3 rounded-full bg-background px-3 py-1 text-[11px] font-semibold shadow-sm">
             {course.enrollmentStatus
@@ -664,26 +853,23 @@ function CourseTile({
           >
             <Heart className={cn("size-5", course.liked && "fill-primary text-primary")} />
           </button>
-          <div className="absolute bottom-3 left-3 flex gap-1">
-            {[0, 1, 2].map((dot) => (
-              <span key={dot} className={cn("size-1.5 rounded-full bg-background", dot === 0 ? "opacity-100" : "opacity-60")} />
-            ))}
-          </div>
         </div>
 
-        <div className="pt-3">
+        <div className="pt-4">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="min-w-0 truncate text-[16px] font-semibold leading-[1.25]">{course.title}</h3>
-            <span className="inline-flex shrink-0 items-center gap-1 text-[14px] text-foreground">
+            <h3 className="font-brand min-w-0 line-clamp-2 text-[17px] font-extrabold leading-[1.3] tracking-[-0.02em] transition-colors group-hover:text-primary">
+              {course.title}
+            </h3>
+            <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-foreground">
               <Star className="size-3.5 fill-foreground" />
               {course.avgRating?.toFixed(2) ?? "4.80"}
             </span>
           </div>
-          <p className="mt-1 line-clamp-2 min-h-10 text-[14px] leading-[1.43] text-muted-foreground">
+          <p className="mt-2 line-clamp-2 min-h-10 text-[13px] leading-5 text-muted-foreground">
             {course.shortDescription || course.description || "강의 소개가 곧 업데이트됩니다."}
           </p>
           {typeof course.enrollmentCapacity === "number" ? (
-            <div className="mt-2 text-[13px] text-muted-foreground">
+            <div className="mt-3 border-l-2 border-primary pl-3 text-[12px] font-medium text-muted-foreground">
               이번 시즌 {course.enrollmentAppliedCount ?? 0}/{course.enrollmentCapacity}명 신청
               {typeof course.remainingSeats === "number" ? ` · 잔여 ${course.remainingSeats}석` : ""}
             </div>
@@ -695,16 +881,16 @@ function CourseTile({
               </Badge>
             ))}
           </div>
-          <div className="mt-3 flex items-end justify-between gap-2">
-            <div className="text-[14px] text-muted-foreground">
+          <div className="mt-4 flex items-end justify-between gap-2 border-t border-border/80 pt-3">
+            <div className="text-[12px] text-muted-foreground">
               <div>{course.instructor?.nickname || course.instructor?.email || "링구스트 판매자"}</div>
               <div className="mt-1 inline-flex items-center gap-1">
                 <Users className="size-3.5" />
                 {course.purchaseCount?.toLocaleString() ?? "0"}명
               </div>
             </div>
-            <div className="text-right text-[14px]">
-              <div className="font-semibold text-foreground">{formatPrice(course)}</div>
+            <div className="text-right text-[13px]">
+              <div className="font-bold text-foreground">{formatPrice(course)}</div>
               {discount ? <div className="text-[13px] font-semibold text-primary">얼리버드 {discount}%</div> : null}
             </div>
           </div>
